@@ -1,6 +1,6 @@
 import unittest
 
-class PlaceHolderTest(unittest.TestCase):
+class PlaceHolderTests(unittest.TestCase):
     def placeholder_test(self):
         # some computation
         a, b, c = 1, 2, 3
