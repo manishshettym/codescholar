@@ -2,3 +2,6 @@ pandas
 numpy
 loguru
 pytest
+attrs
+pycodestyle
+fire

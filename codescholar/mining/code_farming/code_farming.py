@@ -1,25 +1,34 @@
 import ast
 from typing import List
 
-# from codescholar.utils.mining_utils import MinedIdiom
+from codescholar.utils.mining_utils import MinedIdiom, build_node_lookup
 from codescholar.utils.logging import logger
 
 
 def generate_simplified_ast(source_code: str):
+    # NOTE: Move this into mining_utils?
+
+    # TODO: Add simplification strategies. For e.g,
+    # add a MetaVariable node as a parent for each variable
+    # so that the mining algo can decide to chose a symbolic
+    # or a concrete value for each node.
+
     return ast.parse(source_code)
 
 
-def subgraph_matches(G, dataset: List[ast.AST]):
-    """Find if subgraph G is a subgraph isomorphism in
+def subgraph_matches(G: ast.AST, dataset: List[ast.AST]) -> int:
+    """Find if subgraph G is a subgraph isomorphism
+    in each graph H in the dataset.
 
     Args:
-        idiom (_type_): _description_
+        G (ast.AST): a query python ast
+        dataset (List[ast.AST]): a list of asts to search
 
     Returns:
-        _type_: _description_
+        int: number of times G is found in dataset
     """
+
     return 10
-    # pass
 
 
 def grow_idiom(idiom, prog):
@@ -60,10 +69,13 @@ def generic_mine_code(
                 # logger.info(f"I: {idiom} P: {prog}")
                 candidate_idiom = grow_idiom(idiom, prog)
 
-                if subgraph_matches(candidate_idiom) >= gamma**(1/node_count):
+                if(
+                    subgraph_matches(candidate_idiom)
+                    >= gamma**(1 / node_count)
+                ):
                     mined_results = save_idiom(mined_results,
                                                candidate_idiom,
-                                               index=node_count+1)
+                                               index=node_count + 1)
                 else:
                     continue
 
