@@ -1,10 +1,9 @@
 import ast
-from curses import resetty
-from distutils.command.build import build
-import re
 from typing import List
 import collections
 import attrs
+
+from codescholar.utils.logs import logger
 
 
 @attrs.define(eq=False, repr=False)
@@ -23,6 +22,8 @@ def build_subgraph(
     hash = str(node_summary)
 
     if hash in lookup:
+        logger.trace(f"Matched node: {node}")
+        
         # find the query node (hash) in database node (lookup)
         node_matches = lookup[hash]
 
@@ -33,42 +34,50 @@ def build_subgraph(
 
         if any_common_ancestral_path:
             subgraphs_at_node = {}
-
-            # loop over children that are lists
-            for i in node_summary[2]:
-                child = getattr(node, i)
-
-                # if child is also a list
-                if isinstance(child, list):
-                    subgraphs = []
-                    
-                    # loop over grandchildren & recurse
-                    for j in child:
-                        result = build_subgraph(j, lookup, anc + [ntype])
-
-                        if result is not None:
-                            subgraphs.append(result)
-                    
-                    # add all found subgraphs
-                    subgraphs_at_node[i] = subgraphs_at_node
-                
-                # elif child is a node
-                elif result := build_subgraph(
-                        child, lookup,
-                        anc + [ntype]) is not None:
-                        
-                    # add the subgraph
-                    subgraphs_at_node[i] = result
             
-            return type(node)(
+            if node_summary[2] != []:
+                logger.trace(f"looping over: {node_summary[2]}")
+
+                # loop over children that are lists
+                for i in node_summary[2]:
+                    child = getattr(node, i)
+                    logger.trace("field: {i} -> child: {child}")
+
+                    # if child is also a list
+                    if isinstance(child, list):
+                        subgraphs = []
+                        
+                        # loop over grandchildren & recurse
+                        for j in child:
+                            result = build_subgraph(j, lookup, anc + [ntype])
+
+                            if result is not None:
+                                subgraphs.append(result)
+                        
+                        # add all found subgraphs
+                        subgraphs_at_node[i] = subgraphs
+                    
+                    # elif child is a node
+                    elif (result := build_subgraph(
+                            child, lookup,
+                            anc + [ntype])) is not None:
+                            
+                        # add the subgraph
+                        subgraphs_at_node[i] = result
+            
+            new_node = type(node)(
                 **{i : getattr(node, i) for i in node_summary[1]},
                 **subgraphs_at_node,
                 **{i : getattr(node, i, 0) for i in type(node)._attributes})
+                
+            logger.trace(f"returning: {type(new_node).__name__} \
+                    = {vars(new_node)}\n")
+
+            return new_node
 
     return None
- 
+
       
-# verified
 def walk_with_ancestors(prog: ast.AST, ancestors: List[str] = []):
     """retrieve all ast nodes of a tree with ancestor hierarchy
 
@@ -94,7 +103,6 @@ def walk_with_ancestors(prog: ast.AST, ancestors: List[str] = []):
                 v, ancestors + [type(prog).__name__])
 
 
-# verified
 def get_node_summary(node: ast.AST):
     """Get all attributes of a ast node:
 
@@ -117,7 +125,6 @@ def get_node_summary(node: ast.AST):
     return node_type, other_children, list_children
 
 
-# verified
 def build_node_lookup(node: ast.AST):
     """create a lookup for every node type in a python ast mapping
     (type, list(children), children) -> [(node, [ancestors])]
@@ -136,20 +143,20 @@ def build_node_lookup(node: ast.AST):
 
 if __name__ == "__main__":
 
-    data = open("../experiments/basic_idiom.py").read()
+    data = open("../experiments/dataset.py").read()
     data_prog = ast.parse(data)
     lookup = build_node_lookup(data_prog)
 
-    query = open("../experiments/basic.py").read()
+    query = open("../experiments/idiom.py").read()
     query_prog = ast.parse(query)
 
-    result = build_subgraph(query_prog, lookup)
-    try:
-        result = ast.unparse(result)
-        print(result)
-    except:
-        print("error")
-        pass
-
-    # for k, v in lookup_query.items():
-    #     print(k, v)
+    for i in ast.walk(ast.parse(query_prog)):
+        result = build_subgraph(i, lookup)
+        try:
+            result = ast.unparse(result)
+            print("=" * 20)
+            print("Query Start @", i)
+            print(result)
+            print("=" * 20)
+        except Exception:
+            raise(Exception)
