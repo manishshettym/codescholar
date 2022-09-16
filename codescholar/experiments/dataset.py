@@ -11,7 +11,7 @@ def largestElemInFile(file: str):
         for j in range(0, len(inp) - i - 1):
             if inp[j] > inp[j + 1]:
                 temp = inp[j]
-                inp[j] = inp[j+1]
-                inp[j+1] = temp
+                inp[j] = inp[j + 1]
+                inp[j + 1] = temp
 
     return inp[-1]
