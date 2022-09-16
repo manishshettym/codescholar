@@ -1,0 +1,53 @@
+====================
+Query Start @ <ast.Module object at 0x7f87f052d100>
+if b:
+====================
+====================
+Query Start @ <ast.If object at 0x7f87f052dfa0>
+if b == 3:
+    print(b)
+====================
+====================
+Query Start @ <ast.Compare object at 0x7f87f01a18e0>
+b == 3
+====================
+====================
+Query Start @ <ast.Expr object at 0x7f87d0016f40>
+print(b)
+====================
+====================
+Query Start @ <ast.Name object at 0x7f87f01a1880>
+b
+====================
+====================
+Query Start @ <ast.Eq object at 0x7f87e0021df0>
+
+====================
+====================
+Query Start @ <ast.Constant object at 0x7f87d0016ee0>
+3
+====================
+====================
+Query Start @ <ast.Call object at 0x7f87d0016f70>
+print(b)
+====================
+====================
+Query Start @ <ast.Load object at 0x7f87f0195670>
+
+====================
+====================
+Query Start @ <ast.Name object at 0x7f87f05488e0>
+print
+====================
+====================
+Query Start @ <ast.Name object at 0x7f87f0548b80>
+b
+====================
+====================
+Query Start @ <ast.Load object at 0x7f87f0195670>
+
+====================
+====================
+Query Start @ <ast.Load object at 0x7f87f0195670>
+
+====================

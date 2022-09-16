@@ -11,11 +11,18 @@ class MinedIdiom:
     code: str
 
 
-def build_subgraph(
-    node: ast.AST,
-    lookup: dict,
-    anc: List[str] = []
-) -> ast.AST:
+def build_subgraph(node: ast.AST, lookup: dict, anc: List[str] = []):
+    """_summary_
+
+    Args:
+        node (ast.AST): ast node to start with
+        lookup (dict): map of node_type -> [(node, [path])]
+        anc (List[str]): ancestor path from root to node. Defaults to [].
+
+    Returns:
+        ast.AST: a subgraph if present in lookup
+        starting at node.
+    """
 
     node_summary = get_node_summary(node)
     ntype = type(node).__name__

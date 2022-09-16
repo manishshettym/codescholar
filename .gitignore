@@ -113,3 +113,6 @@ pip-selfcheck.json
 node_modules
 scratch/
 .mypy_cache*
+
+# log files
+*.log
