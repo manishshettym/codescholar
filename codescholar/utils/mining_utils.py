@@ -10,6 +10,10 @@ from codescholar.utils.logs import logger
 class MinedIdiom:
     code: str
 
+# TODO: This method returns a subgraph match by making an approximate
+# match over a traversal of node type hierarchies. This should eventually
+# be replaced by a better and faster approximation.
+
 
 def build_subgraph(node: ast.AST, lookup: dict, anc: List[str] = []):
     """_summary_
@@ -34,6 +38,7 @@ def build_subgraph(node: ast.AST, lookup: dict, anc: List[str] = []):
         # find the query node (hash) in database node (lookup)
         node_matches = lookup[hash]
 
+        # TODO: Expensive match
         any_common_ancestral_path = any(
             anc == match_anc[-1 * len(anc):] or not anc
             for _, match_anc in node_matches
@@ -48,7 +53,7 @@ def build_subgraph(node: ast.AST, lookup: dict, anc: List[str] = []):
                 # loop over children that are lists
                 for i in node_summary[2]:
                     child = getattr(node, i)
-                    logger.trace("field: {i} -> child: {child}")
+                    logger.trace(f"field: {i} -> child: {child}")
 
                     # if child is also a list
                     if isinstance(child, list):
@@ -148,11 +153,25 @@ def build_node_lookup(node: ast.AST):
     return lookup_table
 
 
+def get_ast_statements(dataset: List[ast.AST]):
+    stmts = []
+    
+    for prog in dataset:
+        for i in ast.walk(prog):
+            if isinstance(i, ast.stmt):
+                stmts.append(i)
+    
+    return stmts
+
+
 if __name__ == "__main__":
 
     data = open("../experiments/dataset.py").read()
     data_prog = ast.parse(data)
     lookup = build_node_lookup(data_prog)
+
+    # for k, v in lookup.items():
+    #     print(f"{k} -> {v}")
 
     query = open("../experiments/idiom.py").read()
     query_prog = ast.parse(query)
