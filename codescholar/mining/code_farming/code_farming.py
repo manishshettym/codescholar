@@ -1,39 +1,76 @@
+import os
 import ast
+
+from tqdm import tqdm
+import glob
+from copy import deepcopy
 from typing import List
 
-from codescholar.utils.mining_utils import MinedIdiom, build_node_lookup
-from codescholar.utils.logging import logger
+from codescholar.utils.mining_utils import (
+    MinedIdiom,
+    get_ast_statements,
+    build_node_lookup,
+    build_subgraph)
+from codescholar.utils.logs import logger
 
 
-def generate_simplified_ast(source_code: str):
-    # NOTE: Move this into mining_utils?
+def build_dataset_lookup(dataset: List[ast.AST]):
+    dataset_lookup = []
+    for datapoint in dataset:
+        try:
+            lookup = build_node_lookup(datapoint)
+            dataset_lookup.append(lookup)
+        except:
+            continue
+    
+    return dataset_lookup
 
-    # TODO: Add simplification strategies. For e.g,
-    # add a MetaVariable node as a parent for each variable
-    # so that the mining algo can decide to chose a symbolic
-    # or a concrete value for each node.
 
-    return ast.parse(source_code)
-
-
-def subgraph_matches(G: ast.AST, dataset: List[ast.AST]) -> int:
-    """Find if subgraph G is a subgraph isomorphism
-    in each graph H in the dataset.
+def subgraph_matches(query, dataset_lookup) -> int:
+    """Count number of times graph `query` is a subgraph isomorphism
+    in any graph in `dataset`.
 
     Args:
         G (ast.AST): a query python ast
-        dataset (List[ast.AST]): a list of asts to search
-
-    Returns:
-        int: number of times G is found in dataset
+        dataset_lookup (List[]): a list of ast summaries to search
     """
+    count = 0
 
-    return 10
+    for lookup in dataset_lookup:
+        try:
+            result = build_subgraph(query, lookup)
+            result = ast.unparse(result)
+
+            if result == ast.unparse(query):
+                count += 1
+
+        except Exception:
+            pass
+
+    return count
 
 
 def grow_idiom(idiom, prog):
-    return idiom
-    # pass
+    
+    # print(f"Attempting: {type(idiom).__name__} + {type(prog).__name__}")
+    idiom_copy = deepcopy(idiom)
+    body_node = None
+
+    # find last stmt in idiom with a body
+    for i in ast.walk(idiom_copy):
+        if 'body' in i._fields:
+            body_node = i
+    
+    if body_node:
+        try:
+            body_node.body.append(prog.body)
+        except:
+            # print(prog, "has no body attr")
+            body_node.body.append(prog)
+
+        return idiom_copy
+
+    return None
 
 
 def save_idiom(mined_results, candidate_idiom, index):
@@ -47,35 +84,54 @@ def save_idiom(mined_results, candidate_idiom, index):
 
 
 def generic_mine_code(
-    dataset: List,
+    dataset: List[ast.AST],
     fix_max_len: bool = False,
     max_len: int = 0
 ) -> dict:
+
     gamma: float = 0.1 * len(dataset)
     node_count: int = 1
     mined_results: dict = {}
 
-    mined_results[node_count] = dataset
+    statements = get_ast_statements(dataset)
+    dataset_lookup = build_dataset_lookup(dataset)
+    mined_results[node_count] = statements
 
-    while (mined_results[node_count] is not None):
-        # logger.info(f"{node_count}: {mined_results[node_count]}")
+    while (node_count in mined_results
+            and mined_results[node_count] is not None):
+        print(f"Generation {node_count} w/ gamma: {gamma}")
 
-        for idiom in mined_results[node_count]:
-            for prog in dataset:
+        for idiom in tqdm(mined_results[node_count]):
+            for prog in tqdm(statements):
 
                 if idiom == prog:
                     continue
+                
+                try:
+                    candidate_idiom = grow_idiom(idiom, prog)
+                except:
+                    logger.trace(f"[Exception] Could not grow:\n I:\
+                        {ast.unparse(idiom)}\nP:{ast.unparse(prog)}\n\n")
+                    continue
 
-                # logger.info(f"I: {idiom} P: {prog}")
-                candidate_idiom = grow_idiom(idiom, prog)
+                if(candidate_idiom is not None):
+                    try:
+                        match_count = subgraph_matches(candidate_idiom,
+                                                       dataset_lookup)
+                    except:
+                        logger.trace(f"[Exception] Could not grow:\n I:\
+                            {ast.unparse(idiom)}\nP:{ast.unparse(prog)}\n\n")
+                        continue
+                    
+                    if match_count > 0:
+                        logger.trace(f"Match Count: {match_count}")
 
-                if(
-                    subgraph_matches(candidate_idiom)
-                    >= gamma**(1 / node_count)
-                ):
-                    mined_results = save_idiom(mined_results,
-                                               candidate_idiom,
-                                               index=node_count + 1)
+                    if match_count >= gamma**(1 / node_count):
+                        logger.trace(f"C:\n{ast.unparse(candidate_idiom)}\n\n")
+
+                        mined_results = save_idiom(mined_results,
+                                                   candidate_idiom,
+                                                   index=node_count + 1)
                 else:
                     continue
 
@@ -92,14 +148,20 @@ def generic_mine_code(
 
 
 if __name__ == "__main__":
+    dataset = []
+    path = "../../data/Python-master"
 
-    test_dataset = [
-        ast.parse('''with open(file) as fp:
-            line = fp.read()'''),
-        ast.parse('''inp = line.split()'''),
-        ast.parse('''inp = [int(i) for i in line]''')
-    ]
+    for filename in sorted(glob.glob(os.path.join(path, '*.py'))):
+        with open(os.path.join(path, filename), 'r') as f:
+            try:
+                dataset.append(ast.parse(f.read()))
+            except:
+                pass
+        
+    mined_code = generic_mine_code(dataset, fix_max_len=True, max_len=3)
 
-    mined_code = generic_mine_code(dataset=test_dataset,
-                                   fix_max_len=True,
-                                   max_len=3)
+    for i, g in mined_code.items():
+        print(f"iteration {i}")
+        for p in g:
+            print(ast.unparse(p))
+            print()
