@@ -119,8 +119,8 @@ def generic_mine_code(
                         match_count = subgraph_matches(candidate_idiom,
                                                        dataset_lookup)
                     except:
-                        logger.trace(f"[Exception] Could not grow:\n I:\
-                            {ast.unparse(idiom)}\nP:{ast.unparse(prog)}\n\n")
+                        logger.trace(f"[Exception] Could not find:\n C:\
+                            {ast.unparse(candidate_idiom)}\n\n")
                         continue
                     
                     if match_count > 0:

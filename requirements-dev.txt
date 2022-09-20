@@ -5,3 +5,4 @@ pytest
 attrs
 pycodestyle
 fire
+tqdm
