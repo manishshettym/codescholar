@@ -10,9 +10,28 @@ from codescholar.utils.logs import logger
 class MinedIdiom:
     code: str
 
-# TODO: This method returns a subgraph match by making an approximate
-# match over a traversal of node type hierarchies. This should eventually
-# be replaced by a better and faster approximation.
+
+def find_common_ancestors(node_matches, anc):
+    # TODO: This method is the comparator for subgraph matching. It performs
+    # an approx match by traversing of node type hierarchy. This should
+    # be replaced by a better and faster approximation.
+    have_common_ancestors = False
+
+    if node_matches is None:
+        return have_common_ancestors
+
+    for i, val in enumerate(node_matches):
+        _, match_anc = val
+
+        if anc == match_anc[-1 * len(anc):] or not anc:
+            have_common_ancestors = True
+            break
+    
+    # remove matched node from lookup
+    if have_common_ancestors:
+        node_matches.pop(i)
+
+    return have_common_ancestors
 
 
 def build_subgraph(node: ast.AST, lookup: dict, anc: List[str] = []):
@@ -20,11 +39,11 @@ def build_subgraph(node: ast.AST, lookup: dict, anc: List[str] = []):
 
     Args:
         node (ast.AST): ast node to start with
-        lookup (dict): map of node_type -> [(node, [path])]
+        lookup_table (dict): map of node_type -> [(node, [path])]
         anc (List[str]): ancestor path from root to node. Defaults to [].
 
     Returns:
-        ast.AST: a subgraph if present in lookup
+        ast.AST: a subgraph if present in lookup_table
         starting at node.
     """
 
@@ -37,12 +56,7 @@ def build_subgraph(node: ast.AST, lookup: dict, anc: List[str] = []):
         
         # find the query node (hash) in database node (lookup)
         node_matches = lookup[hash]
-
-        # TODO: Expensive match
-        any_common_ancestral_path = any(
-            anc == match_anc[-1 * len(anc):] or not anc
-            for _, match_anc in node_matches
-        )
+        any_common_ancestral_path = find_common_ancestors(node_matches, anc)
 
         if any_common_ancestral_path:
             subgraphs_at_node = {}
@@ -154,11 +168,21 @@ def build_node_lookup(node: ast.AST):
 
 
 def get_ast_statements(dataset: List[ast.AST]):
+    """Get's all unique ast.stmt nodes in the ast.walk
+    order = bfs that are not import or function/class definitions.
+    """
     stmts = []
+    # TODO: Is this the same as building block in CFG?
     
     for prog in dataset:
         for i in ast.walk(prog):
-            if isinstance(i, ast.stmt):
+            if(
+                isinstance(i, ast.stmt)
+                and not isinstance(i, ast.FunctionDef)
+                and not isinstance(i, ast.AsyncFunctionDef)
+                and not isinstance(i, ast.ClassDef)
+                and not isinstance(i, ast.Import)
+            ):
                 stmts.append(i)
     
     return stmts
@@ -169,9 +193,6 @@ if __name__ == "__main__":
     data = open("../experiments/dataset.py").read()
     data_prog = ast.parse(data)
     lookup = build_node_lookup(data_prog)
-
-    # for k, v in lookup.items():
-    #     print(f"{k} -> {v}")
 
     query = open("../experiments/idiom.py").read()
     query_prog = ast.parse(query)
@@ -185,4 +206,4 @@ if __name__ == "__main__":
             print(result)
             print("=" * 20)
         except Exception:
-            raise(Exception)
+            print("[invalid subgraph]")
