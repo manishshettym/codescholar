@@ -6,3 +6,4 @@ attrs
 pycodestyle
 fire
 tqdm
+pebble
