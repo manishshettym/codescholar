@@ -52,9 +52,7 @@ def build_subgraph(node: ast.AST, lookup: dict, anc: List[str] = []):
     hash = str(node_summary)
 
     if hash in lookup:
-        logger.trace(f"Matched node: {node}")
         
-        # find the query node (hash) in database node (lookup)
         node_matches = lookup[hash]
         any_common_ancestral_path = find_common_ancestors(node_matches, anc)
 
@@ -62,12 +60,10 @@ def build_subgraph(node: ast.AST, lookup: dict, anc: List[str] = []):
             subgraphs_at_node = {}
             
             if node_summary[2] != []:
-                logger.trace(f"looping over: {node_summary[2]}")
 
                 # loop over children that are lists
                 for i in node_summary[2]:
                     child = getattr(node, i)
-                    logger.trace(f"field: {i} -> child: {child}")
 
                     # if child is also a list
                     if isinstance(child, list):
@@ -95,9 +91,6 @@ def build_subgraph(node: ast.AST, lookup: dict, anc: List[str] = []):
                 **{i : getattr(node, i) for i in node_summary[1]},
                 **subgraphs_at_node,
                 **{i : getattr(node, i, 0) for i in type(node)._attributes})
-                
-            logger.trace(f"returning: {type(new_node).__name__} \
-                    = {vars(new_node)}\n")
 
             return new_node
 
@@ -165,27 +158,6 @@ def build_node_lookup(node: ast.AST):
         lookup_table[hash].append((child, ancestors))
             
     return lookup_table
-
-
-def get_ast_statements(dataset: List[ast.AST]):
-    """Get's all unique ast.stmt nodes in the ast.walk
-    order = bfs that are not import or function/class definitions.
-    """
-    stmts = []
-    # TODO: Is this the same as building block in CFG?
-    
-    for prog in dataset:
-        for i in ast.walk(prog):
-            if(
-                isinstance(i, ast.stmt)
-                and not isinstance(i, ast.FunctionDef)
-                and not isinstance(i, ast.AsyncFunctionDef)
-                and not isinstance(i, ast.ClassDef)
-                and not isinstance(i, ast.Import)
-            ):
-                stmts.append(i)
-    
-    return stmts
 
 
 if __name__ == "__main__":
