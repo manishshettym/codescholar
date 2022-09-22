@@ -1,8 +1,8 @@
 import os
+import sys
 import ast
 import glob
 import attrs
-import random
 
 from tqdm import tqdm
 from typing import Dict, List, Tuple, Set
@@ -151,14 +151,14 @@ def codescholar_codefarmer(
     mined_results: dict = {}
     mined_results[1] = {}
 
-    print(f"[GEN0 w/ [gamma]: {gamma**(1 / node_count)}]")
+    print("==" * 20 + " [[CodeScholar::CodeFarmer Gen 0]] " + "==" * 20)
     for fileid, prog in enumerate(tqdm(dataset)):
         mined_results[1][fileid] = get_single_nodes([prog],
                                                     dataset_lookup,
                                                     gamma)
     
     while (node_count in mined_results):
-        print(f"[GEN{node_count} w/ [gamma]: {gamma**(1 / node_count)}]")
+        print("==" * 20 + f" [[CodeScholar::CodeFarmer Gen {node_count}]] " + "==" * 20)
         
         file_ids = mined_results[node_count].keys()
 
@@ -187,6 +187,12 @@ def codescholar_codefarmer(
                                                     node_count, fileid,
                                                     dataset_lookup, gamma)
 
+        # print the results:
+        for fileid, g in mined_results[node_count].items():
+            for p in g:
+                print(ast.unparse(p.idiom))
+                print("-" * 10 + "\n")
+
         node_count += 1
 
         if((fix_max_len and node_count > max_len)
@@ -207,7 +213,7 @@ if __name__ == "__main__":
             except:
                 pass
     
-    mined_code = codescholar_codefarmer(dataset, gamma=0.33,
+    mined_code = codescholar_codefarmer(dataset, gamma=0.4,
                                         fix_max_len=True, max_len=5)
 
     # ******************* CREATE MINING CAMPAIGN SUMMARY *******************
@@ -216,12 +222,3 @@ if __name__ == "__main__":
     print(f"Dataset: {len(dataset)} progs")
     print(f"# Explorations: {len(mined_code)}")
     print("==" * 60)
-
-    for i, files in mined_code.items():
-        print(f"Generation {i} progs:")
-        for f, g in files.items():
-            for p in g:
-                print("Prog")
-                print("-" * 10)
-                print(ast.unparse(p.idiom))
-                print()
