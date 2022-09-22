@@ -11,7 +11,12 @@ from codescholar.utils.mining_utils import (build_node_lookup, build_subgraph)
 from codescholar.utils.logs import logger
 from codescholar.utils import multiprocess
 
-MAX_WORKERS = 100
+MAX_WORKERS = 1
+
+
+def _mp_subgraph_matches(args):
+    query, dataset_lookup = args
+    return subgraph_matches(query, dataset_lookup)
 
 
 def get_single_nodes(
@@ -31,7 +36,6 @@ def get_single_nodes(
         _type_: a set of unique and frequent ast.stmt nodes in the dataset
     """
     stmts = []
-    print(f"Generation 0 w/ [gamma]: {gamma}")
 
     candidates: List[Tuple(ast.AST, Dict[str, List])] = []
 
@@ -52,7 +56,7 @@ def get_single_nodes(
     # candidates = random.sample(candidates, k=100)
 
     subgraph_mp_iter = multiprocess.run_tasks_in_parallel_iter(
-        subgraph_matches,
+        _mp_subgraph_matches,
         tasks=candidates,
         use_progress_bar=True,
         num_workers=MAX_WORKERS)
@@ -83,7 +87,7 @@ def build_dataset_lookup(dataset: List[ast.AST]):
     return clean_data, dataset_lookup
 
 
-def subgraph_matches(args: Tuple[ast.AST, Dict[str, List]]) -> int:
+def subgraph_matches(query: ast.AST, dataset_lookup: Dict[str, List]) -> int:
     """Count number of times graph `query` is a subgraph isomorphism
     in any graph in `dataset`.
 
@@ -92,8 +96,6 @@ def subgraph_matches(args: Tuple[ast.AST, Dict[str, List]]) -> int:
         dataset_lookup (List[]): a list of ast summaries to search
     """
     
-    query = args[0]
-    dataset_lookup = args[1]
     count = 0
     query_prog = ast.unparse(query)
 
@@ -179,24 +181,33 @@ def generic_mine_code(
                     if candidate_idiom is not None:
                         candidates.append((candidate_idiom, dataset_lookup))
 
-            # define a multiprocess worker
-            subgraph_mp_iter = multiprocess.run_tasks_in_parallel_iter(
-                subgraph_matches,
-                tasks=candidates,
-                use_progress_bar=False,
-                num_workers=MAX_WORKERS)
+            if MAX_WORKERS > 1:
+                # define a multiprocess worker
+                subgraph_mp_iter = multiprocess.run_tasks_in_parallel_iter(
+                    _mp_subgraph_matches,
+                    tasks=candidates,
+                    use_progress_bar=False,
+                    num_workers=MAX_WORKERS)
 
-            # pass 2: prune candidate idioms based on frequency
-            for (c, _), result in zip(candidates, subgraph_mp_iter):
-                if (
-                    result.is_success()
-                    and isinstance(result.result, int)
-                    and result.result >= gamma**(1 / node_count)
-                ):
+                # pass 2: prune candidate idioms based on frequency
+                for (c, _), result in zip(candidates, subgraph_mp_iter):
+                    if (
+                        result.is_success()
+                        and isinstance(result.result, int)
+                        and result.result >= gamma**(1 / node_count)
+                    ):
 
-                    # print(f"C:\n{ast.unparse(c)}\n\n")
-                    mined_results = save_idiom(mined_results, c,
-                                               node_count + 1)
+                        # print(f"C:\n{ast.unparse(c)}\n\n")
+                        mined_results = save_idiom(mined_results, c,
+                                                   node_count + 1)
+            
+            else:
+                for c, dataset_lookup in candidates:
+                    result = subgraph_matches(c, dataset_lookup)
+
+                    if result >= gamma**(1 / node_count):
+                        mined_results = save_idiom(mined_results, c,
+                                                   node_count + 1)
 
                 else:
                     continue
