@@ -8,10 +8,47 @@ from codescholar.utils.logs import logger
 
 @attrs.define(eq=False, repr=False)
 class MinedIdiom:
-    code: str
+    idiom: ast.AST
+    start: int
+    end: int
+
+
+def pprint_mine(mined_results, index, gamma):
+    """ pretty print a summary of the current generation
+    of mined idioms.
+    """
+    delim = "==" * 20
+    thresh = round(gamma**(1 / index), 3)
+
+    print(f"{delim} [CodeScholar::Gen({index}) (\u03BB = {thresh})] {delim}")
+
+    for _, g in mined_results[index].items():
+        for p in g:
+            print(ast.unparse(p.idiom))
+            print("-" * 10 + "\n")
+
+
+def save_idiom(mined_results, candidate_idiom, loc, index):
+    new_idiom = MinedIdiom(candidate_idiom, loc[0], loc[1])
+    ncount, fileid = index
+    
+    if ncount not in mined_results:
+        mined_results[ncount] = {}
+        mined_results[ncount][fileid] = [new_idiom]
+
+    elif fileid not in mined_results[ncount]:
+        mined_results[ncount][fileid] = [new_idiom]
+
+    else:
+        mined_results[ncount][fileid].append(new_idiom)
+
+    return mined_results
 
 
 def find_common_ancestors(node_matches, anc):
+    """check if any of the matched nodes have same
+    ancestors.
+    """
     # TODO: This method is the comparator for subgraph matching. It performs
     # an approx match by traversing of node type hierarchy. This should
     # be replaced by a better and faster approximation.
@@ -158,24 +195,3 @@ def build_node_lookup(node: ast.AST):
         lookup_table[hash].append((child, ancestors))
             
     return lookup_table
-
-
-if __name__ == "__main__":
-
-    data = open("../experiments/dataset.py").read()
-    data_prog = ast.parse(data)
-    lookup = build_node_lookup(data_prog)
-
-    query = open("../experiments/idiom.py").read()
-    query_prog = ast.parse(query)
-
-    for i in ast.walk(ast.parse(query_prog)):
-        result = build_subgraph(i, lookup)
-        try:
-            result = ast.unparse(result)
-            print("=" * 20)
-            print("Query Start @", i)
-            print(result)
-            print("=" * 20)
-        except Exception:
-            print("[invalid subgraph]")
