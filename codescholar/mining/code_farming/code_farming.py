@@ -1,22 +1,30 @@
 import os
+import sys
 import ast
 import glob
-import random
+import attrs
 
 from tqdm import tqdm
 from copy import deepcopy
 from typing import Dict, List, Tuple, Set
 
-from codescholar.utils.mining_utils import (build_node_lookup, build_subgraph)
-from codescholar.utils.logs import logger
 from codescholar.utils import multiprocess
+from codescholar.utils.mining_utils import MinedIdiom, pprint_mine, save_idiom
+from codescholar.mining.code_farming.subgraphs import (build_dataset_lookup,
+                                                       subgraph_matches)
 
-MAX_WORKERS = 1
+MAX_WORKERS = 2
 
 
 def _mp_subgraph_matches(args):
     query, dataset_lookup = args
     return subgraph_matches(query, dataset_lookup)
+
+
+def _mp_code_miner(args):
+    mined_results, index, dataset_lookup, gamma = args
+    return mine_file(mined_results, index,
+                     dataset_lookup, gamma)
 
 
 def get_single_nodes(
@@ -31,13 +39,11 @@ def get_single_nodes(
         dataset (List[ast.AST]): list of program ASTs
         dataset_lookup (List[Dict[str, List]]): maps of type(node):occurences
         gamma (float): min frequency for mined program nodes
-
-    Returns:
-        _type_: a set of unique and frequent ast.stmt nodes in the dataset
     """
     stmts = []
 
     candidates: List[Tuple(ast.AST, Dict[str, List])] = []
+    candidate_loc: List[Tuple(int, int)] = []
 
     for prog in dataset:
         for i in ast.walk(prog):
@@ -50,72 +56,27 @@ def get_single_nodes(
                                        ast.ImportFrom))):
                 
                 candidates.append((i, dataset_lookup))
-    
-    # TODO: REMOVE THIS WHEN RUNNING FULL CAMPAIGN
-    # random.seed(55)
-    # candidates = random.sample(candidates, k=100)
+                candidate_loc.append((i.lineno, i.end_lineno))
 
     subgraph_mp_iter = multiprocess.run_tasks_in_parallel_iter(
         _mp_subgraph_matches,
         tasks=candidates,
-        use_progress_bar=True,
+        use_progress_bar=False,
         num_workers=MAX_WORKERS)
 
-    for c, result in zip(candidates, subgraph_mp_iter):
+    for c, loc, result in zip(candidates, candidate_loc, subgraph_mp_iter):
 
         if (
             result.is_success()
             and isinstance(result.result, int)
             and result.result >= gamma
         ):
-            stmts.append(c[0])
+            stmts.append(MinedIdiom(c[0], loc[0], loc[1]))
     
     return set(stmts)
 
 
-def build_dataset_lookup(dataset: List[ast.AST]):
-    dataset_lookup = []
-    clean_data = []
-    for i, datapoint in enumerate(dataset):
-        try:
-            lookup = build_node_lookup(datapoint)
-            dataset_lookup.append(lookup)
-            clean_data.append(datapoint)
-        except:
-            continue
-    
-    return clean_data, dataset_lookup
-
-
-def subgraph_matches(query: ast.AST, dataset_lookup: Dict[str, List]) -> int:
-    """Count number of times graph `query` is a subgraph isomorphism
-    in any graph in `dataset`.
-
-    Args:
-        G (ast.AST): a query python ast
-        dataset_lookup (List[]): a list of ast summaries to search
-    """
-    
-    count = 0
-    query_prog = ast.unparse(query)
-
-    for lookup in dataset_lookup:
-        try:
-            result = build_subgraph(query, deepcopy(lookup))
-            result = ast.unparse(result)
-
-            if result == query_prog:
-                count += 1
-
-        except Exception:
-            pass
-
-    return count
-
-
-def grow_idiom(idiom, prog):
-    
-    # print(f"Attempting: {type(idiom).__name__} + {type(prog).__name__}")
+def grow_idiom(idiom: ast.AST, prog: ast.AST):
     idiom_copy = deepcopy(idiom)
     prog_copy = deepcopy(prog)
     new_idiom = None
@@ -131,89 +92,111 @@ def grow_idiom(idiom, prog):
         else:
             new_idiom = ast.Module([idiom_copy, prog_copy], [])
 
-    # print(f"After merging:\n{ast.unparse(new_idiom)}\n\n\n")
     return new_idiom
 
 
-def save_idiom(mined_results, candidate_idiom, index):
-    if index not in mined_results:
-        mined_results[index] = [candidate_idiom]
+def mine_file(
+    mined_results: Dict[int, Dict[int, List]],
+    index: Tuple[int, int],
+    dataset_lookup: Dict,
+    gamma: int
+) -> Dict[int, Dict[int, List]]:
 
-    else:
-        mined_results[index].append(candidate_idiom)
+    ncount, fileid = index
 
+    for idiom in mined_results[ncount][fileid]:
+        candidates: List[Tuple(ast.AST, Dict[str, List])] = []
+        candidates_loc: List[Tuple(int, int)] = []
+
+        # pass 1: create candidate idioms by combining w/ single nodes
+        for prog in mined_results[1][fileid]:
+            candidate_idiom = None
+
+            # don't grow unnatural sequences
+            if prog.end <= idiom.end:
+                continue
+
+            try:
+                candidate_idiom = grow_idiom(idiom.idiom, prog.idiom)
+            except:
+                continue
+            finally:
+                if candidate_idiom is not None:
+                    candidates.append((candidate_idiom, dataset_lookup))
+                    candidates_loc.append((idiom.start, prog.end))
+
+        # pass 2: prune candidate idioms based on frequency
+        for (c, dataset_lookup), loc in zip(candidates, candidates_loc):
+            result = subgraph_matches(c, dataset_lookup)
+            # print(f"C ({result}): {ast.unparse(c)}")
+
+            if result >= gamma**(1 / ncount):
+                index = (ncount + 1, fileid)
+                mined_results = save_idiom(mined_results,
+                                           c, loc, index)
+            else:
+                continue
+    
     return mined_results
 
 
-def generic_mine_code(
+def codescholar_codefarmer(
     dataset: List[ast.AST],
+    gamma: float,
     fix_max_len: bool = False,
     max_len: int = 0
-) -> dict:
+) -> Dict[int, Dict[int, List]]:
+
     dataset, dataset_lookup = build_dataset_lookup(dataset)
-    gamma: float = 0.05 * len(dataset)
-    node_count: int = 1
+    gamma = gamma * len(dataset)
+    ncount: int = 1
+
     mined_results: dict = {}
+    mined_results[1] = {}
 
-    statements = get_single_nodes(dataset, dataset_lookup, gamma)
-    mined_results[node_count] = statements
+    # ================== INIT SINGLE NODES ==================
 
-    while (node_count in mined_results):
-        print(f"Generation {node_count} w/ [gamma]: {gamma**(1 / node_count)}")
+    for fileid, prog in enumerate(tqdm(dataset)):
+        mined_results[1][fileid] = get_single_nodes([prog],
+                                                    dataset_lookup,
+                                                    gamma)
+    pprint_mine(mined_results, ncount, gamma)
 
-        for idiom in tqdm(mined_results[node_count]):
-            candidates = []
+    # ===================== MINING LOOP =====================
 
-            # pass 1: create candidate idioms by combining graphs
-            for prog in statements:
-                candidate_idiom = None
+    while (ncount in mined_results):
+        
+        file_ids = mined_results[ncount].keys()
 
-                if idiom == prog:
-                    continue
+        if MAX_WORKERS > 1:
+            codefarmer_tasks = [
+                (mined_results, (ncount, fileid), dataset_lookup, gamma)
+                for fileid in file_ids
+            ]
 
-                try:
-                    candidate_idiom = grow_idiom(idiom, prog)
-                except:
-                    logger.trace(f'''[Exception] Could not grow:\n I:\
-                        {ast.unparse(idiom)}\nP:{ast.unparse(prog)}\n\n''')
-                    continue
-                finally:
-                    if candidate_idiom is not None:
-                        candidates.append((candidate_idiom, dataset_lookup))
+            miner_mp_iter = multiprocess.run_tasks_in_parallel_iter(
+                _mp_code_miner,
+                tasks=codefarmer_tasks,
+                use_progress_bar=False,
+                num_workers=MAX_WORKERS)
 
-            if MAX_WORKERS > 1:
-                # define a multiprocess worker
-                subgraph_mp_iter = multiprocess.run_tasks_in_parallel_iter(
-                    _mp_subgraph_matches,
-                    tasks=candidates,
-                    use_progress_bar=False,
-                    num_workers=MAX_WORKERS)
+            for fileid, result in tqdm(zip(file_ids, miner_mp_iter),
+                                       total=len(file_ids)):
+                if (result.is_success() and isinstance(result.result, Dict)):
+                    mined_results = result.result
+        else:
+            for fileid in file_ids:
+                index = (ncount, fileid)
+                mined_results = mine_file(mined_results, index,
+                                          dataset_lookup, gamma)
 
-                # pass 2: prune candidate idioms based on frequency
-                for (c, _), result in zip(candidates, subgraph_mp_iter):
-                    if (
-                        result.is_success()
-                        and isinstance(result.result, int)
-                        and result.result >= gamma**(1 / node_count)
-                    ):
+        ncount += 1
 
-                        # print(f"C:\n{ast.unparse(c)}\n\n")
-                        mined_results = save_idiom(mined_results, c,
-                                                   node_count + 1)
-            
-            else:
-                for c, dataset_lookup in candidates:
-                    result = subgraph_matches(c, dataset_lookup)
+        if ncount in mined_results:
+            pprint_mine(mined_results, ncount, gamma)
 
-                    if result >= gamma**(1 / node_count):
-                        mined_results = save_idiom(mined_results, c,
-                                                   node_count + 1)
-
-                else:
-                    continue
-
-        node_count += 1
-        if fix_max_len and node_count > max_len:
+        if((fix_max_len and ncount > max_len)
+                or (gamma**(1 / ncount) < 1)):
             break
 
     return mined_results
@@ -231,17 +214,12 @@ if __name__ == "__main__":
             except:
                 pass
     
-    mined_code = generic_mine_code(dataset, fix_max_len=True, max_len=3)
+    mined_code = codescholar_codefarmer(dataset[:15], gamma=0.1,
+                                        fix_max_len=True, max_len=5)
 
-    # ******************* CREATE MINING CAMPAIGN SUMMARY *******************
+    # ================== CREATE MINING CAMPAIGN SUMMARY ==================
 
-    print("==" * 20 + " [[CodeScholar::Concept Miner Summary]] " + "==" * 20)
+    print("==" * 20 + " [CodeScholar::Concept Miner Summary] " + "==" * 20)
     print(f"Dataset: {len(dataset)} progs")
     print(f"# Explorations: {len(mined_code)}")
     print("==" * 60)
-
-    for i, g in mined_code.items():
-        print(f"Generation {i}: {len(g)} progs")
-        for p in g:
-            print(ast.unparse(p))
-            print()
