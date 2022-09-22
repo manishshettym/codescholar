@@ -14,7 +14,7 @@ from codescholar.mining.code_farming.code_farming import (grow_idiom,
                                                           _mp_subgraph_matches,
                                                           build_dataset_lookup)
 
-MAX_WORKERS = 100
+MAX_WORKERS = 16
 
 
 @attrs.define(eq=False, repr=False)
@@ -98,7 +98,7 @@ def filewise_mine_code(
     max_len: int = 0
 ) -> dict:
     dataset, dataset_lookup = build_dataset_lookup(dataset)
-    gamma: float = 0.1 * len(dataset)
+    gamma: float = 0.25 * len(dataset)
     node_count: int = 1
     mined_results: dict = {}
 
