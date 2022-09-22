@@ -14,14 +14,14 @@ from codescholar.mining.code_farming.code_farming import (grow_idiom,
                                                           _mp_subgraph_matches,
                                                           build_dataset_lookup)
 
-MAX_WORKERS = 16
+MAX_WORKERS = 10
 
 
 @attrs.define(eq=False, repr=False)
 class MinedIdiom:
     idiom: ast.AST
-    start_lineno: int
-    end_lineno: int
+    start: int
+    end: int
 
 
 def get_single_nodes(
@@ -92,88 +92,100 @@ def save_idiom(mined_results, candidate_idiom, loc, nodecount, fileid):
     return mined_results
 
 
-def filewise_mine_code(
+def _mp_code_miner(args):
+    mined_results, node_count, fileid, dataset_lookup, gamma = args
+    return filewise_code_miner(mined_results, node_count, fileid,
+                               dataset_lookup, gamma)
+
+
+def filewise_code_miner(mined_results, node_count,
+                        fileid, dataset_lookup, gamma):
+
+    for idiom in mined_results[node_count][fileid]:
+        candidates: List[Tuple(ast.AST, Dict[str, List])] = []
+        candidates_loc: List[Tuple(int, int)] = []
+
+        # pass 1: create candidate idioms by combining w/ single nodes
+        for prog in mined_results[1][fileid]:
+            candidate_idiom = None
+
+            # don't grow unnatural sequence of operations
+            if prog.end <= idiom.end:
+                continue
+
+            try:
+                candidate_idiom = grow_idiom(idiom.idiom, prog.idiom)
+            except:
+                continue
+            finally:
+                if candidate_idiom is not None:
+                    candidates.append((candidate_idiom, dataset_lookup))
+                    candidates_loc.append((idiom.start, prog.end))
+
+        # pass 2: prune candidate idioms based on frequency
+        for (c, dataset_lookup), loc in zip(candidates, candidates_loc):
+            result = subgraph_matches(c, dataset_lookup)
+
+            if result >= gamma**(1 / node_count):
+                mined_results = save_idiom(mined_results,
+                                           c, loc,
+                                           node_count + 1,
+                                           fileid)
+            else:
+                continue
+    
+    return mined_results
+
+
+def codescholar_codefarmer(
     dataset: List[ast.AST],
+    gamma: float,
     fix_max_len: bool = False,
     max_len: int = 0
 ) -> dict:
-    dataset, dataset_lookup = build_dataset_lookup(dataset)
-    gamma: float = 0.25 * len(dataset)
-    node_count: int = 1
-    mined_results: dict = {}
 
+    dataset, dataset_lookup = build_dataset_lookup(dataset)
+    gamma = gamma * len(dataset)
+    node_count: int = 1
+
+    mined_results: dict = {}
     mined_results[1] = {}
+
+    print(f"[GEN0 w/ [gamma]: {gamma**(1 / node_count)}]")
     for fileid, prog in enumerate(tqdm(dataset)):
         mined_results[1][fileid] = get_single_nodes([prog],
                                                     dataset_lookup,
                                                     gamma)
     
-    print("[Initialized Generation 0]")
-
     while (node_count in mined_results):
-        print(f"[Generation {node_count} w/ [gamma]: {gamma**(1 / node_count)}]")
+        print(f"[GEN{node_count} w/ [gamma]: {gamma**(1 / node_count)}]")
+        
+        file_ids = mined_results[node_count].keys()
 
-        for fileid in tqdm(mined_results[node_count].keys()):
+        if MAX_WORKERS > 1:
 
-            for idiom in mined_results[node_count][fileid]:
-                candidates: List[Tuple(ast.AST, Dict[str, List])] = []
-                candidates_loc: List[Tuple(int, int)] = []
+            # create parallel tasks
+            codefarmer_tasks = [
+                (mined_results, node_count, fileid, dataset_lookup, gamma)
+                for fileid in file_ids
+            ]
 
-                # pass 1: create candidate idioms by combining w/ single nodes
-                for prog in mined_results[1][fileid]:
-                    candidate_idiom = None
+            # define a multiprocess worker
+            miner_mp_iter = multiprocess.run_tasks_in_parallel_iter(
+                _mp_code_miner,
+                tasks=codefarmer_tasks,
+                use_progress_bar=True,
+                num_workers=MAX_WORKERS)
 
-                    # don't grow unnatural sequence of operations
-                    if prog.end_lineno <= idiom.end_lineno:
-                        continue
-
-                    try:
-                        candidate_idiom = grow_idiom(idiom.idiom, prog.idiom)
-                    except:
-                        continue
-                    finally:
-                        if candidate_idiom is not None:
-                            candidates.append((candidate_idiom,
-                                               dataset_lookup))
-                            candidates_loc.append((idiom.start_lineno,
-                                                   prog.end_lineno))
-
-                if MAX_WORKERS > 1:
-                    # define a multiprocess worker
-                    subgraph_mp_iter = multiprocess.run_tasks_in_parallel_iter(
-                        _mp_subgraph_matches,
-                        tasks=candidates,
-                        use_progress_bar=False,
-                        num_workers=MAX_WORKERS)
-
-                    # pass 2: prune candidate idioms based on frequency
-                    for (c, _), loc, result in zip(candidates,
-                                                   candidates_loc,
-                                                   subgraph_mp_iter
-                                                   ):
-                        if (
-                            result.is_success()
-                            and isinstance(result.result, int)
-                            and result.result >= gamma**(1 / node_count)
-                        ):
-
-                            mined_results = save_idiom(mined_results,
-                                                       c, loc,
-                                                       node_count + 1,
-                                                       fileid)
-                
-                else:
-                    for (c, dataset_lookup), loc in zip(candidates,
-                                                        candidates_loc):
-                        result = subgraph_matches(c, dataset_lookup)
-
-                        if result >= gamma**(1 / node_count):
-                            mined_results = save_idiom(mined_results,
-                                                       c, loc,
-                                                       node_count + 1,
-                                                       fileid)
-                    else:
-                        continue
+            for fileid, result in tqdm(zip(file_ids, miner_mp_iter),
+                                       total=len(file_ids)):
+                if (result.is_success() and isinstance(result.result, Dict)):
+                    mined_results = result.result
+        else:
+            for fileid in file_ids:
+                mined_results = filewise_code_miner(mined_results,
+                                                    node_count, fileid,
+                                                    dataset_lookup, gamma)
 
         node_count += 1
 
@@ -187,7 +199,6 @@ def filewise_mine_code(
 if __name__ == "__main__":
     dataset = []
     path = "../../data/Python-master"
-    # path = "../../data/examples"
 
     for filename in sorted(glob.glob(os.path.join(path, '*.py'))):
         with open(os.path.join(path, filename), 'r') as f:
@@ -196,10 +207,8 @@ if __name__ == "__main__":
             except:
                 pass
     
-    random.seed(55)
-    dataset = random.sample(dataset, k=25)
-    
-    mined_code = filewise_mine_code(dataset, fix_max_len=True, max_len=4)
+    mined_code = codescholar_codefarmer(dataset, gamma=0.33,
+                                        fix_max_len=True, max_len=5)
 
     # ******************* CREATE MINING CAMPAIGN SUMMARY *******************
 
