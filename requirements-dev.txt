@@ -7,3 +7,5 @@ pycodestyle
 fire
 tqdm
 pebble
+black
+astunparse
