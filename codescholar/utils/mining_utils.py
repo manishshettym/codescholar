@@ -13,7 +13,7 @@ class MinedIdiom:
     end: int
 
 
-def pprint_mine(mined_results, index, gamma):
+def pprint_mine(code_mine, index, gamma):
     """ pretty print a summary of the current generation
     of mined idioms.
     """
@@ -22,27 +22,27 @@ def pprint_mine(mined_results, index, gamma):
 
     print(f"{delim} [CodeScholar::Gen({index}) (\u03BB = {thresh})] {delim}")
 
-    for _, g in mined_results[index].items():
+    for _, g in code_mine[index].items():
         for p in g:
             print(ast.unparse(p.idiom))
             print("-" * 10 + "\n")
 
 
-def save_idiom(mined_results, candidate_idiom, loc, index):
-    new_idiom = MinedIdiom(candidate_idiom, loc[0], loc[1])
-    ncount, fileid = index
-    
-    if ncount not in mined_results:
-        mined_results[ncount] = {}
-        mined_results[ncount][fileid] = [new_idiom]
+def save_idioms(code_mine, mined_idioms):
+    for idiom, loc, (ncount, fileid) in mined_idioms:
+        new_idiom = MinedIdiom(idiom, loc[0], loc[1])
 
-    elif fileid not in mined_results[ncount]:
-        mined_results[ncount][fileid] = [new_idiom]
+        if ncount not in code_mine:
+            code_mine[ncount] = {}
+            code_mine[ncount][fileid] = [new_idiom]
 
-    else:
-        mined_results[ncount][fileid].append(new_idiom)
+        elif fileid not in code_mine[ncount]:
+            code_mine[ncount][fileid] = [new_idiom]
 
-    return mined_results
+        else:
+            code_mine[ncount][fileid].append(new_idiom)
+
+    return code_mine
 
 
 def find_common_ancestors(node_matches, anc):
