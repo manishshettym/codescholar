@@ -14,7 +14,7 @@ from codescholar.utils.mining_utils import MinedIdiom, pprint_mine, save_idioms
 from codescholar.mining.code_farming.subgraphs import (build_dataset_lookup,
                                                        subgraph_matches)
 
-MAX_WORKERS = 2
+MAX_WORKERS = 1
 
 
 def _mp_subgraph_matches(args):
@@ -61,22 +61,28 @@ def get_single_nodes(
                 
                 candidates.append((i, dataset_lookup))
                 candidate_loc.append((i.lineno, i.end_lineno))
-
-    subgraph_mp_iter = multiprocess.run_tasks_in_parallel_iter(
-        _mp_subgraph_matches,
-        tasks=candidates,
-        use_progress_bar=False,
-        num_workers=MAX_WORKERS)
-
-    for c, loc, result in zip(candidates, candidate_loc, subgraph_mp_iter):
-
-        if (
-            result.is_success()
-            and isinstance(result.result, int)
-            and result.result >= gamma
-        ):
-            stmts.append(MinedIdiom(c[0], loc[0], loc[1]))
     
+    if MAX_WORKERS > 1:
+        subgraph_mp_iter = multiprocess.run_tasks_in_parallel_iter(
+            _mp_subgraph_matches,
+            tasks=candidates,
+            use_progress_bar=False,
+            num_workers=MAX_WORKERS)
+
+        for c, loc, result in zip(candidates, candidate_loc, subgraph_mp_iter):
+
+            if (
+                result.is_success()
+                and isinstance(result.result, int)
+                and result.result >= gamma
+            ):
+                stmts.append(MinedIdiom(c[0], loc[0], loc[1]))
+    
+    else:
+        for c, loc in zip(candidates, candidate_loc):
+            if (subgraph_matches(c[0], dataset_lookup) >= gamma):
+                stmts.append(MinedIdiom(c[0], loc[0], loc[1]))
+
     return stmts
 
 
@@ -227,7 +233,6 @@ def codescholar_codefarmer(
 
 if __name__ == "__main__":
     dataset = []
-    # path = "../../data/Python-master"
     path = "../../data/examples"
 
     for filename in sorted(glob.glob(os.path.join(path, '*.py'))):
@@ -237,7 +242,7 @@ if __name__ == "__main__":
             except:
                 pass
     
-    mined_code = codescholar_codefarmer(dataset[:15], min_freq=0.3,
+    mined_code = codescholar_codefarmer(dataset, min_freq=0.3,
                                         fix_max_len=True, max_len=5)
 
     # ================== CREATE MINING CAMPAIGN SUMMARY ==================
