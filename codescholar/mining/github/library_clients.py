@@ -8,7 +8,7 @@ from typing import List
 
 from codescholar.utils import multiprocess
 
-MAX_WORKERS = 2
+MAX_WORKERS = 5
 
 
 def load_repository_paths(path: str):
@@ -17,7 +17,7 @@ def load_repository_paths(path: str):
 
     repos = [repo['name'] for repo in repos]
 
-    return repos
+    return set(repos)
 
 
 def is_library_used(filepath: str, lib: str):
