@@ -2,7 +2,6 @@ import os
 import git
 import json
 
-from tqdm import tqdm
 import glob
 import shutil
 from typing import List
@@ -13,7 +12,7 @@ MAX_WORKERS = 2
 
 
 def load_repository_paths(path: str):
-    with open(path) as fp:
+    with open(path, 'rb') as fp:
         repos = json.load(fp)["items"]
 
     repos = [repo['name'] for repo in repos]
