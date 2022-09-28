@@ -4,6 +4,7 @@ import json
 
 import glob
 import shutil
+from tqdm import tqdm
 from typing import List
 
 from codescholar.utils import multiprocess
@@ -15,9 +16,9 @@ def load_repository_paths(path: str):
     with open(path, 'rb') as fp:
         repos = json.load(fp)["items"]
 
-    repos = [repo['name'] for repo in repos]
+    repos = sorted(list(set([repo['name'] for repo in repos])))
 
-    return set(repos)
+    return repos
 
 
 def is_library_used(filepath: str, lib: str):
@@ -71,8 +72,10 @@ def repo_lib_clients(repo_path: str, lib: str):
     # rename or remove scratchpad
     if has_lib_usage:
         os.rename(temp_dir, os.path.join(data_dir, lib, repo_name))
+        return "mined"
     else:
         shutil.rmtree(temp_dir)
+        return "skipped"
 
 
 def get_library_clients(paths: List[str], lib: str):
@@ -82,16 +85,28 @@ def get_library_clients(paths: List[str], lib: str):
     if not os.path.isdir(f'{clone_loc}'):
         os.makedirs(clone_loc)
 
-    multiprocess.run_tasks_in_parallel(
+    lib_clients_iter = multiprocess.run_tasks_in_parallel_iter(
         _repo_lib_clients_mp,
         tasks=[(path, lib) for path in paths],
         use_progress_bar=True,
         num_workers=MAX_WORKERS)
 
+    count = 0
+    for path, result in tqdm(zip(paths, lib_clients_iter)):
+        if (result.is_success() and isinstance(result.result, str)):
+            print(f"Repo: {path} => [{result.result}]", flush=True)
+            count += 1
+
+    print("==" * 20 + " [CodeScholar::Github Miner Summary] " + "==" * 20)
+    print(f"#Repos: {len(paths)}")
+    print(f"Lib: {lib}")
+    print(f"#Mined-Repos: {count}")
+    print("==" * 60)
+
 
 if __name__ == "__main__":
     github_repo_list = "../../data/github/repositories.json"
-    library = "tensorflow"
+    library = "pandas"
 
     repositories = load_repository_paths(github_repo_list)
     get_library_clients(repositories, library)
