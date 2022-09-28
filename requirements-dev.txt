@@ -3,5 +3,4 @@ numpy
 loguru
 pytest
 GitPython
-shutil
 glob
