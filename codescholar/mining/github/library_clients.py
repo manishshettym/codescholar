@@ -23,7 +23,7 @@ def load_repository_paths(path: str):
 def is_library_used(filepath: str, lib: str):
     keywords = [f'import {lib}', f'from {lib}']
 
-    with open(filepath) as fp:
+    with open(filepath, encoding="utf8", errors='ignore') as fp:
         text = fp.read()
 
         if any(usage in text for usage in keywords):
@@ -91,7 +91,7 @@ def get_library_clients(paths: List[str], lib: str):
 
 if __name__ == "__main__":
     github_repo_list = "../../data/github/repositories.json"
-    repositories = load_repository_paths(github_repo_list)
-
     library = "tensorflow"
+
+    repositories = load_repository_paths(github_repo_list)
     get_library_clients(repositories, library)
