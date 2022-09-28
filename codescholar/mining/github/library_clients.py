@@ -3,6 +3,7 @@ import sys
 import git
 import json
 
+from tqdm import tqdm
 import glob
 import shutil
 from typing import List
@@ -38,7 +39,7 @@ def get_library_clients(paths: List[str], lib: str):
     if not os.path.isdir(f'{clone_loc}'):
         os.makedirs(clone_loc)
 
-    for repo_path in paths[:10]:
+    for repo_path in tqdm(paths):
 
         # create scratchpad directory for copying
         os.makedirs(temp_dir)
