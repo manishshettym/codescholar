@@ -9,7 +9,7 @@ from typing import List
 
 from codescholar.utils import multiprocess
 
-MAX_WORKERS = 5
+MAX_WORKERS = 12
 
 
 def load_repository_paths(path: str):
@@ -51,7 +51,11 @@ def repo_lib_clients(repo_path: str, lib: str):
     os.makedirs(temp_dir)
 
     # clone repo
-    git.Git(clone_loc).clone(f"https://github.com/{repo_path}")
+    try:
+        git.Git(clone_loc).clone(f"https://github.com/{repo_path}", depth=1)
+    except:
+        shutil.rmtree(repo_loc)
+        return "uncloned"
 
     # find lib usages
     for path in glob.glob(f"{repo_loc}/**", recursive=True):
@@ -89,13 +93,15 @@ def get_library_clients(paths: List[str], lib: str):
         _repo_lib_clients_mp,
         tasks=[(path, lib) for path in paths],
         use_progress_bar=True,
+        use_spawn=True,
         num_workers=MAX_WORKERS)
 
     count = 0
     for path, result in tqdm(zip(paths, lib_clients_iter)):
         if (result.is_success() and isinstance(result.result, str)):
             print(f"Repo: {path} => [{result.result}]", flush=True)
-            count += 1
+            if result.result == "mined":
+                count += 1
 
     print("==" * 20 + " [CodeScholar::Github Miner Summary] " + "==" * 20)
     print(f"#Repos: {len(paths)}")
