@@ -3,7 +3,7 @@ import os
 import unittest
 
 from codescholar.utils import paths
-from codescholar.utils.logging import logger
+from codescholar.utils.logs import logger
 
 
 class LoggingTests(unittest.TestCase):

@@ -2,3 +2,10 @@ pandas
 numpy
 loguru
 pytest
+attrs
+pycodestyle
+fire
+tqdm
+pebble
+black
+astunparse
