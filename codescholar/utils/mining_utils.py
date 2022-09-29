@@ -46,8 +46,9 @@ def save_idioms(code_mine, mined_idioms):
 
 
 def find_common_ancestors(node_matches, anc):
-    """check if any of the matched nodes have same
-    ancestors.
+    """Check if any node in `node_matches` have a common ancestoral
+    path to a given node's ancestors = `anc`. This is used to find
+    valid subgraphs of a program p in a dataset of programs G.
     """
     # TODO: This method is the comparator for subgraph matching. It performs
     # an approx match by traversing of node type hierarchy. This should
@@ -72,7 +73,8 @@ def find_common_ancestors(node_matches, anc):
 
 
 def build_subgraph(node: ast.AST, lookup: dict, anc: List[str] = []):
-    """_summary_
+    """build a valid subgraphs starting from node, in a dataset of
+    programs represented by a lookup table of paths.
 
     Args:
         node (ast.AST): ast node to start with
