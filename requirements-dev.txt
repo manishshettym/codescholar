@@ -3,3 +3,4 @@ numpy
 loguru
 pytest
 GitPython
+pygments
