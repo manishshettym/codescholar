@@ -9,3 +9,5 @@ tqdm
 pebble
 black
 astunparse
+GitPython
+pygments
