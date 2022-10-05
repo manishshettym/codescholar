@@ -118,4 +118,4 @@ def clone_repositories(paths: List[str]):
 if __name__ == "__main__":
     github_repo_list = "python-top-repos.json"
     repositories = load_repository_paths(github_repo_list)
-    clone_repositories(repositories[:10])
+    clone_repositories(repositories[49265:])
