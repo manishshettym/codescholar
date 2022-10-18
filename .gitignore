@@ -116,3 +116,4 @@ scratch/
 
 # log files
 *.log
+runs/
