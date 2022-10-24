@@ -11,6 +11,38 @@ import torch_geometric.utils as pyg_utils
 
 from codescholar.utils.train_utils import get_device
 
+NODE_FEAT = ['ast_type', 'node_degree', 'node_pagerank', 'node_cc']
+NODE_FEAT_DIMS = [1, 1, 1, 1]
+EDGE_FEAT = ['flow_type']
+EDGE_FEAT_DIMS = [1]
+
+
+class Preprocess(nn.Module):
+    def __init__(self, dim_in):
+        super(Preprocess, self).__init__()
+        self.dim_in = dim_in
+
+    @property
+    def dim_out(self):
+        return self.dim_in + sum([aug_dim for aug_dim in NODE_FEAT_DIMS])
+
+    def forward(self, batch):
+        node_feat_list = [batch.node_feature]
+        edge_feat_list = []
+
+        for key in NODE_FEAT:
+            node_feat_list.append(batch[key])
+        
+        for key in EDGE_FEAT:
+            edge_feat_list.append(batch[key])
+        
+        batch.node_feature = torch.cat(node_feat_list,
+                                       dim=-1).type(torch.FloatTensor)
+        batch.edge_feature = torch.cat(edge_feat_list,
+                                       dim=-1).type(torch.FloatTensor)
+
+        return batch
+
 
 class SubgraphEmbedder(nn.Module):
     def __init__(self, input_dim, hidden_dim, args):
@@ -82,7 +114,8 @@ class BasicGNN(nn.Module):
         self.agg_type = args.agg_type
 
         # add a preprocessor
-        self.feat_preprocess = None
+        self.feat_preprocess = Preprocess(input_dim)
+        input_dim = self.feat_preprocess.dim_out
 
         # MODULE: INPUT
         self.pre_mp = nn.Sequential(nn.Linear(input_dim, hidden_dim))
@@ -134,6 +167,15 @@ class BasicGNN(nn.Module):
                     nn.Linear(h, h)
                 ))
         
+        # graph isomorphism net + edge features
+        elif type == "GINE":
+            return lambda i, h: pyg_nn.GINEConv(
+                nn.Sequential(
+                    nn.Linear(i, h),
+                    nn.ReLU(),
+                    nn.Linear(h, h)
+                ), edge_dim=1)
+
         else:
             print("unrecognized model type")
 
@@ -145,7 +187,9 @@ class BasicGNN(nn.Module):
                 data = self.feat_preprocess(data)
                 data.preprocessed = True
 
-        x, edge_index, batch = data.node_feature, data.edge_index, data.batch
+        x = data.node_feature
+        edge_index, edge_attr = data.edge_index, data.edge_feature
+        batch = data.batch
         
         # pre mlp
         x = self.pre_mp(x)
@@ -162,11 +206,11 @@ class BasicGNN(nn.Module):
                 skip_vals = skip_vals.unsqueeze(0).unsqueeze(-1)
                 curr_emb = all_emb * torch.sigmoid(skip_vals)  # select inputs
                 curr_emb = curr_emb.view(x.size(0), -1)
-                x = self.aggregates[i](curr_emb, edge_index)
+                x = self.aggregates[i](curr_emb, edge_index, edge_attr)
             elif self.skip == "all":
-                x = self.aggregates[i](emb, edge_index)
+                x = self.aggregates[i](emb, edge_index, edge_attr)
             else:
-                x = self.aggregates[i](x, edge_index)
+                x = self.aggregates[i](x, edge_index, edge_attr)
             
             x = F.relu(x)
             x = F.dropout(x, p=self.dropout, training=self.training)
@@ -187,8 +231,12 @@ class BasicGNN(nn.Module):
         return F.nll_loss(pred, label)
 
 
-# pytorch geom implementation of GIN + weighted edges
-# adapted from NeuroMatch [#TODO Add reference]
+# GINConv + weighted edges adapted from NeuroMatch 
+# [https://arxiv.org/abs/2007.03092]
+#
+# UPDATE: GINConv does not take into account any edge features.
+# However, GINEConv [https://arxiv.org/abs/1905.12265] does
+#
 class WeightedGINConv(pyg_nn.MessagePassing):
     def __init__(self, nn, eps=0, train_eps=False, **kwargs):
         super(WeightedGINConv, self).__init__(aggr='add', **kwargs)
