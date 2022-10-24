@@ -16,12 +16,12 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - if: ${{ matrix.os }} == 'macos-latest'
+    - if: ${{ matrix.os == 'macos-latest' }} 
       name: Install graphviz (macos)
       run: |
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         brew install graphviz
-    - if: ${{ matrix.os }} == 'ubuntu-latest'
+    - if: ${{ matrix.os == 'ubuntu-latest' }}
       name: Install graphviz (ubuntu)
       run: |
         sudo apt-get install graphviz graphviz-dev
