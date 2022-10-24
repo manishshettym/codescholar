@@ -1,8 +1,10 @@
+from lib2to3.pgen2 import driver
 import os
 import ast
 import os.path as osp
 import random
 import glob
+from tkinter.tix import Tree
 import dill
 
 import torch
@@ -10,10 +12,10 @@ from tqdm import tqdm
 import networkx as nx
 from networkx.algorithms.isomorphism import GraphMatcher
 from python_graphs import program_graph
-from torch_geometric.data import Dataset, Data
+from torch_geometric.data import Dataset
 from typing import Optional, Callable, List
 
-from codescholar.utils.code_utils import program_graph_to_nx
+from codescholar.utils.graph_utils import program_graph_to_nx
 from codescholar.utils.train_utils import sample_neigh, batch_nx_graphs
 
 
@@ -64,7 +66,7 @@ class Corpus:
     ):
         # CONFIGS:
         max_size = 5
-        min_size = 2
+        min_size = 4
         seed = None
         filter_negs = False
         # sample_method = "tree-pair"
@@ -137,7 +139,7 @@ class Corpus:
         pos_q = process_examples(pos_q, pos_q_anchors)
         neg_t = process_examples(neg_t, neg_t_anchors)
         neg_q = process_examples(neg_q, neg_q_anchors)
-        
+                
         return pos_t, pos_q, neg_t, neg_q
 
 
@@ -206,14 +208,10 @@ class ProgramDataset(Dataset):
             
             torch.save(data, osp.join(self.processed_dir, f'data_{idx}.pt'))
             idx += 1
-    
-    # Ref: https://github.com/pyg-team/pytorch_geometric/blob/master/
-    # torch_geometric/io/tu.py
+
     def create_prog_datapoint(self, path):
         prog_graph = program_graph.get_program_graph(path)
-        digraph = program_graph_to_nx(prog_graph)
-        # print(list(digraph.nodes(data=True)))
-        # print(list(digraph.edges(data=True)))
+        digraph = program_graph_to_nx(prog_graph, directed=True)
 
         return digraph
     
