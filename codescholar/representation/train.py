@@ -87,7 +87,7 @@ def train(args, model, corpus, in_queue, out_queue):
             # generate a positive and negative pair
             pos_a, pos_b, neg_a, neg_b = corpus.gen_batch(
                 batch_target, batch_neg_target, batch_neg_query, True)
-
+            
             # get embeddings
             emb_pos_a = model.encoder(pos_a)  # pos target
             emb_pos_b = model.encoder(pos_b)  # pos query
@@ -161,6 +161,8 @@ def train_loop(args):
 
     # build model
     model = build_model(models.SubgraphEmbedder, args)
+    print(model)
+    # exit()
     model.share_memory()
 
     # prepare data source
