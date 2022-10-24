@@ -5,11 +5,11 @@ import torch
 import torch.optim as optim
 import scipy.stats as stats
 
+import networkx as nx
 from deepsnap.batch import Batch
 from deepsnap.graph import Graph as DSGraph
 
-from codescholar.representation.featurizer import FeatureAugment
-
+from codescholar.utils.graph_utils import GraphEdgeLabel, GraphNodeLabel
 
 device_cache = None
 
@@ -98,15 +98,36 @@ def sample_neigh(graphs, size):
 
 
 def batch_nx_graphs(graphs, anchors=None):
-    augmenter = FeatureAugment()
-    
+
+    # create node features
     if anchors is not None:
         for anchor, g in zip(anchors, graphs):
+            pagerank = nx.pagerank(g)
+            clustering_coeff = nx.clustering(g)
+            
             for v in g.nodes:
                 g.nodes[v]["node_feature"] = torch.tensor([float(v == anchor)])
+                node_type_name = g.nodes[v]['ast_type']
 
+                if isinstance(node_type_name, str):
+                    node_type_val = GraphNodeLabel[node_type_name].value
+                    g.nodes[v]["ast_type"] = torch.tensor([node_type_val])
+                
+                g.nodes[v]["node_degree"] = torch.tensor([g.degree(v)])
+                g.nodes[v]["node_pagerank"] = torch.tensor([pagerank[v]])
+                g.nodes[v]["node_cc"] = torch.tensor([clustering_coeff[v]])
+
+    # create edge features
+    for g in graphs:
+        for e in g.edges:
+            edge_type_name = g.edges[e]['flow_type']
+            
+            if isinstance(edge_type_name, str):
+                edge_type_val = GraphEdgeLabel[edge_type_name].value
+                g.edges[e]["flow_type"] = torch.tensor([edge_type_val])
+            
+    # convert to DeepSnap.Batch = List[Data]
     batch = Batch.from_data_list([DSGraph(g) for g in graphs])
-    batch = augmenter.augment(batch)
     batch = batch.to(get_device())
 
     return batch
