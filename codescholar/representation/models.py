@@ -1,8 +1,3 @@
-from turtle import forward
-from unittest import skip
-import numpy as np
-import networkx as nx
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -231,7 +226,7 @@ class BasicGNN(nn.Module):
         return F.nll_loss(pred, label)
 
 
-# GINConv + weighted edges adapted from NeuroMatch 
+# GINConv + weighted edges adapted from NeuroMatch
 # [https://arxiv.org/abs/2007.03092]
 #
 # UPDATE: GINConv does not take into account any edge features.

@@ -1,7 +1,11 @@
 import enum
 import six
+import json
 import pygraphviz
 import networkx as nx
+from networkx.readwrite import json_graph
+
+# from python_graphs import program_graph_graphviz
 
 
 class GraphEdgeLabel(enum.Enum):
@@ -125,7 +129,11 @@ def program_graph_to_nx(program_graph, directed=False):
     Returns:
         A NetworkX graph that can be analyzed by the networkx module.
     """
-    # create a graphviz representation
+    # Debug: render the program graph
+    # program_graph_graphviz.render(program_graph, 
+    #   path="../representation/plots/temp.png")
+
+    # create custom graphviz representation
     graphviz_repr = program_graph_to_graphviz(program_graph)
 
     # translate graphviz to networkx
@@ -160,3 +168,9 @@ def program_graph_to_graphviz(graph):
         g.add_edge(edge.id1, edge.id2, **edge_attrs)
 
     return g
+
+
+def save_as_json(data, path):
+    graph = json_graph.adjacency_data(data)
+    with open(path, 'w') as f:
+        json.dump(graph, f)

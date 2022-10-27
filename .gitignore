@@ -120,3 +120,7 @@ runs/
 
 # random files
 .DS_STORE
+
+# datasets and plots
+plots/
+tmp/
