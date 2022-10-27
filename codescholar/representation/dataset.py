@@ -1,11 +1,8 @@
-from lib2to3.pgen2 import driver
 import os
-import ast
 import os.path as osp
 import random
 import glob
 from tkinter.tix import Tree
-import dill
 
 import torch
 from tqdm import tqdm
@@ -15,7 +12,7 @@ from python_graphs import program_graph
 from torch_geometric.data import Dataset
 from typing import Optional, Callable, List
 
-from codescholar.utils.graph_utils import program_graph_to_nx
+from codescholar.utils.graph_utils import save_as_json, program_graph_to_nx
 from codescholar.utils.train_utils import sample_neigh, batch_nx_graphs
 
 
@@ -152,9 +149,12 @@ class ProgramDataset(Dataset):
         name: str,
         transform: Optional[Callable] = None,
         pre_transform: Optional[Callable] = None,
-        pre_filter: Optional[Callable] = None
+        pre_filter: Optional[Callable] = None,
+        save_json: Optional[bool] = False
     ):
         self.name = name
+        self.save_json = save_json
+        self.json_dir = osp.join(root, 'networkx')
         super().__init__(root, transform, pre_transform, pre_filter)
     
     def download(self):
@@ -205,7 +205,10 @@ class ProgramDataset(Dataset):
 
             if self.pre_transform is not None:
                 data = self.pre_transform(data)
-            
+
+            if self.save_json is True:
+                save_as_json(data, osp.join(self.json_dir, f'data_{idx}.json'))
+
             torch.save(data, osp.join(self.processed_dir, f'data_{idx}.pt'))
             idx += 1
 
