@@ -36,7 +36,7 @@ def init_encoder_configs(parser, arg_str=None):
     enc_args.add_argument('--tag', type=str, help='tag to identify the run')
 
     enc_args.set_defaults(
-        agg_type='GIN',
+        agg_type='GINE',
         dataset='pandas',
         n_layers=7,
         batch_size=64,

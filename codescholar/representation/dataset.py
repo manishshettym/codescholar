@@ -17,8 +17,6 @@ from codescholar.utils.train_utils import sample_neigh, batch_nx_graphs
 
 
 def load_dataset(name):
-    # NOTE: THIS IS AN IN MEMORY IMPLEMENTATION
-    # TODO: Use a large dataset implementation and a generator
     """load a dataset from disk
     """
     train, test = [], []
@@ -192,8 +190,7 @@ class ProgramDataset(Dataset):
         return data
     
     def process(self):
-        """process and store python graphs as a Data object
-        onto the disk
+        """process and store python graphs as a Data object onto the disk
         """
         idx = 0
 

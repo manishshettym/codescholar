@@ -69,7 +69,7 @@ def train(args, model, corpus, in_queue, out_queue):
 
     done = False
     while not done:
-        corpus = get_corpus(args)
+        # corpus = get_corpus(args)
         loaders = corpus.gen_data_loaders(
             args.eval_interval * args.batch_size,
             args.batch_size)
@@ -162,17 +162,16 @@ def train_loop(args):
     # build model
     model = build_model(models.SubgraphEmbedder, args)
     print(model)
-    # exit()
     model.share_memory()
 
     # prepare data source
     corpus = get_corpus(args)
     
-    loaders = corpus.gen_data_loaders(
-        args.eval_interval * args.batch_size,
-        args.batch_size)
-
+    # loaders = corpus.gen_data_loaders(
+    #     args.eval_interval * args.batch_size,
+    #     args.batch_size)
     # validation_pts = make_validation_set(corpus, loaders)
+
     workers = start_workers(model, corpus, in_queue, out_queue, args)
 
     # ====== TRAINING ======
@@ -192,8 +191,8 @@ def train_loop(args):
             logger.add_scalar("Loss(train)", train_loss, batch_n)
             logger.add_scalar("Acc(train)", train_acc, batch_n)
             batch_n += 1
-        
-        # TODO: call validation on validation_pts
+                
+        # TODO: call validation on validation_pts?
 
     for _ in range(args.n_workers):
         in_queue.put(("done", None))
