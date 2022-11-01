@@ -16,6 +16,8 @@ torch
 tensorboard
 matplotlib
 pygraphviz
+networkx
 python_graphs
 deepsnap
 orca
+torch

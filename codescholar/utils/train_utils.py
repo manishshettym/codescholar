@@ -11,22 +11,25 @@ from deepsnap.graph import Graph as DSGraph
 
 from codescholar.utils.graph_utils import GraphEdgeLabel, GraphNodeLabel
 
-device_cache = None
+device_cache = "cpu"
 
 
 def get_device():
     global device_cache
+
     if device_cache is None:
-        device_cache = torch.device("cuda") if torch.cuda.is_available() \
-            else torch.device("cpu")
-        # device_cache = torch.device("cpu")
+        if torch.cuda.is_available():
+            print("GPU is available!!!")
+            device_cache = torch.device("cuda")
+        else:
+            device_cache = torch.device("cpu")
+
     return device_cache
 
 
 def build_model(model_type, args):
     # build model
     model = model_type(1, args.hidden_dim, args)
-
     model.to(get_device())
 
     if args.test and args.model_path:

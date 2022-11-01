@@ -186,6 +186,11 @@ class BasicGNN(nn.Module):
         edge_index, edge_attr = data.edge_index, data.edge_feature
         batch = data.batch
         
+        # MOVE TO DEVICE
+        x = x.to(get_device())
+        edge_index = edge_index.to(get_device())
+        edge_attr = edge_attr.to(get_device())
+        
         # pre mlp
         x = self.pre_mp(x)
         all_emb = x.unsqueeze(1)

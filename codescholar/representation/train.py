@@ -14,6 +14,7 @@ from codescholar.representation import models, config, dataset
 from codescholar.utils.train_utils import (
     build_model, build_optimizer, get_device)
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 def init_logger(args):
     log_keys = ["conv_type", "n_layers", "hidden_dim",
@@ -87,7 +88,7 @@ def train(args, model, corpus, in_queue, out_queue):
             # generate a positive and negative pair
             pos_a, pos_b, neg_a, neg_b = corpus.gen_batch(
                 batch_target, batch_neg_target, batch_neg_query, True)
-            
+
             # get embeddings
             emb_pos_a = model.encoder(pos_a)  # pos target
             emb_pos_b = model.encoder(pos_b)  # pos query
@@ -163,6 +164,8 @@ def train_loop(args):
     model = build_model(models.SubgraphEmbedder, args)
     print(model)
     model.share_memory()
+    print("Moving model to GPU:", get_device())
+    model = model.to(get_device())
 
     # prepare data source
     corpus = get_corpus(args)
@@ -210,4 +213,5 @@ def main():
 
 
 if __name__ == "__main__":
+    torch.multiprocessing.set_start_method('spawn')
     main()

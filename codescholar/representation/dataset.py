@@ -13,7 +13,7 @@ from torch_geometric.data import Dataset
 from typing import Optional, Callable, List
 
 from codescholar.utils.graph_utils import save_as_json, program_graph_to_nx
-from codescholar.utils.train_utils import sample_neigh, batch_nx_graphs
+from codescholar.utils.train_utils import sample_neigh, batch_nx_graphs, get_device
 
 
 def load_dataset(name):
@@ -130,10 +130,10 @@ class Corpus:
 
             return examples
 
-        pos_t = process_examples(pos_t, pos_t_anchors)
-        pos_q = process_examples(pos_q, pos_q_anchors)
-        neg_t = process_examples(neg_t, neg_t_anchors)
-        neg_q = process_examples(neg_q, neg_q_anchors)
+        pos_t = process_examples(pos_t, pos_t_anchors).to(get_device())
+        pos_q = process_examples(pos_q, pos_q_anchors).to(get_device())
+        neg_t = process_examples(neg_t, neg_t_anchors).to(get_device())
+        neg_q = process_examples(neg_q, neg_q_anchors).to(get_device())
                 
         return pos_t, pos_q, neg_t, neg_q
 
