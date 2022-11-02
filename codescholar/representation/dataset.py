@@ -25,7 +25,7 @@ def load_dataset(name):
     random.shuffle(dataset)
 
     train_len = int(0.8 * len(dataset))
-    for i, graph in enumerate(dataset):
+    for i, graph in tqdm(enumerate(dataset), total=len(dataset), desc="LoadData"):
         if i < train_len:
             train.append(graph)
         else:

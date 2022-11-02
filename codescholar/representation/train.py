@@ -16,7 +16,8 @@ from codescholar.representation import models, config, dataset
 from codescholar.utils.train_utils import (
     build_model, build_optimizer, get_device)
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 
 def init_logger(args):
