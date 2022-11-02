@@ -40,7 +40,7 @@ def get_corpus(args):
 def make_validation_set(args, corpus, loaders):
     test_pts = []
 
-    for _, _, _ in tqdm(zip(*loaders), total=len(loaders[0])):
+    for _, _, _ in tqdm(zip(*loaders), total=len(loaders[0]), desc="TestData"):
         pos_q, pos_t, neg_q, neg_t = corpus.gen_batch(
             args.batch_size, train=False)
         
@@ -137,7 +137,7 @@ def train(args, model, corpus, in_queue, out_queue):
 
 def start_workers(model, corpus, in_queue, out_queue, args):
     workers = []
-    for i in range(args.n_workers):
+    for _ in tqdm(range(args.n_workers), desc="Workers"):
         worker = mp.Process(
             target=train,
             args=(args, model, corpus, in_queue, out_queue)
@@ -155,7 +155,6 @@ def train_loop(args):
         os.makedirs("plots/")
     
     print("Using dataset {}".format(args.dataset))
-    print("Starting {} workers".format(args.n_workers))
     in_queue, out_queue = mp.Queue(), mp.Queue()
 
     # init logger

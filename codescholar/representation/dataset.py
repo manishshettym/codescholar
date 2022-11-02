@@ -2,36 +2,30 @@ import os
 import os.path as osp
 import random
 import glob
-from tkinter.tix import Tree
 
 import torch
 from tqdm import tqdm
-import networkx as nx
 from networkx.algorithms.isomorphism import GraphMatcher
 from python_graphs import program_graph
 from torch_geometric.data import Dataset
 from typing import Optional, Callable, List
 
-from codescholar.utils.graph_utils import save_as_json, program_graph_to_nx
-from codescholar.utils.train_utils import (
-    sample_neigh, batch_nx_graphs, get_device)
+from codescholar.utils.graph_utils import (
+    sample_neigh, save_as_json, program_graph_to_nx)
+from codescholar.utils.train_utils import batch_nx_graphs, get_device
 
 
 def load_dataset(name):
     """load a dataset from disk
     """
     train, test = [], []
-
-    if name == "test":
-        dataset = [g for g in nx.graph_atlas_g()[1:] if nx.is_connected(g)]
-    else:
-        dataset = ProgramDataset(root=f"./tmp/{name}", name=name)
+    dataset = ProgramDataset(root=f"./tmp/{name}", name=name)
     
     dataset = list(dataset)
     random.shuffle(dataset)
 
     train_len = int(0.8 * len(dataset))
-    for i, graph in tqdm(enumerate(dataset), total=len(dataset)):
+    for i, graph in enumerate(dataset):
         if i < train_len:
             train.append(graph)
         else:
@@ -58,8 +52,8 @@ class Corpus:
     
     def gen_batch(self, batch_size, train):
         # CONFIGS:
-        max_size = 5
-        min_size = 4
+        max_size = 29
+        min_size = 2
         seed = None
         filter_negs = False
         # sample_method = "tree-pair"
@@ -191,7 +185,7 @@ class ProgramDataset(Dataset):
         """
         idx = 0
 
-        for raw_path in self.raw_paths:
+        for raw_path in tqdm(self.raw_paths, desc="Preprocess"):
             data = self.create_prog_datapoint(raw_path)
 
             if self.pre_filter is not None and self.prefilter(data):

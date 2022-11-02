@@ -1,6 +1,11 @@
 import enum
 import six
 import json
+import random
+
+import numpy as np
+import scipy.stats as stats
+
 import pygraphviz
 import networkx as nx
 from networkx.readwrite import json_graph
@@ -130,7 +135,7 @@ def program_graph_to_nx(program_graph, directed=False):
         A NetworkX graph that can be analyzed by the networkx module.
     """
     # Debug: render the program graph
-    # program_graph_graphviz.render(program_graph, 
+    # program_graph_graphviz.render(program_graph,
     #   path="../representation/plots/temp.png")
 
     # create custom graphviz representation
@@ -168,6 +173,35 @@ def program_graph_to_graphviz(graph):
         g.add_edge(edge.id1, edge.id2, **edge_attrs)
 
     return g
+
+
+def sample_neigh(graphs, size):
+    """random bfs walk to find neighborhood graphs of a set size
+    """
+    ps = np.array([len(g) for g in graphs], dtype=np.float)
+    ps /= np.sum(ps)
+    dist = stats.rv_discrete(values=(np.arange(len(graphs)), ps))
+
+    while True:
+        idx = dist.rvs()
+        # graph = random.choice(graphs)
+        graph = graphs[idx]
+        start_node = random.choice(list(graph.nodes))
+        neigh = [start_node]
+        frontier = list(set(graph.neighbors(start_node)) - set(neigh))
+        visited = set([start_node])
+
+        while len(neigh) < size and frontier:
+            new_node = random.choice(list(frontier))
+            # new_node = max(sorted(frontier))
+            assert new_node not in neigh
+            neigh.append(new_node)
+            visited.add(new_node)
+            frontier += list(graph.neighbors(new_node))
+            frontier = [x for x in frontier if x not in visited]
+
+        if len(neigh) == size:
+            return graph, neigh
 
 
 def save_as_json(data, path):

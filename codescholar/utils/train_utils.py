@@ -1,9 +1,5 @@
-import random
-
-import numpy as np
 import torch
 import torch.optim as optim
-import scipy.stats as stats
 
 import networkx as nx
 from deepsnap.batch import Batch
@@ -19,7 +15,7 @@ def get_device():
 
     if device_cache is None:
         if torch.cuda.is_available():
-            print("GPU is available!!!")
+            # print("GPU is available!!!")
             device_cache = torch.device("cuda")
         else:
             device_cache = torch.device("cpu")
@@ -69,35 +65,6 @@ def build_optimizer(args, params):
             optimizer, T_max=args.opt_restart)
 
     return scheduler, optimizer
-
-
-def sample_neigh(graphs, size):
-    """random bfs walk to find neighborhood graphs of a set size
-    """
-    ps = np.array([len(g) for g in graphs], dtype=np.float)
-    ps /= np.sum(ps)
-    dist = stats.rv_discrete(values=(np.arange(len(graphs)), ps))
-
-    while True:
-        idx = dist.rvs()
-        # graph = random.choice(graphs)
-        graph = graphs[idx]
-        start_node = random.choice(list(graph.nodes))
-        neigh = [start_node]
-        frontier = list(set(graph.neighbors(start_node)) - set(neigh))
-        visited = set([start_node])
-
-        while len(neigh) < size and frontier:
-            new_node = random.choice(list(frontier))
-            # new_node = max(sorted(frontier))
-            assert new_node not in neigh
-            neigh.append(new_node)
-            visited.add(new_node)
-            frontier += list(graph.neighbors(new_node))
-            frontier = [x for x in frontier if x not in visited]
-
-        if len(neigh) == size:
-            return graph, neigh
 
 
 def batch_nx_graphs(graphs, anchors=None):
