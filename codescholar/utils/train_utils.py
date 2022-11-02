@@ -7,7 +7,7 @@ from deepsnap.graph import Graph as DSGraph
 
 from codescholar.utils.graph_utils import GraphEdgeLabel, GraphNodeLabel
 
-device_cache = "cpu"
+device_cache = None
 
 
 def get_device():
