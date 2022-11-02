@@ -1,6 +1,7 @@
 import os
 import argparse
 
+from tqdm import tqdm
 import networkx as nx
 import matplotlib.pyplot as plt
 
@@ -10,11 +11,13 @@ import torch.optim as optim
 import torch.multiprocessing as mp
 from torch.utils.tensorboard import SummaryWriter
 
+from codescholar.representation.test import validation
 from codescholar.representation import models, config, dataset
 from codescholar.utils.train_utils import (
     build_model, build_optimizer, get_device)
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+
 
 def init_logger(args):
     log_keys = ["conv_type", "n_layers", "hidden_dim",
@@ -34,20 +37,18 @@ def get_corpus(args):
     return corpus
 
 
-def make_validation_set(corpus, loaders):
+def make_validation_set(args, corpus, loaders):
     test_pts = []
 
-    for batch_target, batch_neg_target, batch_neg_query in zip(*loaders):
+    for _, _, _ in tqdm(zip(*loaders), total=len(loaders[0])):
         pos_q, pos_t, neg_q, neg_t = corpus.gen_batch(
-            batch_target,
-            batch_neg_target,
-            batch_neg_query, False)
+            args.batch_size, train=False)
         
-        if pos_q:
-            pos_q = pos_q.to(torch.device("cpu"))
-            pos_t = pos_t.to(torch.device("cpu"))
-        neg_q = neg_q.to(torch.device("cpu"))
-        neg_t = neg_t.to(torch.device("cpu"))
+        # if pos_q:
+        #     pos_q = pos_q.to(torch.device("cpu"))
+        #     pos_t = pos_t.to(torch.device("cpu"))
+        # neg_q = neg_q.to(torch.device("cpu"))
+        # neg_t = neg_t.to(torch.device("cpu"))
         
         test_pts.append((pos_q, pos_t, neg_q, neg_t))
     
@@ -75,7 +76,7 @@ def train(args, model, corpus, in_queue, out_queue):
             args.eval_interval * args.batch_size,
             args.batch_size)
         
-        for batch_target, batch_neg_target, batch_neg_query in zip(*loaders):
+        for _, _, _ in zip(*loaders):
             msg, _ = in_queue.get()
             if msg == "done":
                 done = True
@@ -87,7 +88,7 @@ def train(args, model, corpus, in_queue, out_queue):
 
             # generate a positive and negative pair
             pos_a, pos_b, neg_a, neg_b = corpus.gen_batch(
-                batch_target, batch_neg_target, batch_neg_query, True)
+                args.batch_size, train=True)
 
             # get embeddings
             emb_pos_a = model.encoder(pos_a)  # pos target
@@ -164,18 +165,22 @@ def train_loop(args):
     model = build_model(models.SubgraphEmbedder, args)
     print(model)
     model.share_memory()
-    print("Moving model to GPU:", get_device())
+
+    print("Moving model to device:", get_device())
     model = model.to(get_device())
 
-    # prepare data source
+    # get corpus for validation set
     corpus = get_corpus(args)
-    
-    # loaders = corpus.gen_data_loaders(
-    #     args.eval_interval * args.batch_size,
-    #     args.batch_size)
-    # validation_pts = make_validation_set(corpus, loaders)
+    loaders = corpus.gen_data_loaders(
+        args.eval_interval * args.batch_size,
+        args.batch_size)
+    validation_pts = make_validation_set(args, corpus, loaders)
 
     workers = start_workers(model, corpus, in_queue, out_queue, args)
+
+    # ====== TESTING ======
+    if args.test:
+        validation(args, model, validation_pts, logger, 0, 0)
 
     # ====== TRAINING ======
     batch_n = 0
@@ -185,6 +190,7 @@ def train_loop(args):
         for _ in range(args.eval_interval):
             in_queue.put(("step", None))
         
+        # loop over #batches in an epoch
         for _ in range(args.eval_interval):
             _, result = out_queue.get()
             train_loss, train_acc = result
@@ -194,8 +200,9 @@ def train_loop(args):
             logger.add_scalar("Loss(train)", train_loss, batch_n)
             logger.add_scalar("Acc(train)", train_acc, batch_n)
             batch_n += 1
-                
-        # TODO: call validation on validation_pts?
+
+        # validation after an epoch
+        validation(args, model, validation_pts, logger, batch_n, epoch)
 
     for _ in range(args.n_workers):
         in_queue.put(("done", None))
@@ -203,11 +210,14 @@ def train_loop(args):
         worker.join()
 
 
-def main():
+def main(testing=False):
     parser = argparse.ArgumentParser()
     config.init_optimizer_configs(parser)
     config.init_encoder_configs(parser)
     args = parser.parse_args()
+
+    if testing:
+        args.test = True
 
     train_loop(args)
 

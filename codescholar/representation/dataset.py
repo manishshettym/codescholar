@@ -55,10 +55,7 @@ class Corpus:
         loaders = [[batch_size] * (size // batch_size) for i in range(3)]
         return loaders
     
-    def gen_batch(
-        self, batch_target, batch_neg_target,
-        batch_neg_query, train
-    ):
+    def gen_batch(self, batch_size, train):
         # CONFIGS:
         max_size = 5
         min_size = 4
@@ -66,8 +63,7 @@ class Corpus:
         filter_negs = False
         # sample_method = "tree-pair"
 
-        # set datapoints
-        batch_size = batch_target  # BUG??
+        # set train/test dataset
         train_set, test_set = self.dataset
         graphs = train_set if train else test_set
 
