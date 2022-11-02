@@ -13,8 +13,8 @@ from torch_geometric.data import Dataset
 from typing import Optional, Callable, List
 
 from codescholar.utils.graph_utils import save_as_json, program_graph_to_nx
-from codescholar.utils.train_utils import (sample_neigh, 
-    batch_nx_graphs, get_device)
+from codescholar.utils.train_utils import (
+    sample_neigh, batch_nx_graphs, get_device)
 
 
 def load_dataset(name):
