@@ -169,7 +169,7 @@ def train_loop(args):
 
     # create validation points
     loader = corpus.gen_data_loader(args.batch_size, train=False)
-    validation_pts = make_validation_set(args, corpus, loader)
+    validation_pts = make_validation_set(loader)
 
     workers = start_workers(model, corpus, in_queue, out_queue, args)
 
