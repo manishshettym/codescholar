@@ -1,9 +1,6 @@
 import os
 import argparse
-
 from tqdm import tqdm
-import networkx as nx
-import matplotlib.pyplot as plt
 
 import torch
 import torch.nn as nn
@@ -158,51 +155,54 @@ def train_loop(args):
 
     # build model
     model = build_model(models.SubgraphEmbedder, args)
-    print(model)
+    # print(model)
     model.share_memory()
 
     print("Moving model to device:", get_device())
     model = model.to(get_device())
 
     # create a corpus for train and test
-    corpus = dataset.Corpus(args.dataset, args.n_train, args.n_test)
+    corpus = dataset.Corpus(
+        args.dataset, args.n_train, args.n_test,
+        train=(not args.test))
 
     # create validation points
     loader = corpus.gen_data_loader(args.batch_size, train=False)
     validation_pts = make_validation_set(loader)
-
-    workers = start_workers(model, corpus, in_queue, out_queue, args)
 
     # ====== TESTING ======
     if args.test:
         validation(args, model, validation_pts, logger, 0, 0)
 
     # ====== TRAINING ======
-    batch_n = 0
-    for epoch in range(args.n_batches // args.eval_interval):
-        print(f"Epoch #{epoch}")
+    else:
+        workers = start_workers(model, corpus, in_queue, out_queue, args)
 
-        for _ in range(args.eval_interval):
-            in_queue.put(("step", None))
-        
-        # loop over #batches in an epoch
-        for _ in range(args.eval_interval):
-            _, result = out_queue.get()
-            train_loss, train_acc = result
-            print(f"Batch {batch_n}. Loss: {train_loss:.4f}. \
-                Train acc: {train_acc:.4f}\n")
+        batch_n = 0
+        for epoch in range(args.n_batches // args.eval_interval):
+            print(f"Epoch #{epoch}")
+
+            for _ in range(args.eval_interval):
+                in_queue.put(("step", None))
             
-            logger.add_scalar("Loss(train)", train_loss, batch_n)
-            logger.add_scalar("Acc(train)", train_acc, batch_n)
-            batch_n += 1
+            # loop over #batches in an epoch
+            for _ in range(args.eval_interval):
+                _, result = out_queue.get()
+                train_loss, train_acc = result
+                print(f"Batch {batch_n}. Loss: {train_loss:.4f}. \
+                    Train acc: {train_acc:.4f}\n")
+                
+                logger.add_scalar("Loss(train)", train_loss, batch_n)
+                logger.add_scalar("Acc(train)", train_acc, batch_n)
+                batch_n += 1
 
-        # validation after an epoch
-        validation(args, model, validation_pts, logger, batch_n, epoch)
-
-    for _ in range(args.n_workers):
-        in_queue.put(("done", None))
-    for worker in workers:
-        worker.join()
+            # validation after an epoch
+            validation(args, model, validation_pts, logger, batch_n, epoch)
+    
+        for _ in range(args.n_workers):
+            in_queue.put(("done", None))
+        for worker in workers:
+            worker.join()
 
 
 def main(testing=False):

@@ -75,16 +75,16 @@ def validation(args, model, test_pts, logger, batch_n, epoch):
     raw_pred = raw_pred.detach().cpu().numpy()
     pred = pred.detach().cpu().numpy()
 
-    auroc = roc_auc_score(labels, raw_pred)
-    avg_prec = average_precision_score(labels, raw_pred)
+    auroc = roc_auc_score(labels, pred)
+    avg_prec = average_precision_score(labels, pred)
     tn, fp, fn, tp = confusion_matrix(labels, pred).ravel()
 
     print("\n{}".format(str(datetime.now())))
     print(
-        "Validation. Epoch {}. Acc: {:.4f}. "
+        "Validation. Epoch {}. Count: {}. Acc: {:.4f}. "
         "P: {:.4f}. R: {:.4f}. AUROC: {:.4f}. AP: {:.4f}.\n     "
         "TN: {}. FP: {}. FN: {}. TP: {}".format(
-            epoch, acc, prec, rec, auroc, avg_prec,
+            epoch, len(pred), acc, prec, rec, auroc, avg_prec,
             tn, fp, fn, tp))
     
     if not args.test:
