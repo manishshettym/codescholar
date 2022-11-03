@@ -5,8 +5,6 @@ def init_encoder_configs(parser, arg_str=None):
 
     enc_args.add_argument('--agg_type', type=str,
                           help='type of aggregation/convolution')
-    enc_args.add_argument('--n_samples', type=int,
-                          help='Number of samples to generate for the Dataset')
     enc_args.add_argument('--batch_size', type=int,
                           help='Training batch size')
     enc_args.add_argument('--n_layers', type=int,
@@ -39,14 +37,13 @@ def init_encoder_configs(parser, arg_str=None):
 
     enc_args.set_defaults(
         agg_type='GINE',
-        n_samples=100,
         dataset='pandas',
         n_layers=7,
         batch_size=64,
         hidden_dim=64,
         skip="learnable",
         dropout=0.0,
-        n_batches=3000,  # 1000000,
+        n_batches=100,  # 1000000,
         opt='adam',
         opt_scheduler='none',
         opt_restart=100,
@@ -54,7 +51,7 @@ def init_encoder_configs(parser, arg_str=None):
         lr=1e-4,
         margin=0.1,
         test_set='',
-        eval_interval=10,
+        eval_interval=1000,
         n_workers=1,
         model_path="ckpt/model.pt",
         tag='',

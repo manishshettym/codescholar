@@ -61,7 +61,7 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str):
     """
     example_id = 0
     code = None
-    with open(path, 'r') as fp:
+    with open(path, 'r', encoding='utf-8') as fp:
         source = fp.read()
         code = ast.parse(source, mode='exec')
 

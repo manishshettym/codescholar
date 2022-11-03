@@ -165,7 +165,7 @@ def train_loop(args):
     model = model.to(get_device())
 
     # create a corpus for train and test
-    corpus = corpus = dataset.Corpus(args.dataset, args.n_samples)
+    corpus = dataset.Corpus(args.dataset, args.n_train, args.n_test)
 
     # create validation points
     loader = corpus.gen_data_loader(args.batch_size, train=False)
@@ -213,6 +213,9 @@ def main(testing=False):
 
     if testing:
         args.test = True
+    
+    args.n_train = args.n_batches * args.batch_size
+    args.n_test = 0.2 * args.n_train
 
     train_loop(args)
 
