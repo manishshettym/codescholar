@@ -67,7 +67,7 @@ class ProgramDataset(Dataset):
         pre_transform: Optional[Callable] = None,
         pre_filter: Optional[Callable] = None,
         save_json: Optional[bool] = False,
-        min_size=2, max_size=30
+        min_size=2, max_size=7
     ):
         self.name = name
         self.graph_dir = osp.join(root, 'graphs')
@@ -155,7 +155,7 @@ class ProgramDataset(Dataset):
         5. repeat for negative e.g. but with different random graph
         for the query"""
 
-        FILTER_NEGS = True
+        FILTER_NEGS = False
         
         idx = 0
         pbar = tqdm(total=self.n_samples + 1)
@@ -183,6 +183,7 @@ class ProgramDataset(Dataset):
                 neg_t, neg_q = graph_t.subgraph(t), graph_q.subgraph(q)
 
                 if FILTER_NEGS:
+                    # NOTE: VERY SLOW
                     matcher = GraphMatcher(neg_t, neg_q)
                     if matcher.subgraph_is_isomorphic():
                         continue
