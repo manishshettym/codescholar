@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.multiprocessing as mp
 from torch.utils.tensorboard import SummaryWriter
+from deepsnap.batch import Batch
 
 from codescholar.representation.test import validation
 from codescholar.representation import models, config, dataset
@@ -29,21 +30,15 @@ def init_logger(args):
     return SummaryWriter(comment=log_str)
 
 
-def get_corpus(args):
-    corpus = dataset.Corpus(
-        args.dataset,
-        node_anchored=args.node_anchored
-    )
-
-    return corpus
-
-
-def make_validation_set(args, corpus, loaders):
+def make_validation_set(args, corpus, dataloader):
     test_pts = []
 
-    for _, _, _ in tqdm(zip(*loaders), total=len(loaders[0]), desc="TestData"):
-        pos_q, pos_t, neg_q, neg_t = corpus.gen_batch(
-            args.batch_size, train=False)
+    for batch in tqdm(dataloader, total=len(dataloader), desc="TestData"):
+        pos_q, pos_t, neg_q, neg_t = zip(*batch)
+        pos_q = Batch.from_data_list(pos_q)
+        pos_t = Batch.from_data_list(pos_t)
+        neg_q = Batch.from_data_list(neg_q)
+        neg_t = Batch.from_data_list(neg_t)
         
         # if pos_q:
         #     pos_q = pos_q.to(torch.device("cpu"))
@@ -72,24 +67,24 @@ def train(args, model, corpus, in_queue, out_queue):
 
     done = False
     while not done:
-        # corpus = get_corpus(args)
-        loaders = corpus.gen_data_loaders(
-            args.eval_interval * args.batch_size,
-            args.batch_size)
-        
-        for _, _, _ in zip(*loaders):
+        dataloader = corpus.gen_data_loader(args.batch_size, train=True)
+
+        for batch in dataloader:
             msg, _ = in_queue.get()
             if msg == "done":
                 done = True
                 break
 
-            # train
             model.train()
             model.zero_grad()
 
-            # generate a positive and negative pair
-            pos_a, pos_b, neg_a, neg_b = corpus.gen_batch(
-                args.batch_size, train=True)
+            pos_a, pos_b, neg_a, neg_b = zip(*batch)
+
+            # convert to DeepSnap Batch
+            pos_a = Batch.from_data_list(pos_a).to(get_device())
+            pos_b = Batch.from_data_list(pos_b).to(get_device())
+            neg_a = Batch.from_data_list(neg_a).to(get_device())
+            neg_b = Batch.from_data_list(neg_b).to(get_device())
 
             # get embeddings
             emb_pos_a = model.encoder(pos_a)  # pos target
@@ -169,12 +164,12 @@ def train_loop(args):
     print("Moving model to device:", get_device())
     model = model.to(get_device())
 
-    # get corpus for validation set
-    corpus = get_corpus(args)
-    loaders = corpus.gen_data_loaders(
-        args.eval_interval * args.batch_size,
-        args.batch_size)
-    validation_pts = make_validation_set(args, corpus, loaders)
+    # create a corpus for train and test
+    corpus = corpus = dataset.Corpus(args.dataset, args.n_samples)
+
+    # create validation points
+    loader = corpus.gen_data_loader(args.batch_size, train=False)
+    validation_pts = make_validation_set(args, corpus, loader)
 
     workers = start_workers(model, corpus, in_queue, out_queue, args)
 
