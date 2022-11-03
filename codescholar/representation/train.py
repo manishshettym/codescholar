@@ -214,10 +214,10 @@ def main(testing=False):
     if testing:
         args.test = True
     
-    # args.n_train = args.n_batches * args.batch_size
-    # args.n_test = int(0.2 * args.n_train)
-    args.n_train = 32000
-    args.n_test = 6400
+    args.n_train = args.n_batches * args.batch_size
+    args.n_test = int(0.2 * args.n_train)
+    # args.n_train = 32000
+    # args.n_test = 6400
 
     train_loop(args)
 
