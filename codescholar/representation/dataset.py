@@ -154,8 +154,6 @@ class ProgramDataset(Dataset):
         4. choose a random but anchored query = positive e.g.
         5. repeat for negative e.g. but with different random graph
         for the query"""
-
-        FILTER_NEGS = False
         
         idx = 0
         pbar = tqdm(total=self.n_samples + 1)
@@ -170,25 +168,15 @@ class ProgramDataset(Dataset):
             pos_q_anchor = anchor
             pos_t, pos_q = graph.subgraph(t), graph.subgraph(q)
 
-            found_neg_example = False
-            while not found_neg_example:
-                size = random.randint(self.min_size + 1, self.max_size)
-                graph_t, t = self.sample_neigh(program_size, count, size)
-                graph_q, q = self.sample_neigh(
-                    program_size, count,
-                    random.randint(self.min_size, size - 1))
-                
-                neg_t_anchor = list(graph_t.nodes)[0]
-                neg_q_anchor = list(graph_q.nodes)[0]
-                neg_t, neg_q = graph_t.subgraph(t), graph_q.subgraph(q)
-
-                if FILTER_NEGS:
-                    # NOTE: VERY SLOW
-                    matcher = GraphMatcher(neg_t, neg_q)
-                    if matcher.subgraph_is_isomorphic():
-                        continue
-                    else:
-                        found_neg_example = True
+            size = random.randint(self.min_size + 1, self.max_size)
+            graph_t, t = self.sample_neigh(program_size, count, size)
+            graph_q, q = self.sample_neigh(
+                program_size, count,
+                random.randint(self.min_size, size - 1))
+            
+            neg_t_anchor = list(graph_t.nodes)[0]
+            neg_q_anchor = list(graph_q.nodes)[0]
+            neg_t, neg_q = graph_t.subgraph(t), graph_q.subgraph(q)
 
             # translate to DeepSnap Graph
             pos_t = featurize_graph(pos_t, pos_t_anchor)
