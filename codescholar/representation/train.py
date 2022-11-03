@@ -30,10 +30,10 @@ def init_logger(args):
     return SummaryWriter(comment=log_str)
 
 
-def make_validation_set(args, corpus, dataloader):
+def make_validation_set(dataloader):
     test_pts = []
 
-    for batch in tqdm(dataloader, total=len(dataloader), desc="TestData"):
+    for batch in tqdm(dataloader, total=len(dataloader), desc="TestBatches"):
         pos_q, pos_t, neg_q, neg_t = zip(*batch)
         pos_q = Batch.from_data_list(pos_q)
         pos_t = Batch.from_data_list(pos_t)
@@ -63,7 +63,7 @@ def train(args, model, corpus, in_queue, out_queue):
         out_queue: output queue to an intersection computation worker
     """
     scheduler, opt = build_optimizer(args, model.parameters())
-    opt = optim.Adam(model.classifier.parameters(), lr=args.lr)
+    clf_opt = optim.Adam(model.classifier.parameters(), lr=args.lr)
 
     done = False
     while not done:
@@ -120,7 +120,7 @@ def train(args, model, corpus, in_queue, out_queue):
             criterion = nn.NLLLoss()
             clf_loss = criterion(pred, labels)
             clf_loss.backward()
-            opt.step()
+            clf_opt.step()
             
             # metrics
             pred = pred.argmax(dim=-1)
@@ -214,8 +214,8 @@ def main(testing=False):
     if testing:
         args.test = True
     
-    #args.n_train = args.n_batches * args.batch_size
-    #args.n_test = int(0.2 * args.n_train)
+    # args.n_train = args.n_batches * args.batch_size
+    # args.n_test = int(0.2 * args.n_train)
     args.n_train = 32000
     args.n_test = 6400
 

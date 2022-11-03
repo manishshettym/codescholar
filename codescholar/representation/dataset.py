@@ -152,9 +152,15 @@ class ProgramDataset(Dataset):
         2. choose a random target graph
         3. perform random bfs traversal in neighborhood = size
         4. choose a random but anchored query = positive e.g.
-        5. repeat for negative e.g. with different random graph"""
+        5. repeat for negative e.g. but with different random graph
+        for the query"""
+
+        FILTER_NEGS = True
         
-        for idx in tqdm(range(self.n_samples), desc="Sampling"):
+        idx = 0
+        pbar = tqdm(total=self.n_samples + 1)
+
+        while idx < self.n_samples:
             size = random.randint(self.min_size + 1, self.max_size)
             graph, t = self.sample_neigh(program_size, count, size)
             q = t[:random.randint(self.min_size, len(t) - 1)]
@@ -162,23 +168,26 @@ class ProgramDataset(Dataset):
             anchor = list(graph.nodes)[0]
             pos_t_anchor = anchor
             pos_q_anchor = anchor
+            pos_t, pos_q = graph.subgraph(t), graph.subgraph(q)
 
-            neigh_t, neigh_q = graph.subgraph(t), graph.subgraph(q)
-            pos_t = neigh_t
-            pos_q = neigh_q
+            found_neg_example = False
+            while not found_neg_example:
+                size = random.randint(self.min_size + 1, self.max_size)
+                graph_t, t = self.sample_neigh(program_size, count, size)
+                graph_q, q = self.sample_neigh(
+                    program_size, count,
+                    random.randint(self.min_size, size - 1))
+                
+                neg_t_anchor = list(graph_t.nodes)[0]
+                neg_q_anchor = list(graph_q.nodes)[0]
+                neg_t, neg_q = graph_t.subgraph(t), graph_q.subgraph(q)
 
-            size = random.randint(self.min_size + 1, self.max_size)
-            graph_t, t = self.sample_neigh(program_size, count, size)
-            graph_q, q = self.sample_neigh(
-                program_size, count,
-                random.randint(self.min_size, size - 1))
-            
-            neg_t_anchor = list(graph_t.nodes)[0]
-            neg_q_anchor = list(graph_q.nodes)[0]
-
-            neigh_t, neigh_q = graph_t.subgraph(t), graph_q.subgraph(q)
-            neg_t = neigh_t
-            neg_q = neigh_q
+                if FILTER_NEGS:
+                    matcher = GraphMatcher(neg_t, neg_q)
+                    if matcher.subgraph_is_isomorphic():
+                        continue
+                    else:
+                        found_neg_example = True
 
             # translate to DeepSnap Graph
             pos_t = featurize_graph(pos_t, pos_t_anchor)
@@ -187,8 +196,9 @@ class ProgramDataset(Dataset):
             neg_q = featurize_graph(neg_q, neg_q_anchor)
             
             data = [pos_t, pos_q, neg_t, neg_q]
-
             torch.save(data, osp.join(self.processed_dir, f'data_{idx}.pt'))
+            idx += 1
+            pbar.update(1)
 
     def sample_neigh(self, ps, count, size):
         """random bfs walk to find neighborhood graphs of a set size
