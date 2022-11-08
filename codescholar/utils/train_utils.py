@@ -76,7 +76,11 @@ def featurize_graph(g, anchor=None):
             node_type_name = g.nodes[v]['ast_type']
 
             if isinstance(node_type_name, str):
-                node_type_val = GraphNodeLabel[node_type_name].value
+                try:
+                    node_type_val = GraphNodeLabel[node_type_name].value
+                except KeyError:
+                    node_type_val = GraphNodeLabel['Other'].value
+
                 g.nodes[v]["ast_type"] = torch.tensor([node_type_val])
             
             g.nodes[v]["node_degree"] = torch.tensor([g.degree(v)])
