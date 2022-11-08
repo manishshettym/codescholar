@@ -141,7 +141,7 @@ class CodeSpan(ast.NodeTransformer):
             span_start = self._get_char_index(lineno, col_offset)
             span_end = self._get_char_index(end_lineno, end_col_offset)
             node.span = self.source[span_start : span_end].strip()
-        except AttributeError:
+        except:
             node.span = ""
         
         return node
