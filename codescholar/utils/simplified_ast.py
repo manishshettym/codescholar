@@ -16,7 +16,7 @@ def get_simplified_ast(path, dfg=True, cfg=True):
 
     program = ast.parse(source)
     program_node = program_utils.program_to_ast(program)
-    program_node = CodeSpan(program).visit(ast.parse(program))
+    program_node = CodeSpan(source).visit(program)
 
     program_graph = ProgramGraph()
     control_flow_graph = control_flow.get_control_flow_graph(program_node)
