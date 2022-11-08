@@ -2,6 +2,7 @@ import os
 import os.path as osp
 import random
 import glob
+import gast as ast
 
 import torch
 import numpy as np
@@ -135,6 +136,9 @@ class ProgramDataset(Dataset):
         for raw_path in tqdm(self.raw_paths, desc="Preprocess"):
             data = self.create_prog_datapoint(raw_path)
 
+            if data is None:
+                continue
+
             if self.pre_filter is not None and self.prefilter(data):
                 continue
 
@@ -226,8 +230,15 @@ class ProgramDataset(Dataset):
                 return graph, neigh
 
     def create_prog_datapoint(self, path):
+        with open(path, 'r') as fp:
+            source = fp.read()
+        try:
+            program = ast.parse(source)
+        except:
+            return None
+
         # prog_graph = program_graph.get_program_graph(path)
-        prog_graph = get_simplified_ast(path)
+        prog_graph = get_simplified_ast(source, program)
         digraph = program_graph_to_nx(prog_graph, directed=True)
 
         return digraph

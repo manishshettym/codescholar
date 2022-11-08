@@ -8,13 +8,8 @@ import gast as ast
 AST_NODE_FILTER = (ast.Load, ast.Store)
 
 
-def get_simplified_ast(path, dfg=True, cfg=True):
+def get_simplified_ast(source, program, dfg=True, cfg=True):
     """Constructs a simplified program graph to represent the given function"""
-
-    with open(path, 'r') as fp:
-        source = fp.read()
-
-    program = ast.parse(source)
     program_node = program_utils.program_to_ast(program)
     program_node = CodeSpan(source).visit(program)
 
