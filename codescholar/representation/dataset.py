@@ -17,7 +17,7 @@ from typing import Optional, Callable, List
 
 from codescholar.utils.graph_utils import save_as_json, program_graph_to_nx
 from codescholar.utils.train_utils import featurize_graph
-from codescholar.utils.simplified_ast import get_simplified_ast
+from codescholar.sast.simplified_ast import get_simplified_ast
 
 
 def my_collate(batch):
