@@ -89,7 +89,8 @@ def featurize_graph(g, anchor=None):
                 g.nodes[v]["ast_type"] = torch.tensor([node_type_val])
             
             if isinstance(node_span, str):
-                tokens_ids = CodeBertTokenizer.encode(node_span, truncation=True)
+                tokens_ids = CodeBertTokenizer.encode(
+                    node_span, truncation=True)
                 context_embeddings = CodeBertModel(
                     torch.tensor(tokens_ids)[None, :])[0]
 
