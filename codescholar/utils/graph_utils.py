@@ -159,11 +159,12 @@ def program_graph_to_graphviz(graph):
 
     for _, node in graph.nodes.items():
         node_attrs = {'ast_type': 'Other'}
-        if node.ast_type:
+
+        try:
             node_attrs['ast_type'] = six.ensure_str(node.ast_type, 'utf-8')
-        
-        if node.span:
             node_attrs['span'] = six.ensure_str(node.span, 'utf-8')
+        except KeyError:
+            raise KeyError("key error in {node}")
 
         g.add_node(node.id, **node_attrs)
 
