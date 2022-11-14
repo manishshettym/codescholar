@@ -1,3 +1,4 @@
+import re
 import gast as ast
 from python_graphs.program_graph import ProgramGraph
 from python_graphs import program_graph_dataclasses as pb
@@ -23,7 +24,7 @@ class CodeSpan(ast.NodeTransformer):
             span_start = self._get_char_index(lineno, col_offset)
             span_end = self._get_char_index(end_lineno, end_col_offset)
             node.range = (span_start, span_end)
-        except AttributeError:
+        except (AttributeError, TypeError) as error:
             node.range = (0, 0)
         
         return node
@@ -65,9 +66,24 @@ def remove_node(sast: ProgramGraph, id):
     sast.nodes.pop(id)
 
 
+def filter_non_ast(sast: ProgramGraph):
+    nodes_to_pop = []
+    for node in sast.all_nodes():
+        if node.ast_node is None:
+            nodes_to_pop.append(node.id)
+    
+    for i in nodes_to_pop:
+        remove_node(sast, i)
+    
+    return sast
+
+
 def collapse_nodes(sast: ProgramGraph):
     '''collapse noisy nodes from the program graph to create
     a simplified AST'''
+
+    sast = filter_non_ast(sast)
+
     nodes_to_pop = []
     for node in sast.all_nodes():
         parent = sast.parent(node)
@@ -115,6 +131,7 @@ def label_nodes(sast: ProgramGraph, source: str):
             span = span[:c_l] + '#' + span[c_r:]
             offset += (c_r - c_l) - 1
         
+        span = re.sub('\s+', ' ', span)
         setattr(node, 'span', span)
 
     return sast
