@@ -164,7 +164,7 @@ def program_graph_to_graphviz(graph):
             node_attrs['ast_type'] = six.ensure_str(node.ast_type, 'utf-8')
             node_attrs['span'] = six.ensure_str(node.span, 'utf-8')
         except KeyError:
-            raise KeyError("key error in {node}")
+            raise KeyError(f"key error in {node}")
 
         g.add_node(node.id, **node_attrs)
 
