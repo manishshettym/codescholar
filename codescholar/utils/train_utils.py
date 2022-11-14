@@ -92,7 +92,9 @@ def featurize_graph(g, anchor=None):
             if isinstance(node_span, str):
                 tokens = CodeBertTokenizer.tokenize(node_span)
                 tokens_ids = CodeBertTokenizer.convert_tokens_to_ids(tokens)
-                tokens_ids = tokens_ids[: MAX_TOKENS]
+                if len(tokens_ids) > MAX_TOKENS:
+                    tokens_ids = tokens_ids[: MAX_TOKENS]
+                    
                 context_embeddings = CodeBertModel(
                     torch.tensor(tokens_ids)[None, :])[0]
                 
