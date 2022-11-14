@@ -11,7 +11,6 @@ device_cache = None
 codebert_name = "microsoft/codebert-base"
 CodeBertTokenizer = RobertaTokenizer.from_pretrained(codebert_name)
 CodeBertModel = RobertaModel.from_pretrained(codebert_name)
-MAX_TOKENS = 514
 
 
 def get_device():
@@ -90,14 +89,11 @@ def featurize_graph(g, anchor=None):
                 g.nodes[v]["ast_type"] = torch.tensor([node_type_val])
             
             if isinstance(node_span, str):
-                tokens = CodeBertTokenizer.tokenize(node_span)
-                if len(tokens) > MAX_TOKENS:
-                    tokens = tokens[: MAX_TOKENS]
-
-                tokens_ids = CodeBertTokenizer.convert_tokens_to_ids(tokens)
+                tokens_ids = CodeBertTokenizer.encode(node_span, truncation=True)
+                print(len(tokens_ids))
                 context_embeddings = CodeBertModel(
                     torch.tensor(tokens_ids)[None, :])[0]
-                
+
                 g.nodes[v]["node_span"] = torch.mean(
                     context_embeddings,
                     dim=1)
