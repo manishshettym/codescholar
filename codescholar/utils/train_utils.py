@@ -2,11 +2,15 @@ import torch
 import torch.optim as optim
 
 import networkx as nx
+from transformers import RobertaTokenizer, RobertaModel
 from deepsnap.graph import Graph as DSGraph
 
 from codescholar.utils.graph_utils import GraphEdgeLabel, GraphNodeLabel
 
 device_cache = None
+codebert_name = "microsoft/codebert-base"
+CodeBertTokenizer = RobertaTokenizer.from_pretrained(codebert_name)
+CodeBertModel = RobertaModel.from_pretrained(codebert_name)
 
 
 def get_device():
@@ -74,6 +78,7 @@ def featurize_graph(g, anchor=None):
         for v in g.nodes:
             g.nodes[v]["node_feature"] = torch.tensor([float(v == anchor)])
             node_type_name = g.nodes[v]['ast_type']
+            node_span = g.nodes[v]['span']
 
             if isinstance(node_type_name, str):
                 try:
@@ -83,6 +88,16 @@ def featurize_graph(g, anchor=None):
 
                 g.nodes[v]["ast_type"] = torch.tensor([node_type_val])
             
+            if isinstance(node_span, str):
+                tokens = CodeBertTokenizer.tokenize(node_span)
+                tokens_ids = CodeBertTokenizer.convert_tokens_to_ids(tokens)
+                context_embeddings = CodeBertModel(
+                    torch.tensor(tokens_ids)[None, :])[0]
+                
+                g.nodes[v]["node_span"] = torch.mean(
+                    context_embeddings,
+                    dim=1)
+                            
             g.nodes[v]["node_degree"] = torch.tensor([g.degree(v)])
             g.nodes[v]["node_pagerank"] = torch.tensor([pagerank[v]])
             g.nodes[v]["node_cc"] = torch.tensor([clustering_coeff[v]])

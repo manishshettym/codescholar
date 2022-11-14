@@ -21,3 +21,4 @@ python_graphs
 deepsnap
 orca
 torch
+transformers
