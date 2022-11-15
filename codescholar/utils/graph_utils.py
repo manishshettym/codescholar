@@ -158,14 +158,12 @@ def program_graph_to_graphviz(graph):
     g = pygraphviz.AGraph(strict=False, directed=True)
 
     for _, node in graph.nodes.items():
+        assert node.ast_type
+        assert node.span
+
         node_attrs = {'ast_type': 'Other'}
-
-        try:
-            node_attrs['ast_type'] = six.ensure_str(node.ast_type, 'utf-8')
-            node_attrs['span'] = six.ensure_str(node.span, 'utf-8')
-        except KeyError:
-            raise KeyError(f"key error in {node}")
-
+        node_attrs['ast_type'] = six.ensure_str(node.ast_type, 'utf-8')
+        node_attrs['span'] = six.ensure_str(node.span, 'utf-8')
         g.add_node(node.id, **node_attrs)
 
     for edge in graph.edges:

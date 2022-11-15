@@ -78,7 +78,10 @@ def featurize_graph(g, anchor=None):
         for v in g.nodes:
             g.nodes[v]["node_feature"] = torch.tensor([float(v == anchor)])
             node_type_name = g.nodes[v]['ast_type']
-            node_span = g.nodes[v]['span']
+            try:
+                node_span = g.nodes[v]['span']
+            except KeyError:
+                raise KeyError(f"key error in node {v}")
 
             if isinstance(node_type_name, str):
                 try:
