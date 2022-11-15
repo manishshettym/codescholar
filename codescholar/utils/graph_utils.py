@@ -158,6 +158,7 @@ def program_graph_to_graphviz(graph):
     g = pygraphviz.AGraph(strict=False, directed=True)
 
     for _, node in graph.nodes.items():
+        print(node)
         assert node.ast_type
         assert node.span
 
