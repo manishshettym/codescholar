@@ -4,6 +4,18 @@ from python_graphs.program_graph import ProgramGraph
 from python_graphs import program_graph_dataclasses as pb
 
 
+class DropDecorators(ast.NodeTransformer):
+    def visit_FunctionDef(self, node):
+        new_node = node
+        new_node.decorator_list = []
+
+        ast.copy_location(new_node, node)
+        ast.fix_missing_locations(new_node)
+        self.generic_visit(node)
+
+        return new_node
+
+
 class CodeSpan(ast.NodeTransformer):
     def __init__(self, source):
         self.source = source
@@ -24,7 +36,11 @@ class CodeSpan(ast.NodeTransformer):
             span_start = self._get_char_index(lineno, col_offset)
             span_end = self._get_char_index(end_lineno, end_col_offset)
             node.range = (span_start, span_end)
-        except (AttributeError, TypeError) as error:
+            
+            assert span_start >= 0 and span_start <= len(self.source)
+            assert span_end >= 0 and span_end <= len(self.source)
+
+        except (AttributeError, AssertionError, TypeError) as error:
             node.range = (0, 0)
         
         return node
@@ -60,9 +76,32 @@ def remove_node(sast: ProgramGraph, id):
         if edge.id1 == id or edge.id2 == id:
             edges_to_pop.append(edge)
     
+    # remove the edges
     for edge in edges_to_pop:
-        sast.remove_edge(edge)
+        sast.edges.remove(edge)
+        n1, n2 = edge.id1, edge.id2
 
+        if n1 in sast.child_map:
+            try:
+                sast.child_map[n1].remove(n2)
+            except:
+                pass
+
+        if n2 in sast.parent_map:
+            del sast.parent_map[n2]
+
+        if n1 in sast.neighbors_map:
+            try:
+                sast.neighbors_map[n1].remove((edge, n2))
+            except:
+                pass
+        if n2 in sast.neighbors_map:
+            try:
+                sast.neighbors_map[n2].remove((edge, edge.id1))
+            except:
+                pass
+
+    # pop the node
     sast.nodes.pop(id)
 
 
@@ -95,6 +134,12 @@ def collapse_nodes(sast: ProgramGraph):
                 sast.add_new_edge(parent, child, pb.EdgeType.FIELD)
             
             nodes_to_pop.append(node.id)
+        
+        # if empty function
+        elif isinstance(node.ast_node, ast.Module):
+            child = children[0]
+            if child.ast_node.range == (0, 0):
+                return None
 
         elif len(children) == 1:
             child = children[0]

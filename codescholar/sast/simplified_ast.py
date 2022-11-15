@@ -1,7 +1,8 @@
 from python_graphs.program_graph import ProgramGraph
 from python_graphs.program_graph import *
 from python_graphs import program_utils, control_flow
-from codescholar.sast.sast_utils import CodeSpan, collapse_nodes, label_nodes
+from codescholar.sast.sast_utils import (
+    DropDecorators, CodeSpan, collapse_nodes, label_nodes)
 import gast as ast
 
 
@@ -13,6 +14,7 @@ def get_simplified_ast(program, dfg=True, cfg=True):
     program_node = program_utils.program_to_ast(program)
 
     # Apply AST transformers
+    program_node = DropDecorators().visit(ast.parse(program))
     program_node = CodeSpan(program).visit(ast.parse(program))
 
     program_graph = ProgramGraph()
@@ -121,6 +123,8 @@ def get_simplified_ast(program, dfg=True, cfg=True):
     
     # simplify the graph by removing noisy nodes
     sast = collapse_nodes(program_graph)
+    if sast is None:
+        return None
 
     # label SAST nodes with concrete syntax
     sast = label_nodes(sast, program)

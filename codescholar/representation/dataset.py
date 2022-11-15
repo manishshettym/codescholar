@@ -239,6 +239,9 @@ class ProgramDataset(Dataset):
 
         # prog_graph = program_graph.get_program_graph(path)
         prog_graph = get_simplified_ast(source, dfg=False, cfg=False)
+        if prog_graph is None:
+            return None
+        
         digraph = program_graph_to_nx(prog_graph, directed=True)
 
         return digraph
