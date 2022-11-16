@@ -61,6 +61,12 @@ def validation(args, model, test_pts, logger, batch_n, epoch):
         all_raw_preds.append(raw_pred)
         all_preds.append(pred)
         all_labels.append(labels)
+        
+        #pos_a.detach()
+        #pos_b.detach()
+        #neg_a.detach()
+        #neg_b.detach()
+        #labels.detach()
 
     pred = torch.cat(all_preds, dim=-1)
     labels = torch.cat(all_labels, dim=-1)
