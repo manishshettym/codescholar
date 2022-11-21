@@ -12,16 +12,13 @@ AST_NODE_FILTER = (ast.Load, ast.Store)
 
 def get_simplified_ast(program, dfg=True, cfg=True):
     """Constructs a program graph to represent the given program."""
-    
-    # remove comments and docstrings
-    program = remove_comments_and_docstrings(program)
 
-    # parse the AST
+    program = remove_comments_and_docstrings(program)
     program_node = program_utils.program_to_ast(program)
 
     # Apply AST transformers
     program_node = DropDecorators().visit(ast.parse(program))
-    program_node = CodeSpan(program).visit(ast.parse(program))
+    program_node = CodeSpan(program).visit(program_node)
 
     program_graph = ProgramGraph()
     control_flow_graph = control_flow.get_control_flow_graph(program_node)

@@ -38,11 +38,11 @@ class CodeSpan(ast.NodeTransformer):
             span_start = self._get_char_index(lineno, col_offset)
             span_end = self._get_char_index(end_lineno, end_col_offset)
             node.range = (span_start, span_end)
-            
+
             assert span_start >= 0 and span_start <= len(self.source)
             assert span_end >= 0 and span_end <= len(self.source)
 
-        except (AttributeError, AssertionError, TypeError) as error:
+        except (AttributeError, AssertionError, TypeError) as e:
             node.range = (0, 0)
         
         return node
@@ -67,7 +67,7 @@ class CodeSpan(ast.NodeTransformer):
             elif isinstance(value, ast.AST):
                 self._add_span(value)
                 self.visit(value)
-        
+            
         return node
 
 
@@ -130,6 +130,7 @@ def collapse_nodes(sast: ProgramGraph):
         parent = sast.parent(node)
         children = [c for c in sast.children(node)]
 
+        # if range of the node is 0:0
         if (not isinstance(node.ast_node, ast.Module)
                 and node.ast_node.range == (0, 0)):
             for child in children:
@@ -142,13 +143,15 @@ def collapse_nodes(sast: ProgramGraph):
             child = children[0]
             if child.ast_node.range == (0, 0):
                 return None
-
+        
+        # if only 1 child w/ same range; e.g. Expr-->Call
         elif len(children) == 1:
             child = children[0]
+
             if node.ast_node.range == child.ast_node.range:
                 sast.add_new_edge(parent, child, pb.EdgeType.FIELD)
                 nodes_to_pop.append(node.id)
-
+            
     for i in nodes_to_pop:
         remove_node(sast, i)
 
