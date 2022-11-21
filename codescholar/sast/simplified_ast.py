@@ -2,7 +2,8 @@ from python_graphs.program_graph import ProgramGraph
 from python_graphs.program_graph import *
 from python_graphs import program_utils, control_flow
 from codescholar.sast.sast_utils import (
-    DropDecorators, CodeSpan, collapse_nodes, label_nodes)
+    DropDecorators, CodeSpan, remove_comments_and_docstrings,
+    collapse_nodes, label_nodes)
 import gast as ast
 
 
@@ -11,6 +12,11 @@ AST_NODE_FILTER = (ast.Load, ast.Store)
 
 def get_simplified_ast(program, dfg=True, cfg=True):
     """Constructs a program graph to represent the given program."""
+    
+    # remove comments and docstrings
+    source = remove_comments_and_docstrings(source)
+
+    # parse the AST
     program_node = program_utils.program_to_ast(program)
 
     # Apply AST transformers
