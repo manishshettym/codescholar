@@ -14,7 +14,7 @@ def get_simplified_ast(program, dfg=True, cfg=True):
     """Constructs a program graph to represent the given program."""
     
     # remove comments and docstrings
-    source = remove_comments_and_docstrings(source)
+    program = remove_comments_and_docstrings(program)
 
     # parse the AST
     program_node = program_utils.program_to_ast(program)
