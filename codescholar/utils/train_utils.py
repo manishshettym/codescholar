@@ -70,6 +70,7 @@ codebert_name = "microsoft/codebert-base"
 CodeBertTokenizer = RobertaTokenizer.from_pretrained(codebert_name)
 CodeBertModel = RobertaModel.from_pretrained(codebert_name).to(get_device())
 
+
 def featurize_graph(g, anchor=None):
     if anchor is not None:
         pagerank = nx.pagerank(g)
