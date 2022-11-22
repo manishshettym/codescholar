@@ -7,11 +7,6 @@ from deepsnap.graph import Graph as DSGraph
 
 from codescholar.utils.graph_utils import GraphEdgeLabel, GraphNodeLabel
 
-device_cache = None
-codebert_name = "microsoft/codebert-base"
-CodeBertTokenizer = RobertaTokenizer.from_pretrained(codebert_name)
-CodeBertModel = RobertaModel.from_pretrained(codebert_name).to(get_device())
-
 
 def get_device():
     global device_cache
@@ -69,6 +64,11 @@ def build_optimizer(args, params):
 
     return scheduler, optimizer
 
+
+device_cache = None
+codebert_name = "microsoft/codebert-base"
+CodeBertTokenizer = RobertaTokenizer.from_pretrained(codebert_name)
+CodeBertModel = RobertaModel.from_pretrained(codebert_name).to(get_device())
 
 def featurize_graph(g, anchor=None):
     if anchor is not None:
