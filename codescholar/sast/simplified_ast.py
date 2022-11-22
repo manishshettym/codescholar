@@ -14,7 +14,10 @@ def get_simplified_ast(program, dfg=True, cfg=True):
     """Constructs a program graph to represent the given program."""
 
     program = remove_comments_and_docstrings(program)
-    program_node = program_utils.program_to_ast(program)
+    try:
+        program_node = program_utils.program_to_ast(program)
+    except:
+        return None
 
     # Apply AST transformers
     program_node = DropDecorators().visit(ast.parse(program))
