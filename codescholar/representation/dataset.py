@@ -10,7 +10,6 @@ from tqdm import tqdm
 import scipy.stats as stats
 
 from networkx.algorithms.isomorphism import GraphMatcher
-from python_graphs import program_graph
 from torch_geometric.data import Dataset
 from torch.utils.data import DataLoader
 from typing import Optional, Callable, List

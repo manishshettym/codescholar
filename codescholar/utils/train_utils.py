@@ -6,11 +6,12 @@ from transformers import RobertaTokenizer, RobertaModel
 from deepsnap.graph import Graph as DSGraph
 
 from codescholar.utils.graph_utils import GraphEdgeLabel, GraphNodeLabel
+from codescholar.utils.train_utils import get_device
 
 device_cache = None
 codebert_name = "microsoft/codebert-base"
 CodeBertTokenizer = RobertaTokenizer.from_pretrained(codebert_name)
-CodeBertModel = RobertaModel.from_pretrained(codebert_name)
+CodeBertModel = RobertaModel.from_pretrained(codebert_name).to(get_device())
 
 
 def get_device():
@@ -95,7 +96,9 @@ def featurize_graph(g, anchor=None):
                 tokens_ids = CodeBertTokenizer.encode(
                     node_span, truncation=True)
                 context_embeddings = CodeBertModel(
-                    torch.tensor(tokens_ids)[None, :])[0]
+                    torch.tensor(tokens_ids, device=get_device())[None, :])[0]
+                
+                # context_embeddings = context_embeddings.to('cpu')
 
                 g.nodes[v]["node_span"] = torch.mean(
                     context_embeddings,
