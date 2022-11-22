@@ -6,7 +6,6 @@ from transformers import RobertaTokenizer, RobertaModel
 from deepsnap.graph import Graph as DSGraph
 
 from codescholar.utils.graph_utils import GraphEdgeLabel, GraphNodeLabel
-from codescholar.utils.train_utils import get_device
 
 device_cache = None
 codebert_name = "microsoft/codebert-base"
