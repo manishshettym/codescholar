@@ -71,7 +71,7 @@ class ProgramDataset(Dataset):
         pre_transform: Optional[Callable] = None,
         pre_filter: Optional[Callable] = None,
         save_json: Optional[bool] = False,
-        min_size=2, max_size=7
+        min_size=2, max_size=20
     ):
         self.name = name
         self.graph_dir = osp.join(root, 'graphs')
