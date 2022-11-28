@@ -38,6 +38,7 @@ def get_neighborhoods(args, graph):
             try:
                 neigh = featurize_graph(neigh, anchor=0)
             except RuntimeError:
+                print(neigh.span)
                 raise RuntimeError(f"CodeBert: graph too deep, len: {len(neigh)}")
             neighs.append(neigh)
     

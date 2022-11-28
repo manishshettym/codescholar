@@ -98,8 +98,6 @@ def featurize_graph(g, anchor=None):
                 tokens_tensor = torch.tensor(tokens_ids, device=get_device())
                 context_embeddings = CodeBertModel(tokens_tensor[None, :])[0]
                 
-                del tokens_ids
-                del tokens_tensor
                 # torch.cuda.empty_cache()
 
                 g.nodes[v]["node_span"] = torch.mean(
