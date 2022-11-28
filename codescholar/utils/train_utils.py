@@ -95,10 +95,12 @@ def featurize_graph(g, anchor=None):
             if isinstance(node_span, str):
                 tokens_ids = CodeBertTokenizer.encode(
                     node_span, truncation=True)
-                context_embeddings = CodeBertModel(
-                    torch.tensor(tokens_ids, device=get_device())[None, :])[0]
+                tokens_tensor = torch.tensor(tokens_ids, device=get_device())
+                context_embeddings = CodeBertModel(tokens_tensor[None, :])[0]
                 
-                # context_embeddings = context_embeddings.to('cpu')
+                del tokens_ids
+                del tokens_tensor
+                # torch.cuda.empty_cache()
 
                 g.nodes[v]["node_span"] = torch.mean(
                     context_embeddings,
