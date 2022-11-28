@@ -98,7 +98,7 @@ def featurize_graph(g, anchor=None):
                 context_embeddings = CodeBertModel(
                     torch.tensor(tokens_ids, device=get_device())[None, :])[0]
                 
-                # context_embeddings = context_embeddings.to('cpu')
+                context_embeddings = context_embeddings.to('cpu')
 
                 g.nodes[v]["node_span"] = torch.mean(
                     context_embeddings,
