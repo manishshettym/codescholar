@@ -77,7 +77,7 @@ def generate_embeddings(args, model, raw_paths, in_queue, out_queue):
     done = False
     while not done:
         msg, idx = in_queue.get()
-        
+
         if msg == "done":
             done = True
             break
@@ -121,10 +121,10 @@ def embed_main(args):
     in_queue, out_queue = mp.Queue(), mp.Queue()
     workers = start_workers(model, raw_paths, in_queue, out_queue, args)
 
-    for i in range(len(raw_paths[:10])):
+    for i in range(len(raw_paths)):
         in_queue.put(("idx", i))
         
-    for _ in range(len(raw_paths[:10])):
+    for _ in range(len(raw_paths)):
         msg = out_queue.get()
     
     for _ in range(args.n_workers):
