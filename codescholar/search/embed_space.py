@@ -95,9 +95,12 @@ def generate_embeddings(args, model, raw_paths, in_queue, out_queue):
             neighs = get_neighborhoods(args, graph)
         
         # NOTE: expensive -- so better to do many at a time as a batch
-        with torch.no_grad():
-            emb = model.encoder(Batch.from_data_list(neighs).to(get_device()))
-            torch.save(emb, osp.join(args.emb_dir, f'emb_{idx}.pt'))
+        try:
+            with torch.no_grad():
+                emb = model.encoder(Batch.from_data_list(neighs).to(get_device()))
+                torch.save(emb, osp.join(args.emb_dir, f'emb_{idx}.pt'))
+        except RuntimeError:
+            print(len(neighs), "was too much for me")
         
         out_queue.put(("complete"))
 
