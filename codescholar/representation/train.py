@@ -9,7 +9,7 @@ import torch.multiprocessing as mp
 from torch.utils.tensorboard import SummaryWriter
 from deepsnap.batch import Batch
 
-from codescholar.representation.test import validation
+from codescholar.representation.test import validation, test
 from codescholar.representation import models, config, dataset
 from codescholar.utils.train_utils import (
     build_model, build_optimizer, get_device)
@@ -36,12 +36,6 @@ def make_validation_set(dataloader):
         pos_t = Batch.from_data_list(pos_t)
         neg_q = Batch.from_data_list(neg_q)
         neg_t = Batch.from_data_list(neg_t)
-        
-        # if pos_q:
-        #     pos_q = pos_q.to(torch.device("cpu"))
-        #     pos_t = pos_t.to(torch.device("cpu"))
-        # neg_q = neg_q.to(torch.device("cpu"))
-        # neg_t = neg_t.to(torch.device("cpu"))
         
         test_pts.append((pos_q, pos_t, neg_q, neg_t))
     
@@ -168,14 +162,15 @@ def train_loop(args):
 
     # create validation points
     loader = corpus.gen_data_loader(args.batch_size, train=False)
-    validation_pts = make_validation_set(loader)
 
     # ====== TESTING ======
     if args.test:
-        validation(args, model, validation_pts, logger, 0, 0)
+        test(args, model, loader, logger)
 
     # ====== TRAINING ======
     else:
+        validation_pts = make_validation_set(loader)
+        
         for iter in range(args.n_iters):
             print(f"Iteration #{iter}")
             workers = start_workers(model, corpus, in_queue, out_queue, args)
@@ -217,8 +212,9 @@ def main(testing=False):
         args.test = True
     
     args.n_train = args.n_batches * args.batch_size
-    # args.n_test = int(0.2 * args.n_train)
-    args.n_test = 10000
+    args.n_test = int(0.2 * args.n_train)
+    # args.n_test = 100000
+    args.test = True
 
     train_loop(args)
 
