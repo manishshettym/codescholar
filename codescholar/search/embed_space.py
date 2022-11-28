@@ -21,7 +21,6 @@ from codescholar.search import search_config
 
 # radial sampling
 def get_neighborhoods(args, graph):
-    print("neighbsss")
     neighs = []
 
     # find each node's neighborhood
@@ -78,9 +77,7 @@ def generate_embeddings(args, model, raw_paths, in_queue, out_queue):
     done = False
     while not done:
         msg, idx = in_queue.get()
-
-        print(msg, idx)
-
+        
         if msg == "done":
             done = True
             break
@@ -99,7 +96,7 @@ def generate_embeddings(args, model, raw_paths, in_queue, out_queue):
         
         # NOTE: expensive -- so better to do many at a time as a batch
         with torch.no_grad():
-            emb = model.encoder(Batch.from_data_list(neighs))
+            emb = model.encoder(Batch.from_data_list(neighs).to(get_device()))
             torch.save(emb, osp.join(args.emb_dir, f'emb_{idx}.pt'))
         
         out_queue.put(("complete"))
@@ -119,20 +116,19 @@ def embed_main(args):
 
     print("Moving model to device:", get_device())
     model = model.to(get_device())
+    model.eval()
 
     in_queue, out_queue = mp.Queue(), mp.Queue()
     workers = start_workers(model, raw_paths, in_queue, out_queue, args)
 
     for i in range(len(raw_paths[:10])):
         in_queue.put(("idx", i))
+        
+    for _ in range(len(raw_paths[:10])):
+        msg = out_queue.get()
     
-    print(in_queue.get())
-    
-    # for _ in range(len(raw_paths)):
-    #     msg = out_queue.get()
-    
-    # for _ in range(args.n_workers):
-    #     in_queue.put(("done", None))
+    for _ in range(args.n_workers):
+        in_queue.put(("done", None))
 
     for worker in workers:
         worker.join()
@@ -153,4 +149,5 @@ def main():
 
 
 if __name__ == "__main__":
+    torch.multiprocessing.set_start_method('spawn')
     main()
