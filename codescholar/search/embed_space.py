@@ -119,7 +119,7 @@ def embed_main(args):
     else:
         raw_paths = sorted(glob.glob(osp.join(args.source_dir, '*.pt')))
 
-    generate_neighborhoods()
+    generate_neighborhoods(args, raw_paths)
 
     # ######### EMBED GRAPHS #########
 
