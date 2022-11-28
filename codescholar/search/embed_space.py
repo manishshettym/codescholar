@@ -124,7 +124,7 @@ def embed_main(args):
     for i in range(len(raw_paths)):
         in_queue.put(("idx", i))
         
-    for _ in range(len(raw_paths)):
+    for _ in tqdm(range(len(raw_paths))):
         msg = out_queue.get()
     
     for _ in range(args.n_workers):
