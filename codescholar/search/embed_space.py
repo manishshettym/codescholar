@@ -60,20 +60,7 @@ def process_program(path, format="source"):
     return graph
 
 
-def start_neighborhood_workers(raw_paths, in_queue, out_queue, args):
-    workers = []
-    for _ in tqdm(range(args.n_workers), desc="Workers"):
-        worker = mp.Process(
-            target=generate_neighborhoods,
-            args=(args, raw_paths, in_queue, out_queue)
-        )
-        worker.start()
-        workers.append(worker)
-    
-    return workers
-
-
-def start_emb_workers(model, in_queue, out_queue, args):
+def start_workers(model, in_queue, out_queue, args):
     workers = []
     for _ in tqdm(range(args.n_workers), desc="Workers"):
         worker = mp.Process(
@@ -104,16 +91,8 @@ def generate_embeddings(args, model, in_queue, out_queue):
         out_queue.put(("complete"))
 
 
-def generate_neighborhoods(args, raw_paths, in_queue, out_queue):
-    done = False
-    while not done:
-        msg, idx = in_queue.get()
-
-        if msg == "done":
-            done = True
-            break
-
-        path = raw_paths[idx]
+def generate_neighborhoods(args, raw_paths):
+    for idx, path in enumerate(tqdm(raw_paths)):
         graph = process_program(path, args.format)
 
         if graph is None:
@@ -126,7 +105,6 @@ def generate_neighborhoods(args, raw_paths, in_queue, out_queue):
             neighs = get_neighborhoods(args, graph)
         
         torch.save(neighs, osp.join(args.processed_dir, f'data_{idx}.pt'))
-        out_queue.put(("complete"))
 
 
 def embed_main(args):
@@ -141,23 +119,8 @@ def embed_main(args):
     else:
         raw_paths = sorted(glob.glob(osp.join(args.source_dir, '*.pt')))
 
-    # ######### PROCESS GRAPHS #########
+    generate_neighborhoods()
 
-    in_queue, out_queue = mp.Queue(), mp.Queue()
-    workers = start_neighborhood_workers(raw_paths, in_queue, out_queue, args)
-
-    for i in range(len(raw_paths)):
-        in_queue.put(("idx", i))
-        
-    for _ in tqdm(range(len(raw_paths))):
-        msg = out_queue.get()
-    
-    for _ in range(args.n_workers):
-        in_queue.put(("done", None))
-
-    for worker in workers:
-        worker.join()
-    
     # ######### EMBED GRAPHS #########
 
     model = build_model(models.SubgraphEmbedder, args)
@@ -168,7 +131,7 @@ def embed_main(args):
     model.eval()
 
     in_queue, out_queue = mp.Queue(), mp.Queue()
-    workers = start_emb_workers(model, in_queue, out_queue, args)
+    workers = start_workers(raw_paths, in_queue, out_queue, args)
 
     for i in range(len(raw_paths)):
         in_queue.put(("idx", i))
