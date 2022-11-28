@@ -69,6 +69,7 @@ device_cache = None
 codebert_name = "microsoft/codebert-base"
 CodeBertTokenizer = RobertaTokenizer.from_pretrained(codebert_name)
 CodeBertModel = RobertaModel.from_pretrained(codebert_name).to(get_device())
+CodeBertModel.eval()
 
 
 def featurize_graph(g, anchor=None):
@@ -96,7 +97,9 @@ def featurize_graph(g, anchor=None):
                 tokens_ids = CodeBertTokenizer.encode(
                     node_span, truncation=True)
                 tokens_tensor = torch.tensor(tokens_ids, device=get_device())
-                context_embeddings = CodeBertModel(tokens_tensor[None, :])[0]
+                
+                with torch.no_grad():
+                    context_embeddings = CodeBertModel(tokens_tensor[None, :])[0]
                 
                 # torch.cuda.empty_cache()
 
