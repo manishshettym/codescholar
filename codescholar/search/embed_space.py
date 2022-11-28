@@ -130,6 +130,9 @@ def generate_neighborhoods(args, raw_paths, in_queue, out_queue):
 
 
 def embed_main(args):
+    if not osp.exists(osp.dirname(args.processed_dir)):
+        os.makedirs(osp.dirname(args.processed_dir))
+
     if not osp.exists(osp.dirname(args.emb_dir)):
         os.makedirs(osp.dirname(args.emb_dir))
     
