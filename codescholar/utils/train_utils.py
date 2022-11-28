@@ -68,7 +68,7 @@ def build_optimizer(args, params):
 device_cache = None
 codebert_name = "microsoft/codebert-base"
 CodeBertTokenizer = RobertaTokenizer.from_pretrained(codebert_name)
-CodeBertModel = RobertaModel.from_pretrained(codebert_name).to(get_device())
+CodeBertModel = RobertaModel.from_pretrained(codebert_name).to('cpu')  #.to(get_device())
 
 
 def featurize_graph(g, anchor=None):
@@ -96,7 +96,7 @@ def featurize_graph(g, anchor=None):
                 tokens_ids = CodeBertTokenizer.encode(
                     node_span, truncation=True)
                 context_embeddings = CodeBertModel(
-                    torch.tensor(tokens_ids, device=get_device())[None, :])[0]
+                    torch.tensor(tokens_ids, device='cpu')[None, :])[0]
                 
                 # context_embeddings = context_embeddings.to('cpu')
 
