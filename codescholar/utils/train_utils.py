@@ -99,7 +99,8 @@ def featurize_graph(g, anchor=None):
                 tokens_tensor = torch.tensor(tokens_ids, device=get_device())
                 
                 with torch.no_grad():
-                    context_embeddings = CodeBertModel(tokens_tensor[None, :])[0]
+                    context_embeddings = CodeBertModel(
+                        tokens_tensor[None, :])[0]
                 
                 # torch.cuda.empty_cache()
 
