@@ -126,7 +126,7 @@ def embed_main(args):
     else:
         raw_paths = sorted(glob.glob(osp.join(args.source_dir, '*.pt')))
 
-    generate_neighborhoods(args, raw_paths)
+    # generate_neighborhoods(args, raw_paths)
 
     # ######### EMBED GRAPHS #########
 
@@ -138,7 +138,7 @@ def embed_main(args):
     model.eval()
 
     in_queue, out_queue = mp.Queue(), mp.Queue()
-    workers = start_workers(raw_paths, in_queue, out_queue, args)
+    workers = start_workers(model, in_queue, out_queue, args)
 
     for i in range(len(raw_paths)):
         in_queue.put(("idx", i))
