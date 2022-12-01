@@ -5,26 +5,11 @@ from collections import Counter, defaultdict
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-
 import torch
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import DBSCAN, OPTICS
 
-
-def choose_progs(src_dir, k=10000, seed=24):
-    np.random.seed(seed)
-
-    prog_embs = []
-    prog_sizes = []
-    files = [f for f in sorted(glob.glob(osp.join(src_dir, '*.pt')))]
-    random_files = np.random.choice(files, min(len(files), k))
-
-    for file in random_files:
-        embs = torch.load(file, map_location=torch.device('cpu'))
-        prog_embs.append(embs)
-        prog_sizes.append(len(embs))
-        
-    return torch.cat(prog_embs, dim=0), random_files, prog_sizes
+from codescholar.utils.search_utils import sample_progs
 
 
 def write_results(paths, sizes, labels):
@@ -59,7 +44,7 @@ def write_results(paths, sizes, labels):
 def main():
     SRC_DIR = "./tmp/pandas/emb"
     n_workers = 4
-    embs, paths, sizes = choose_progs(SRC_DIR, k=500, seed=4)
+    embs, paths, sizes = sample_progs(SRC_DIR, k=500, seed=4)
     
     dbscan = DBSCAN(
         eps=0.1, min_samples=5,
