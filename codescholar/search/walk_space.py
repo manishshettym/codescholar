@@ -27,10 +27,15 @@ def main():
     args.format = "nx"  # nx or source
     args.source_dir = f"../representation/tmp/{args.dataset}/train/graphs/"
     args.emb_dir = f"./tmp/{args.dataset}/emb/"
+
+    args.plots_dir = "./plots/"
     args.idiom_dir = f"./results/idioms/"
 
     if not osp.exists(args.idiom_dir):
         os.makedirs(args.idiom_dir)
+    
+    if not osp.exists(args.plots_dir):
+        os.makedirs(args.plots_dir)
 
     embs, emb_paths, _ = sample_prog_embs(
         args.emb_dir, k=500, seed=4)
@@ -65,7 +70,7 @@ def main():
         file = "idiom_{}_{}".format(pat_len, pat_count)
         print(f"Saving {file}")
         
-        path = f"plots/{file}.png"
+        path = f"{args.plots_dir}{file}.png"
         plt.savefig(path)
         plt.close()
 

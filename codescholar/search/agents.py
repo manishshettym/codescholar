@@ -74,7 +74,6 @@ class GreedySearch(SearchAgent):
         self.n_beams = n_beams
         # List of [neighborhood nodes + neighbors, visited, and graph_idx]
         self.beam_sets = None
-        self.analyze_embs = []
 
     def search(self, n_trials=1000):
         self.n_trials = n_trials
@@ -116,9 +115,7 @@ class GreedySearch(SearchAgent):
         new_beam_sets = []
         dist_graphs = len(set(b[0][-1] for b in self.beam_sets))
         print(f"seeds from {dist_graphs} distinct graphs")
-        
-        analyze_embs_cur = []
-        
+                
         for beam_set in tqdm(self.beam_sets):
             new_beams = []
 
@@ -190,38 +187,12 @@ class GreedySearch(SearchAgent):
                 self.cand_patterns[len(neigh_g)].append((score, neigh_g))
                 self.counts[len(neigh_g)][wl_hash(neigh_g)].append(neigh_g)
 
-                if self.analyze and len(neigh) >= 3:
-                    neigh_g = featurize_graph(neigh_g, neigh[0])
-
-                    emb = self.model.encoder(
-                        Batch.from_data_list([neigh_g]).to(get_device())
-                    ).squeeze(0)
-                    analyze_embs_cur.append(emb.detach().cpu().numpy())
-
             if len(new_beams) > 0:
                 new_beam_sets.append(new_beams)
 
         self.beam_sets = new_beam_sets
-        self.analyze_embs.append(analyze_embs_cur)
 
     def finish_search(self):
-        if self.analyze:
-            # print("Saving analysis info in results/analyze.p")
-            # with open("results/analyze.p", "wb") as f:
-            #     pickle.dump((self.cand_patterns, self.analyze_embs), f)
-
-            xs, ys = [], []
-            for embs_ls in self.analyze_embs:
-                for emb in embs_ls:
-                    xs.append(emb[0])
-                    ys.append(emb[1])
-
-            print("Saving analysis plot in results/analyze.png")
-            plt.scatter(xs, ys, color="red", label="motif")
-            plt.legend()
-            plt.savefig("plots/analyze.png")
-            plt.close()
-
         cand_patterns_uniq = []
         for pattern_size in range(
                 self.min_pattern_size,
