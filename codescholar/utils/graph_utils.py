@@ -5,6 +5,10 @@ import json
 import pygraphviz
 import networkx as nx
 from networkx.readwrite import json_graph
+from python_graphs.program_graph import (
+    ProgramGraph, ProgramGraphNode)
+from python_graphs import program_graph_dataclasses as pgdata
+from python_graphs import program_utils
 
 # from python_graphs import program_graph_graphviz
 
@@ -120,6 +124,38 @@ class GraphNodeLabel(enum.Enum):
     arguments = 90
     keyword = 91
     alias = 92
+
+
+def nx_to_program_graph(graph: nx.DiGraph):
+    pgraph = ProgramGraph()
+    nxnode_to_pgnode = {}
+
+    for node in graph.nodes:
+        ast_type = graph.nodes[node]['ast_type'].numpy()[0]
+        ast_type = GraphNodeLabel(ast_type).name
+        span = graph.nodes[node]['span']
+        
+        new_node = ProgramGraphNode()
+        new_node.node_type = pgdata.NodeType.SYNTAX_NODE
+        new_node.id = program_utils.unique_id()
+        new_node.ast_type = ast_type
+        setattr(new_node, 'span', span)
+        
+        pgraph.add_node(new_node)
+        nxnode_to_pgnode[node] = new_node.id
+
+    for edge in graph.edges:
+        edge_type = graph.edges[edge]['flow_type'].numpy()[0]
+        edge_type = GraphEdgeLabel(edge_type)
+        n1 = nxnode_to_pgnode[edge[0]]
+        n2 = nxnode_to_pgnode[edge[1]]
+
+        new_edge = pgdata.Edge(
+            id1=n1, id2=n2, type=edge_type)
+
+        pgraph.add_edge(new_edge)
+
+    return pgraph
 
 
 def program_graph_to_nx(program_graph, directed=False):

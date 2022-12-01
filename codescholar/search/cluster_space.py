@@ -9,7 +9,7 @@ import torch
 from sklearn.metrics import silhouette_score
 from sklearn.cluster import DBSCAN, OPTICS
 
-from codescholar.utils.search_utils import sample_progs
+from codescholar.utils.search_utils import sample_prog_embs
 
 
 def write_results(paths, sizes, labels):
@@ -44,7 +44,10 @@ def write_results(paths, sizes, labels):
 def main():
     SRC_DIR = "./tmp/pandas/emb"
     n_workers = 4
-    embs, paths, sizes = sample_progs(SRC_DIR, k=500, seed=4)
+    embs, paths, sizes = sample_prog_embs(SRC_DIR, k=500, seed=4)
+
+    # concatenate to get [#neighs x emb-dim]
+    embs = torch.cat(embs, dim=0)
     
     dbscan = DBSCAN(
         eps=0.1, min_samples=5,
