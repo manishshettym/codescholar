@@ -214,7 +214,7 @@ def main(testing=False):
     args.n_train = args.n_batches * args.batch_size
     args.n_test = int(0.2 * args.n_train)
     # args.n_test = 100000
-    args.test = True
+    # args.test = True
 
     train_loop(args)
 
