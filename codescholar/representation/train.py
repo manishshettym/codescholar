@@ -159,6 +159,8 @@ def train_loop(args):
     corpus = dataset.Corpus(
         args.dataset, args.n_train, args.n_test,
         train=(not args.test))
+    
+    exit()
 
     # create validation points
     loader = corpus.gen_data_loader(args.batch_size, train=False)
