@@ -161,6 +161,10 @@ def collapse_nodes(sast: ProgramGraph):
 def label_nodes(sast: ProgramGraph, source: str):
     '''label nodes for the simplified AST'''
     for node in sast.all_nodes():
+
+        if not hasattr(node, 'relpos'):
+            setattr(node, 'relpos', 0)
+
         if isinstance(node.ast_node, ast.Module):
             setattr(node, 'span', '#')
             continue
@@ -172,7 +176,8 @@ def label_nodes(sast: ProgramGraph, source: str):
         span = source[l: r]
         offset = l
         
-        for c in children:
+        for c_id, c in enumerate(children):
+            setattr(c, 'relpos', c_id)
             c_l, c_r = c.ast_node.range
             c_len = c_r - c_l
             c_l -= offset

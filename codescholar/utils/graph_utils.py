@@ -166,10 +166,6 @@ def program_graph_to_nx(program_graph, directed=False):
     Returns:
         A NetworkX graph that can be analyzed by the networkx module.
     """
-    # Debug: render the program graph
-    # program_graph_graphviz.render(program_graph,
-    #   path="../representation/plots/temp.png")
-
     # create custom graphviz representation
     graphviz_repr = program_graph_to_graphviz(program_graph)
 
@@ -197,7 +193,7 @@ def program_graph_to_graphviz(graph):
         assert node.ast_type
         assert node.span
 
-        node_attrs = {'ast_type': 'Other'}
+        node_attrs = {'ast_type': 'Other', 'relpos': node.relpos}
         node_attrs['ast_type'] = six.ensure_str(node.ast_type, 'utf-8')
         node_attrs['span'] = six.ensure_str(node.span, 'utf-8')
         g.add_node(node.id, **node_attrs)

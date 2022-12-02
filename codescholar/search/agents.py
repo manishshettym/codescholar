@@ -99,7 +99,7 @@ class GreedySearch(SearchAgent):
             start_node = random.choice(list(graph.nodes))
             neigh = [start_node]
             
-            # find its frontier
+            # find frontier = {neighbors} - {itself} = {supergraphs}
             frontier = list(set(graph.neighbors(start_node)) - set(neigh))
             visited = set([start_node])
 
@@ -139,7 +139,7 @@ class GreedySearch(SearchAgent):
                 cand_embs = self.model.encoder(cand_batch)
                     
                 # SCORE CANDIDATES
-                best_score = float("inf")
+                # best_score = float("inf")
 
                 for cand_node, cand_emb in zip(frontier, cand_embs):
                     score, n_embs = 0, 0
@@ -156,9 +156,9 @@ class GreedySearch(SearchAgent):
                                     emb_batch.to(get_device()),
                                     cand_emb)).unsqueeze(1)), axis=1)).item()
 
-                    # adding cand_node reduces total_violation
-                    if score < best_score:
-                        best_score = score
+                    # # adding cand_node reduces total_violation
+                    # if score < best_score:
+                    #     best_score = score
 
                     new_neigh = neigh + [cand_node]
                     new_frontier = list(((

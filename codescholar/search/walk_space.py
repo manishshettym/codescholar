@@ -24,7 +24,6 @@ def main():
     search_config.init_search_configs(parser)
     args = parser.parse_args()
 
-    args.format = "nx"  # nx or source
     args.source_dir = f"../representation/tmp/{args.dataset}/train/graphs/"
     args.emb_dir = f"./tmp/{args.dataset}/emb/"
 
