@@ -134,12 +134,14 @@ def nx_to_program_graph(graph: nx.DiGraph):
         ast_type = graph.nodes[node]['ast_type'].numpy()[0]
         ast_type = GraphNodeLabel(ast_type).name
         span = graph.nodes[node]['span']
+        relpos = graph.nodes[node]['relpos']
         
         new_node = ProgramGraphNode()
         new_node.node_type = pgdata.NodeType.SYNTAX_NODE
         new_node.id = program_utils.unique_id()
         new_node.ast_type = ast_type
         setattr(new_node, 'span', span)
+        setattr(new_node, 'relpos', relpos)
         
         pgraph.add_node(new_node)
         nxnode_to_pgnode[node] = new_node.id

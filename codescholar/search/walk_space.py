@@ -58,20 +58,10 @@ def main():
     count_by_size = defaultdict(int)
 
     for idiom in out_graphs:
-        if args.node_anchored:
-            colors = ["red"] + ["blue"] * (len(idiom) - 1)
-            nx.draw(idiom, node_color=colors, with_labels=True)
-        else:
-            nx.draw(idiom)
-
         pat_len = len(idiom)
         pat_count = count_by_size[len(idiom)]
         file = "idiom_{}_{}".format(pat_len, pat_count)
         print(f"Saving {file}")
-        
-        path = f"{args.plots_dir}{file}.png"
-        plt.savefig(path)
-        plt.close()
 
         path = f"{args.idiom_dir}{file}.png"
         sast = nx_to_program_graph(idiom)
