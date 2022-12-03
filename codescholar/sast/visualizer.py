@@ -4,7 +4,7 @@ import pygraphviz
 from python_graphs import program_graph_dataclasses as pb
 
 
-def to_graphviz(graph, spans=False):
+def to_graphviz(graph, spans=False, relpos=False):
     """Creates a graphviz representation of a SAST.
 
     Args:
@@ -19,6 +19,8 @@ def to_graphviz(graph, spans=False):
             node_attrs['label'] = str(node.ast_type)
             if spans:
                 node_attrs['label'] = str(node.span)
+            if relpos:
+                node_attrs['label'] += f" ({str(node.relpos)})"
         else:
             node_attrs['shape'] = 'point'
 
@@ -45,6 +47,6 @@ def to_graphviz(graph, spans=False):
     return g
 
 
-def render_sast(graph, path='/tmp/graph.png', spans=False):
-    g = to_graphviz(graph, spans)
+def render_sast(graph, path='/tmp/graph.png', spans=False, relpos=False):
+    g = to_graphviz(graph, spans, relpos)
     g.draw(path, prog='dot')

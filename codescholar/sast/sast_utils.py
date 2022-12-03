@@ -2,6 +2,9 @@ import re
 import gast as ast
 import io
 import tokenize
+from collections import defaultdict
+import textwrap
+
 from python_graphs.program_graph import ProgramGraph
 from python_graphs import program_graph_dataclasses as pb
 
@@ -190,6 +193,105 @@ def label_nodes(sast: ProgramGraph, source: str):
         setattr(node, 'span', span)
 
     return sast
+
+
+def add_indent_to_block(prog_str: str):
+    return textwrap.indent(prog_str, 1 * '\t')
+
+
+def kth_substr_idx(s: str, sub: str, k):
+    where = [m.start() for m in re.finditer(sub, s)]
+
+    if len(where) < k - 1:
+        return -1
+    else:
+        return where[k - 1]
+
+
+# NOTE @manishs: migth be incomplete and hacky. Need to
+# clean it up in the future and simplify transpilation between
+# source and sast.
+def replace_nonterminals(node, child_spans):
+    '''replace nonterminals in a node's span'''
+
+    ins = 0
+    dels = 0
+
+    module_flag = False
+    if isinstance(node.ast_node, ast.Module):
+        module_flag = True
+
+    child_spans = sorted(child_spans, key=lambda x: x[1])
+    new_span = node.span if not module_flag else ""
+
+    if ' else' in new_span:
+        new_span = new_span.replace(' else', '\nelse')
+
+    for span, span_idx in child_spans:
+        elif_flag = span.startswith('elif')
+        else_flag = 'else' in span
+        span_idx = span_idx - dels + ins
+
+        if module_flag:
+            new_span += span + "\n"
+        else:
+
+            col_loc = None
+            loc = kth_substr_idx(new_span, '#', k=span_idx + 1)
+
+            if ':' in new_span:
+                col_loc = new_span.index(':')
+            
+            # update the child_span
+            if elif_flag:
+                span = f"\n{span}"
+                if else_flag:
+                    span = span.replace(' else', '\nelse')
+            
+            elif col_loc and loc > col_loc:
+                span = f"\n{add_indent_to_block(span)}"
+
+            new_span = new_span[:loc] + new_span[loc:].replace('#', span, 1)
+            
+            dels += 1
+            ins += len([m for m in re.finditer('#', span)])
+
+    node.span = new_span
+    return node
+
+
+def sast_to_prog(sast: ProgramGraph):
+    '''perform an dfs traversal and regenerate prog'''
+
+    def dfs_util(sast: ProgramGraph, node, visited):
+        # print(f"VISITING NODE {node.span}")
+        visited[node.id] = True
+        span_pos = []
+        
+        for child in sast.children(node):
+            # print(f"- Child {child.span}")
+            if not visited[child.id]:
+                span, pos = dfs_util(sast, child, visited)
+                span_pos.append((span, pos))
+            else:
+                span_pos.append((child.span, child.relpos))
+        
+        # print(f"before: {node.span}")
+        # print(f"replacements: {span_pos}")
+        node = replace_nonterminals(node, span_pos)
+        # print(f"after: {node.span}\n")
+        
+        return node.span, node.relpos
+
+    visited = defaultdict()
+    for node in sast.all_nodes():
+        visited[node.id] = False
+
+    for node in sast.all_nodes():
+        if not visited[node.id]:
+            dfs_util(sast, node, visited)
+    
+    return sast.root.span
 
 
 def remove_comments_and_docstrings(source: str):

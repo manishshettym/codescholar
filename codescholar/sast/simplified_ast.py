@@ -10,7 +10,7 @@ import gast as ast
 AST_NODE_FILTER = (ast.Load, ast.Store)
 
 
-def get_simplified_ast(program, dfg=True, cfg=True):
+def get_simplified_ast(program, dfg=False, cfg=False, compfrom=False):
     """Constructs a program graph to represent the given program."""
 
     program = remove_comments_and_docstrings(program)
@@ -118,14 +118,15 @@ def get_simplified_ast(program, dfg=True, cfg=True):
                     last_accesses[write_identifier] = [access]
 
     # Add COMPUTED_FROM edges.
-    for node in ast.walk(program_node):
-        if isinstance(node, ast.Assign):
-            for value_node in ast.walk(node.value):
-                if isinstance(value_node, ast.Name):
-                    for target in node.targets:
-                        program_graph.add_new_edge(
-                            target, value_node,
-                            edge_type=pb.EdgeType.COMPUTED_FROM)
+    if compfrom:
+        for node in ast.walk(program_node):
+            if isinstance(node, ast.Assign):
+                for value_node in ast.walk(node.value):
+                    if isinstance(value_node, ast.Name):
+                        for target in node.targets:
+                            program_graph.add_new_edge(
+                                target, value_node,
+                                edge_type=pb.EdgeType.COMPUTED_FROM)
     
     # simplify the graph by removing noisy nodes
     sast = collapse_nodes(program_graph)
