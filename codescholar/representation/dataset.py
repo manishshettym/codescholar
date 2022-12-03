@@ -154,7 +154,7 @@ class ProgramDataset(Dataset):
             count += 1
         
         # Create randomly mutated examples and store in self.processed_dir
-        # self.random_samples_generator(program_size, count)
+        self.random_samples_generator(program_size, count)
 
     def random_samples_generator(self, program_size, count):
         """Steps:
