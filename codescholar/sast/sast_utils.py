@@ -223,9 +223,12 @@ def replace_nonterminals(node, child_spans):
 
     child_spans = sorted(child_spans, key=lambda x: x[1])
     new_span = node.span if not module_flag else ""
+    col_loc = None
 
     if ' else' in new_span:
         new_span = new_span.replace(' else', '\nelse')
+    
+    # ######## LOOP OVER THE CHILDREN #########
 
     for span, span_idx in child_spans:
         elif_flag = span.startswith('elif')
@@ -235,19 +238,18 @@ def replace_nonterminals(node, child_spans):
         if module_flag:
             new_span += span + "\n"
         else:
-
-            col_loc = None
             loc = kth_substr_idx(new_span, '#', k=span_idx + 1)
 
             if ':' in new_span:
                 col_loc = new_span.index(':')
             
-            # update the child_span
+            # adding a elif/elif-else (child) to an if (parent)
             if elif_flag:
                 span = f"\n{span}"
                 if else_flag:
                     span = span.replace(' else', '\nelse')
             
+            # adding a child to a block node (parent)
             elif col_loc and loc > col_loc:
                 span = f"\n{add_indent_to_block(span)}"
 
@@ -255,6 +257,9 @@ def replace_nonterminals(node, child_spans):
             
             dels += 1
             ins += len([m for m in re.finditer('#', span)])
+
+    if col_loc:
+        new_span = new_span.replace(':', ':\n')
 
     node.span = new_span
     return node
