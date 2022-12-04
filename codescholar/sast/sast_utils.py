@@ -269,23 +269,17 @@ def sast_to_prog(sast: ProgramGraph):
     '''perform an dfs traversal and regenerate prog'''
 
     def dfs_util(sast: ProgramGraph, node, visited):
-        # print(f"VISITING NODE {node.span}")
         visited[node.id] = True
         span_pos = []
         
         for child in sast.children(node):
-            # print(f"- Child {child.span}")
             if not visited[child.id]:
                 span, pos = dfs_util(sast, child, visited)
                 span_pos.append((span, pos))
             else:
                 span_pos.append((child.span, child.relpos))
-        
-        # print(f"before: {node.span}")
-        # print(f"replacements: {span_pos}")
+
         node = replace_nonterminals(node, span_pos)
-        # print(f"after: {node.span}\n")
-        
         return node.span, node.relpos
 
     visited = defaultdict()
