@@ -1,6 +1,7 @@
 import enum
 import six
 import json
+from collections import OrderedDict
 
 import pygraphviz
 import networkx as nx
@@ -130,7 +131,12 @@ def nx_to_program_graph(graph: nx.DiGraph):
     pgraph = ProgramGraph()
     nxnode_to_pgnode = {}
 
-    for node in graph.nodes:
+    # sort nodes in relative level order
+    graph_nodes = sorted(
+        graph.nodes.items(),
+        key=lambda x: x[1]['relpos'])
+
+    for node in OrderedDict(graph_nodes):
         ast_type = graph.nodes[node]['ast_type'].numpy()[0]
         ast_type = GraphNodeLabel(ast_type).name
         span = graph.nodes[node]['span']
@@ -141,9 +147,13 @@ def nx_to_program_graph(graph: nx.DiGraph):
         new_node.id = program_utils.unique_id()
         new_node.ast_type = ast_type
         setattr(new_node, 'span', span)
-        setattr(new_node, 'relpos', relpos)
+        setattr(new_node, 'relpos', int(relpos))
         
         pgraph.add_node(new_node)
+
+        if graph.nodes[node]['anchor'] == 1:
+            pgraph.root_id = new_node.id
+
         nxnode_to_pgnode[node] = new_node.id
 
     for edge in graph.edges:
@@ -156,6 +166,11 @@ def nx_to_program_graph(graph: nx.DiGraph):
             id1=n1, id2=n2, type=edge_type)
 
         pgraph.add_edge(new_edge)
+
+        # TODO: Figure out how to use DFG/computed-from edges
+        # to regenerate the source code.
+        if edge_type == GraphEdgeLabel.FIELD:
+            pgraph.child_map[n1].append(n2)
 
     return pgraph
 
