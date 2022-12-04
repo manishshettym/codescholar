@@ -3,10 +3,8 @@ import os.path as osp
 import argparse
 from typing import List
 import networkx as nx
+import black
 from collections import defaultdict
-
-import torch
-import matplotlib.pyplot as plt
 
 from codescholar.representation import models, config
 from codescholar.search import search_config
@@ -15,6 +13,12 @@ from codescholar.utils.train_utils import build_model
 from codescholar.search.agents import GreedySearch
 from codescholar.utils.graph_utils import nx_to_program_graph
 from codescholar.sast.visualizer import render_sast
+from codescholar.sast.sast_utils import sast_to_prog
+
+
+def save_idiom(path, idiom):
+    with open(path, 'w') as fp:
+        fp.write(idiom)
 
 
 def main():
@@ -26,15 +30,14 @@ def main():
 
     args.source_dir = f"../representation/tmp/{args.dataset}/train/graphs/"
     args.emb_dir = f"./tmp/{args.dataset}/emb/"
+    args.idiom_g_dir = f"./results/idioms/graphs/"
+    args.idiom_p_dir = f"./results/idioms/progs/"
 
-    args.plots_dir = "./plots/"
-    args.idiom_dir = f"./results/idioms/"
-
-    if not osp.exists(args.idiom_dir):
-        os.makedirs(args.idiom_dir)
+    if not osp.exists(args.idiom_g_dir):
+        os.makedirs(args.idiom_g_dir)
     
-    if not osp.exists(args.plots_dir):
-        os.makedirs(args.plots_dir)
+    if not osp.exists(args.idiom_p_dir):
+        os.makedirs(args.idiom_p_dir)
 
     embs, emb_paths, _ = sample_prog_embs(
         args.emb_dir, k=500, seed=4)
@@ -58,15 +61,22 @@ def main():
     count_by_size = defaultdict(int)
 
     for idiom in out_graphs:
-        pat_len = len(idiom)
-        pat_count = count_by_size[len(idiom)]
+        pat_len, pat_count = len(idiom), count_by_size[len(idiom)]
         file = "idiom_{}_{}".format(pat_len, pat_count)
         print(f"Saving {file}")
-
-        path = f"{args.idiom_dir}{file}.png"
+        
+        path = f"{args.idiom_g_dir}{file}.png"
         sast = nx_to_program_graph(idiom)
         render_sast(sast, path, spans=True)
 
+        path = f"{args.idiom_p_dir}{file}.py"
+        prog = sast_to_prog(sast).replace('#', '_')
+        try:
+            prog = black.format_str(prog, mode=black.FileMode())
+        except:
+            pass
+
+        save_idiom(path, prog)
         count_by_size[len(idiom)] += 1
 
 
