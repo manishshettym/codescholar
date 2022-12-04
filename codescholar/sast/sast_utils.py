@@ -202,7 +202,7 @@ def add_indent_to_block(prog_str: str):
 def kth_substr_idx(s: str, sub: str, k):
     where = [m.start() for m in re.finditer(sub, s)]
 
-    if len(where) < k - 1:
+    if len(where) <= k - 1:
         return -1
     else:
         return where[k - 1]
