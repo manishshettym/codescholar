@@ -17,6 +17,11 @@ from codescholar.sast.sast_utils import sast_to_prog
 
 
 def save_idiom(path, idiom):
+    try:
+        idiom = black.format_str(idiom, mode=black.FileMode())
+    except:
+        pass
+    
     with open(path, 'w') as fp:
         fp.write(idiom)
 
@@ -71,12 +76,8 @@ def main():
 
         path = f"{args.idiom_p_dir}{file}.py"
         prog = sast_to_prog(sast).replace('#', '_')
-        try:
-            prog = black.format_str(prog, mode=black.FileMode())
-        except:
-            pass
-
         save_idiom(path, prog)
+
         count_by_size[len(idiom)] += 1
 
 
