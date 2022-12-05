@@ -189,14 +189,9 @@ def label_nodes(sast: ProgramGraph, source: str):
             span = span[:c_l] + '#' + span[c_r:]
             offset += (c_r - c_l) - 1
         
-        span = re.sub('\s+', ' ', span)
         setattr(node, 'span', span)
 
     return sast
-
-
-def add_indent_to_block(prog_str: str):
-    return textwrap.indent(prog_str, 1 * '\t')
 
 
 def kth_substr_idx(s: str, sub: str, k):
@@ -208,58 +203,33 @@ def kth_substr_idx(s: str, sub: str, k):
         return where[k - 1]
 
 
-# NOTE @manishs: migth be incomplete and hacky. Need to
-# clean it up in the future and simplify transpilation between
-# source and sast.
+# NOTE @manishs: migth be incomplete and hacky.
+# clean up in the future and simplify transpilation.
 def replace_nonterminals(node, child_spans):
     '''replace nonterminals in a node's span'''
 
-    ins = 0
-    dels = 0
-
+    ins, dels = 0, 0
     module_flag = False
+    
     if isinstance(node.ast_node, ast.Module):
         module_flag = True
 
     child_spans = sorted(child_spans, key=lambda x: x[1])
     new_span = node.span if not module_flag else ""
-    col_loc = None
-
-    if ' else' in new_span:
-        new_span = new_span.replace(' else', '\nelse')
     
     # ######## LOOP OVER THE CHILDREN #########
 
     for span, span_idx in child_spans:
-        elif_flag = span.startswith('elif')
-        else_flag = 'else' in span
         span_idx = span_idx - dels + ins
 
         if module_flag:
             new_span += span + "\n"
         else:
             loc = kth_substr_idx(new_span, '#', k=span_idx + 1)
-
-            if ':' in new_span:
-                col_loc = new_span.index(':')
-            
-            # adding a elif/elif-else (child) to an if (parent)
-            if elif_flag:
-                span = f"\n{span}"
-                if else_flag:
-                    span = span.replace(' else', '\nelse')
-            
-            # adding a child to a block node (parent)
-            elif col_loc and loc > col_loc:
-                span = f"\n{add_indent_to_block(span)}"
-
             new_span = new_span[:loc] + new_span[loc:].replace('#', span, 1)
             
             dels += 1
             ins += len([m for m in re.finditer('#', span)])
-
-    if col_loc:
-        new_span = new_span.replace(':', ':\n')
 
     node.span = new_span
     return node

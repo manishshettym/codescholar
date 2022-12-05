@@ -67,7 +67,7 @@ def main():
         
         path = f"{args.idiom_g_dir}{file}.png"
         sast = nx_to_program_graph(idiom)
-        render_sast(sast, path, spans=True)
+        render_sast(sast, path, spans=True, relpos=True)
 
         path = f"{args.idiom_p_dir}{file}.py"
         prog = sast_to_prog(sast).replace('#', '_')

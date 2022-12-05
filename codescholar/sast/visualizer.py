@@ -1,5 +1,5 @@
 """Graphviz visualizations of SAST."""
-
+import re
 import pygraphviz
 from python_graphs import program_graph_dataclasses as pb
 
@@ -12,6 +12,8 @@ def to_graphviz(graph, spans=False, relpos=False):
     Returns:
         A pygraphviz object representing the ProgramGraph.
     """
+    SUB = str.maketrans("0123456789", "₀₁₂₃₄₅₆₇₈₉")
+
     g = pygraphviz.AGraph(strict=False, directed=True)
     for _, node in graph.nodes.items():
         node_attrs = {}
@@ -20,7 +22,11 @@ def to_graphviz(graph, spans=False, relpos=False):
             if spans:
                 node_attrs['label'] = str(node.span)
             if relpos:
-                node_attrs['label'] += f" ({str(node.relpos)})"
+                relpos_str = str(node.relpos).translate(SUB)
+                node_attrs['label'] += relpos_str
+            
+            # remove formatting for the render
+            node_attrs['label'] = re.sub('\s+', ' ', node_attrs['label'])
         else:
             node_attrs['shape'] = 'point'
 
