@@ -1,6 +1,7 @@
 import torch
 import torch.optim as optim
 
+import re
 import networkx as nx
 from transformers import RobertaTokenizer, RobertaModel
 from deepsnap.graph import Graph as DSGraph
@@ -94,6 +95,9 @@ def featurize_graph(g, anchor=None):
                 g.nodes[v]["ast_type"] = torch.tensor([node_type_val])
             
             if isinstance(node_span, str):
+                # remove format #TODO @manishs: is this is better/worse
+                node_span = re.sub('\s+', ' ', node_span)
+
                 tokens_ids = CodeBertTokenizer.encode(
                     node_span, truncation=True)
                 tokens_tensor = torch.tensor(tokens_ids, device=get_device())
