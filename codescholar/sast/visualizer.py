@@ -1,11 +1,12 @@
-"""Graphviz visualizations of SAST."""
+"""Graphviz visualizations of Program Graphs."""
 import re
 import pygraphviz
+from python_graphs.program_graph import ProgramGraph
 from python_graphs import program_graph_dataclasses as pb
 
 
-def to_graphviz(graph, spans=False, relpos=False):
-    """Creates a graphviz representation of a SAST.
+def to_graphviz(graph: ProgramGraph, spans=False, relpos=False):
+    """Creates a grapvhviz representation of a ProgramGraph.
 
     Args:
         graph: A ProgramGraph object to visualize.
@@ -16,7 +17,9 @@ def to_graphviz(graph, spans=False, relpos=False):
 
     g = pygraphviz.AGraph(strict=False, directed=True)
     for _, node in graph.nodes.items():
+        has_child = len([c for c in graph.children(node)])
         node_attrs = {}
+
         if node.ast_type:
             node_attrs['label'] = str(node.ast_type)
             if spans:
@@ -27,6 +30,10 @@ def to_graphviz(graph, spans=False, relpos=False):
             
             # remove formatting for the render
             node_attrs['label'] = re.sub('\s+', ' ', node_attrs['label'])
+
+            if has_child:
+                node_attrs['shape'] = 'box'
+
         else:
             node_attrs['shape'] = 'point'
 
@@ -53,6 +60,6 @@ def to_graphviz(graph, spans=False, relpos=False):
     return g
 
 
-def render_sast(graph, path='/tmp/graph.png', spans=False, relpos=False):
+def render_sast(graph: ProgramGraph, path='/tmp/graph.png', spans=False, relpos=False):
     g = to_graphviz(graph, spans, relpos)
     g.draw(path, prog='dot')
