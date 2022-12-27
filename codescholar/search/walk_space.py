@@ -45,7 +45,7 @@ def main():
         os.makedirs(args.idiom_p_dir)
 
     embs, emb_paths, _ = sample_prog_embs(
-        args.emb_dir, k=500, seed=4)
+        args.emb_dir, k=1000, seed=4)
 
     dataset: List[nx.Digraph] = graphs_from_embs(args.source_dir, emb_paths)
 
@@ -62,7 +62,7 @@ def main():
         analyze=True,
         out_batch_size=20)
 
-    out_graphs = agent.search(n_trials=10)
+    out_graphs = agent.search(n_trials=args.n_trials)
     count_by_size = defaultdict(int)
 
     for idiom in out_graphs:
