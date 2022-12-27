@@ -20,6 +20,7 @@ jobs:
       name: Install graphviz (macos)
       run: |
         /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
         brew install graphviz
     - if: ${{ matrix.os == 'ubuntu-latest' }}
       name: Install graphviz (ubuntu)
