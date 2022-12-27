@@ -11,3 +11,15 @@ black
 astunparse
 GitPython
 pygments
+networkx
+torch
+tensorboard
+matplotlib
+pygraphviz
+networkx
+python_graphs
+deepsnap
+orca
+torch
+transformers
+openpyxl

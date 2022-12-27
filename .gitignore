@@ -116,3 +116,12 @@ scratch/
 
 # log files
 *.log
+runs/
+
+# random files
+.DS_STORE
+
+# datasets, plots, and results
+plots/
+tmp/
+results/

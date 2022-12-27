@@ -1,0 +1,6 @@
+# https://stackoverflow.com/questions/65860764/pytorch-torch-sparse-installation-without-cuda
+torch-scatter -f https://pytorch-geometric.com/whl/torch-1.7.0+cpu.html
+torch-sparse -f https://pytorch-geometric.com/whl/torch-1.7.0+cpu.html
+torch-cluster -f https://pytorch-geometric.com/whl/torch-1.7.0+cpu.html
+torch-spline-conv -f https://pytorch-geometric.com/whl/torch-1.7.0+cpu.html
+torch_geometric
