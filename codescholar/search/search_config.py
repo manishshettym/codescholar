@@ -15,7 +15,7 @@ def init_search_configs(parser, arg_str=None):
     search_args.add_argument('--max_pattern_size', type=int)
     search_args.add_argument(
         '--n_trials', type=int,
-        help='number of search trials to run')
+        help='number of search trials = #initial program nodes')
 
     search_args.set_defaults(
         n_trials=1000,
