@@ -44,14 +44,16 @@ def main():
     if not osp.exists(args.idiom_p_dir):
         os.makedirs(args.idiom_p_dir)
 
-    embs, emb_paths, _ = sample_prog_embs(
-        args.emb_dir, k=1000, seed=4)
-
+    # sample K programs to perform idiom searn
+    embs, emb_paths, _ = sample_prog_embs(args.emb_dir, k=1000, seed=4)
     dataset: List[nx.Digraph] = graphs_from_embs(args.source_dir, emb_paths)
 
+    # build subgraph embedding model
     model = build_model(models.SubgraphEmbedder, args)
     model.share_memory()
 
+    # build greedy beam search agent
+    # hyperparams: idiom size, n_trials
     agent = GreedySearch(
         min_pattern_size=args.min_pattern_size,
         max_pattern_size=args.max_pattern_size,
