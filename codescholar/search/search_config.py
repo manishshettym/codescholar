@@ -18,7 +18,7 @@ def init_search_configs(parser, arg_str=None):
         help='number of search trials = #initial program nodes')
 
     search_args.set_defaults(
-        n_trials=1000,
+        n_trials=5000,
         min_pattern_size=5,
         max_pattern_size=20,
         subgraph_sample_size=0,

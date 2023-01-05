@@ -45,7 +45,7 @@ def main():
         os.makedirs(args.idiom_p_dir)
 
     # sample K programs to perform idiom searn
-    embs, emb_paths, _ = sample_prog_embs(args.emb_dir, k=1000, seed=4)
+    embs, emb_paths, _ = sample_prog_embs(args.emb_dir, k=15000, seed=4)
     dataset: List[nx.Digraph] = graphs_from_embs(args.source_dir, emb_paths)
 
     # build subgraph embedding model
