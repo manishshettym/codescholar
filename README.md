@@ -1,4 +1,4 @@
-# Project Codescholar
+<img align="center" src="./codescholar.png"/>
 
 <!-- # Requirements: -->
 
