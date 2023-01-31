@@ -33,7 +33,7 @@ def main():
     search_config.init_search_configs(parser)
     args = parser.parse_args()
 
-    args.source_dir = f"../representation/tmp/{args.dataset}/train/graphs/"
+    args.source_dir = f"../data/{args.dataset}/graphs/"
     args.emb_dir = f"./tmp/{args.dataset}/emb/"
     args.idiom_g_dir = f"./results/idioms/graphs/"
     args.idiom_p_dir = f"./results/idioms/progs/"

@@ -19,6 +19,36 @@ from codescholar.utils.train_utils import (
 from codescholar.search import search_config
 
 
+# ########## MULTI PROC ##########
+
+def start_workers_process(raw_paths, in_queue, out_queue, args):
+    workers = []
+    for _ in tqdm(range(args.n_workers), desc="Workers"):
+        worker = mp.Process(
+            target=generate_neighborhoods,
+            args=(args, raw_paths, in_queue, out_queue)
+        )
+        worker.start()
+        workers.append(worker)
+    
+    return workers
+
+
+def start_workers_embed(model, in_queue, out_queue, args):
+    workers = []
+    for _ in tqdm(range(args.n_workers), desc="Workers"):
+        worker = mp.Process(
+            target=generate_embeddings,
+            args=(args, model, in_queue, out_queue)
+        )
+        worker.start()
+        workers.append(worker)
+    
+    return workers
+
+
+# ########## UTILITIES ##########
+
 # radial sampling
 def get_neighborhoods(args, graph):
     neighs = []
@@ -41,6 +71,7 @@ def get_neighborhoods(args, graph):
     return neighs
 
 
+# load the graph for a source program
 def process_program(path, format="source"):
     
     if format == "source":
@@ -52,31 +83,25 @@ def process_program(path, format="source"):
             return None
 
         prog_graph = get_simplified_ast(source, dfg=False, cfg=False)
+
+        if prog_graph is None:
+            return None
+
         graph = program_graph_to_nx(prog_graph, directed=True)
     
-    elif format == "nx":
+    elif format == "graphs":
         graph = torch.load(path)
     
     return graph
-
-
-def start_workers(model, in_queue, out_queue, args):
-    workers = []
-    for _ in tqdm(range(args.n_workers), desc="Workers"):
-        worker = mp.Process(
-            target=generate_embeddings,
-            args=(args, model, in_queue, out_queue)
-        )
-        worker.start()
-        workers.append(worker)
-    
-    return workers
 
 
 def generate_embeddings(args, model, in_queue, out_queue):
     done = False
     while not done:
         msg, idx = in_queue.get()
+
+        if idx % 10 == 0:
+            print(f"[Embed] {idx}")
 
         if msg == "done":
             done = True
@@ -91,23 +116,43 @@ def generate_embeddings(args, model, in_queue, out_queue):
         out_queue.put(("complete"))
 
 
-def generate_neighborhoods(args, raw_paths):
-    for idx, path in enumerate(tqdm(raw_paths)):
-        graph = process_program(path, args.format)
+def generate_neighborhoods(args, raw_paths, in_queue, out_queue):
+    done = False
+    while not done:
+        msg, idx = in_queue.get()
 
+        if idx % 10 == 0:
+            print(f"[Process] {idx}/{len(raw_paths)}")
+
+        if msg == "done":
+            done = True
+            break
+        
+        graph = process_program(raw_paths[idx], args.format)
+
+        if args.format == "source":
+            torch.save(graph, osp.join(args.graphs_dir, f'data_{idx}.pt'))
+        
         if graph is None:
             continue
-
+        
         if args.use_full_graphs:
             datapoint = featurize_graph(graph, 0)
             neighs = [datapoint]
         else:
             neighs = get_neighborhoods(args, graph)
-        
+
         torch.save(neighs, osp.join(args.processed_dir, f'data_{idx}.pt'))
+        out_queue.put(("complete"))
 
 
 def embed_main(args):
+
+    # ######### PHASE1: PROCESS GRAPHS #########
+
+    if not osp.exists(osp.dirname(args.graphs_dir)):
+        os.makedirs(osp.dirname(args.graphs_dir))
+
     if not osp.exists(osp.dirname(args.processed_dir)):
         os.makedirs(osp.dirname(args.processed_dir))
 
@@ -117,11 +162,24 @@ def embed_main(args):
     if args.format == "source":
         raw_paths = sorted(glob.glob(osp.join(args.source_dir, '*.py')))
     else:
-        raw_paths = sorted(glob.glob(osp.join(args.source_dir, '*.pt')))
+        raw_paths = sorted(glob.glob(osp.join(args.graphs_dir, '*.pt')))
 
-    generate_neighborhoods(args, raw_paths)
+    in_queue, out_queue = mp.Queue(), mp.Queue()
+    workers = start_workers_process(raw_paths, in_queue, out_queue, args)
 
-    # ######### EMBED GRAPHS #########
+    for i in range(len(raw_paths)):
+        in_queue.put(("idx", i))
+        
+    for _ in tqdm(range(len(raw_paths))):
+        msg = out_queue.get()
+    
+    for _ in range(args.n_workers):
+        in_queue.put(("done", None))
+
+    for worker in workers:
+        worker.join()
+
+    # ######### PHASE2: EMBED GRAPHS #########
 
     model = build_model(models.SubgraphEmbedder, args)
     model.share_memory()
@@ -131,7 +189,7 @@ def embed_main(args):
     model.eval()
 
     in_queue, out_queue = mp.Queue(), mp.Queue()
-    workers = start_workers(model, in_queue, out_queue, args)
+    workers = start_workers_embed(model, in_queue, out_queue, args)
 
     for i in range(len(raw_paths)):
         in_queue.put(("idx", i))
@@ -153,8 +211,9 @@ def main():
     search_config.init_search_configs(parser)
     args = parser.parse_args()
 
-    args.format = "nx"  # nx or source
-    args.source_dir = f"../representation/tmp/{args.dataset}/train/graphs/"
+    args.format = "source"  # {graphs, source}
+    args.source_dir = f"../data/{args.dataset}/source/"
+    args.graphs_dir = f"../data/{args.dataset}/graphs/"
     args.processed_dir = f"./tmp/{args.dataset}/processed/"
     args.emb_dir = f"./tmp/{args.dataset}/emb/"
 
