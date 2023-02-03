@@ -187,10 +187,13 @@ def program_graph_to_nx(program_graph, directed=False):
     graphviz_repr = program_graph_to_graphviz(program_graph)
 
     # translate graphviz to networkx
-    if directed:
-        return nx.DiGraph(graphviz_repr)
-    else:
-        return nx.Graph(graphviz_repr)
+    try:
+        if directed:
+            return nx.DiGraph(graphviz_repr)
+        else:
+            return nx.Graph(graphviz_repr)
+    except:
+        return None
 
 
 # note: this method is adapted from the python_graphs library

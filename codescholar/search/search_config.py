@@ -7,10 +7,6 @@ def init_search_configs(parser, arg_str=None):
     search_args.add_argument(
         '--subgraph_sample_size', type=int,
         help='number of nodes to take from each neighborhood')
-    search_args.add_argument(
-        '--use_full_graphs', action="store_true",
-        help="process whole graphs or sampled node neighborhoods")
-    
     search_args.add_argument('--min_pattern_size', type=int)
     search_args.add_argument('--max_pattern_size', type=int)
     search_args.add_argument(
@@ -21,5 +17,5 @@ def init_search_configs(parser, arg_str=None):
         n_trials=5000,
         min_pattern_size=5,
         max_pattern_size=20,
-        subgraph_sample_size=0,
+        subgraph_sample_size=10,
         radius=3)

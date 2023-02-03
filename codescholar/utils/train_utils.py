@@ -74,6 +74,10 @@ CodeBertModel.eval()
 
 
 def featurize_graph(g, anchor=None):
+
+    assert len(g.nodes) > 0
+    assert len(g.edges) > 0
+
     if anchor is not None:
         pagerank = nx.pagerank(g)
         clustering_coeff = nx.clustering(g)

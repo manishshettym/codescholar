@@ -21,12 +21,12 @@ from codescholar.search import search_config
 
 # ########## MULTI PROC ##########
 
-def start_workers_process(raw_paths, in_queue, out_queue, args):
+def start_workers_process(in_queue, out_queue, args):
     workers = []
     for _ in tqdm(range(args.n_workers), desc="Workers"):
         worker = mp.Process(
             target=generate_neighborhoods,
-            args=(args, raw_paths, in_queue, out_queue)
+            args=(args, in_queue, out_queue)
         )
         worker.start()
         workers.append(worker)
@@ -49,22 +49,27 @@ def start_workers_embed(model, in_queue, out_queue, args):
 
 # ########## UTILITIES ##########
 
-# radial sampling
+# returns a featurized (sampled) radial neighborhood for all nodes in the graph
 def get_neighborhoods(args, graph):
     neighs = []
 
-    # find each node's neighborhood
+    # find each node's neighbors via SSSP
     for j, node in enumerate(graph.nodes):
-        neigh = list(nx.single_source_shortest_path_length(
-            graph, node, cutoff=args.radius).keys())
+        shortest_paths = sorted(nx.single_source_shortest_path_length(
+            graph, node, cutoff=args.radius).items(), key = lambda x: x[1])
+        neighbors = list(map(lambda x: x[0], shortest_paths))
 
         if args.subgraph_sample_size != 0:
-            neigh = random.sample(
-                neigh, min(len(neigh), args.subgraph_sample_size))
-        
-        if len(neigh) > 1:
-            neigh = graph.subgraph(neigh)
-            # neigh.add_edge(0, 0)
+            # NOTE: random sampling of radius-hop neighbors, 
+            # results in nodes w/o any edges between them!!
+            # Instead, sort neighbors by hops and chose top-K closest neighbors
+            neighbors = neighbors[: args.subgraph_sample_size]
+
+        if len(neighbors) > 1:
+            # NOTE: G.subgraph([nodes]) returns the subG induced on [nodes]
+            # i.e., the subG containing the nodes in [nodes] and 
+            # edges between these nodes => in this case, a (sampled) radial n'hood
+            neigh = graph.subgraph(neighbors)
             neigh = featurize_graph(neigh, anchor=0)
             neighs.append(neigh)
     
@@ -76,11 +81,12 @@ def process_program(path, format="source"):
     
     if format == "source":
         with open(path, 'r') as fp:
-            source = fp.read()
-        try:
-            program = ast.parse(source)
-        except:
-            return None
+            try:
+                source = fp.read()
+                program = ast.parse(source)
+            except:
+                # print(f"[ast.parse] {path} is a bad file!")
+                return None
 
         prog_graph = get_simplified_ast(source, dfg=False, cfg=False)
 
@@ -100,9 +106,6 @@ def generate_embeddings(args, model, in_queue, out_queue):
     while not done:
         msg, idx = in_queue.get()
 
-        if idx % 10 == 0:
-            print(f"[Embed] {idx}")
-
         if msg == "done":
             done = True
             break
@@ -116,39 +119,39 @@ def generate_embeddings(args, model, in_queue, out_queue):
         out_queue.put(("complete"))
 
 
-def generate_neighborhoods(args, raw_paths, in_queue, out_queue):
+def generate_neighborhoods(args, in_queue, out_queue):
     done = False
     while not done:
         msg, idx = in_queue.get()
 
-        if idx % 10 == 0:
-            print(f"[Process] {idx}/{len(raw_paths)}")
-
         if msg == "done":
             done = True
             break
-        
-        graph = process_program(raw_paths[idx], args.format)
 
+        if args.format == "source":
+            raw_path = osp.join(args.source_dir, f'example_{idx}.py')
+        else:
+            raw_path = osp.join(args.graphs_dir, f'data_{idx}.pt')
+        
+        graph = process_program(raw_path, args.format)
+        
+        if graph is None:
+            out_queue.put(("complete"))
+            continue
+        
+        # cache/save graph for search
         if args.format == "source":
             torch.save(graph, osp.join(args.graphs_dir, f'data_{idx}.pt'))
         
-        if graph is None:
-            continue
-        
-        if args.use_full_graphs:
-            datapoint = featurize_graph(graph, 0)
-            neighs = [datapoint]
-        else:
-            neighs = get_neighborhoods(args, graph)
-
+        neighs = get_neighborhoods(args, graph)
         torch.save(neighs, osp.join(args.processed_dir, f'data_{idx}.pt'))
+
+        del graph
+        del neighs
+
         out_queue.put(("complete"))
 
-
 def embed_main(args):
-
-    # ######### PHASE1: PROCESS GRAPHS #########
 
     if not osp.exists(osp.dirname(args.graphs_dir)):
         os.makedirs(osp.dirname(args.graphs_dir))
@@ -158,14 +161,19 @@ def embed_main(args):
 
     if not osp.exists(osp.dirname(args.emb_dir)):
         os.makedirs(osp.dirname(args.emb_dir))
-    
+
+    # ######### PHASE1: PROCESS GRAPHS #########
+
     if args.format == "source":
         raw_paths = sorted(glob.glob(osp.join(args.source_dir, '*.py')))
     else:
         raw_paths = sorted(glob.glob(osp.join(args.graphs_dir, '*.pt')))
 
+    # for idx, p in enumerate(raw_paths):
+    #     os.rename(p, osp.join(args.source_dir, f"example_{idx}.py"))
+    
     in_queue, out_queue = mp.Queue(), mp.Queue()
-    workers = start_workers_process(raw_paths, in_queue, out_queue, args)
+    workers = start_workers_process(in_queue, out_queue, args)
 
     for i in range(len(raw_paths)):
         in_queue.put(("idx", i))
@@ -181,27 +189,27 @@ def embed_main(args):
 
     # ######### PHASE2: EMBED GRAPHS #########
 
-    model = build_model(models.SubgraphEmbedder, args)
-    model.share_memory()
+    # model = build_model(models.SubgraphEmbedder, args)
+    # model.share_memory()
 
-    print("Moving model to device:", get_device())
-    model = model.to(get_device())
-    model.eval()
+    # print("Moving model to device:", get_device())
+    # model = model.to(get_device())
+    # model.eval()
 
-    in_queue, out_queue = mp.Queue(), mp.Queue()
-    workers = start_workers_embed(model, in_queue, out_queue, args)
+    # in_queue, out_queue = mp.Queue(), mp.Queue()
+    # workers = start_workers_embed(model, in_queue, out_queue, args)
 
-    for i in range(len(raw_paths)):
-        in_queue.put(("idx", i))
+    # for i in range(len(raw_paths)):
+    #     in_queue.put(("idx", i))
         
-    for _ in tqdm(range(len(raw_paths))):
-        msg = out_queue.get()
+    # for _ in tqdm(range(len(raw_paths))):
+    #     msg = out_queue.get()
     
-    for _ in range(args.n_workers):
-        in_queue.put(("done", None))
+    # for _ in range(args.n_workers):
+    #     in_queue.put(("done", None))
 
-    for worker in workers:
-        worker.join()
+    # for worker in workers:
+    #     worker.join()
 
 
 def main():
