@@ -172,6 +172,7 @@ def embed_main(args):
     else:
         raw_paths = sorted(glob.glob(osp.join(args.graphs_dir, '*.pt')))
 
+    # util: to rename .py files into a standard filename format
     # for idx, p in enumerate(raw_paths):
     #     os.rename(p, osp.join(args.source_dir, f"example_{idx}.py"))
     
