@@ -164,20 +164,44 @@ def embed_main(args):
 
     if not osp.exists(osp.dirname(args.emb_dir)):
         os.makedirs(osp.dirname(args.emb_dir))
-
-    # ######### PHASE1: PROCESS GRAPHS #########
-
+    
     if args.format == "source":
         raw_paths = sorted(glob.glob(osp.join(args.source_dir, '*.py')))
     else:
         raw_paths = sorted(glob.glob(osp.join(args.graphs_dir, '*.pt')))
 
+    # ######### PHASE1: PROCESS GRAPHS #########
+
     # util: to rename .py files into a standard filename format
     # for idx, p in enumerate(raw_paths):
     #     os.rename(p, osp.join(args.source_dir, f"example_{idx}.py"))
     
+    # in_queue, out_queue = mp.Queue(), mp.Queue()
+    # workers = start_workers_process(in_queue, out_queue, args)
+
+    # for i in range(1010579, len(raw_paths)):
+    #     in_queue.put(("idx", i))
+        
+    # for _ in tqdm(range(1010579, len(raw_paths))):
+    #     msg = out_queue.get()
+    
+    # for _ in range(args.n_workers):
+    #     in_queue.put(("done", None))
+
+    # for worker in workers:
+    #     worker.join()
+
+    # ######### PHASE2: EMBED GRAPHS #########
+
+    model = build_model(models.SubgraphEmbedder, args)
+    model.share_memory()
+
+    print("Moving model to device:", get_device())
+    model = model.to(get_device())
+    model.eval()
+
     in_queue, out_queue = mp.Queue(), mp.Queue()
-    workers = start_workers_process(in_queue, out_queue, args)
+    workers = start_workers_embed(model, in_queue, out_queue, args)
 
     for i in range(1010579, len(raw_paths)):
         in_queue.put(("idx", i))
@@ -190,30 +214,6 @@ def embed_main(args):
 
     for worker in workers:
         worker.join()
-
-    # ######### PHASE2: EMBED GRAPHS #########
-
-    # model = build_model(models.SubgraphEmbedder, args)
-    # model.share_memory()
-
-    # print("Moving model to device:", get_device())
-    # model = model.to(get_device())
-    # model.eval()
-
-    # in_queue, out_queue = mp.Queue(), mp.Queue()
-    # workers = start_workers_embed(model, in_queue, out_queue, args)
-
-    # for i in range(len(raw_paths)):
-    #     in_queue.put(("idx", i))
-        
-    # for _ in tqdm(range(len(raw_paths))):
-    #     msg = out_queue.get()
-    
-    # for _ in range(args.n_workers):
-    #     in_queue.put(("done", None))
-
-    # for worker in workers:
-    #     worker.join()
 
 
 def main():
