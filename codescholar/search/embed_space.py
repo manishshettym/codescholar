@@ -88,7 +88,10 @@ def process_program(path, format="source"):
                 # print(f"[ast.parse] {path} is a bad file!")
                 return None
 
-        prog_graph = get_simplified_ast(source, dfg=False, cfg=False)
+        try:
+            prog_graph = get_simplified_ast(source, dfg=False, cfg=False)
+        except:
+            return None
 
         if prog_graph is None:
             return None
@@ -175,10 +178,10 @@ def embed_main(args):
     in_queue, out_queue = mp.Queue(), mp.Queue()
     workers = start_workers_process(in_queue, out_queue, args)
 
-    for i in range(len(raw_paths)):
+    for i in range(1010579, len(raw_paths)):
         in_queue.put(("idx", i))
         
-    for _ in tqdm(range(len(raw_paths))):
+    for _ in tqdm(range(1010579, len(raw_paths))):
         msg = out_queue.get()
     
     for _ in range(args.n_workers):
