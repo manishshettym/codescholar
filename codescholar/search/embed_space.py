@@ -104,6 +104,8 @@ def process_program(path, format="source"):
     return graph
 
 
+# ########## PIPELINE FUNCTIONS ##########
+
 def generate_embeddings(args, model, in_queue, out_queue):
     done = False
     while not done:
@@ -112,8 +114,13 @@ def generate_embeddings(args, model, in_queue, out_queue):
         if msg == "done":
             done = True
             break
-
-        neighs = torch.load(osp.join(args.processed_dir, f'data_{idx}.pt'))
+        
+        # read only graphs of processed programs
+        try:
+            neighs = torch.load(osp.join(args.processed_dir, f'data_{idx}.pt'))
+        except:
+            out_queue.put(("complete"))
+            continue
 
         with torch.no_grad():
             emb = model.encoder(Batch.from_data_list(neighs).to(get_device()))
@@ -153,6 +160,9 @@ def generate_neighborhoods(args, in_queue, out_queue):
         del neighs
 
         out_queue.put(("complete"))
+
+
+# ########## MAIN ##########
 
 def embed_main(args):
 
