@@ -46,7 +46,7 @@ def to_graphviz(graph: ProgramGraph, spans=False, relpos=False):
 
     for edge in graph.edges:
         edge_attrs = {}
-        edge_attrs['label'] = edge.type.name
+        edge_attrs['label'] = edge.type
         edge_colors = {
             pb.EdgeType.LAST_READ: 'red',
             pb.EdgeType.LAST_WRITE: 'blue',

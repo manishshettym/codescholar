@@ -137,8 +137,13 @@ def nx_to_program_graph(graph: nx.DiGraph):
         key=lambda x: x[1]['relpos'])
 
     for node in OrderedDict(graph_nodes):
-        ast_type = graph.nodes[node]['ast_type'].numpy()[0]
-        ast_type = GraphNodeLabel(ast_type).name
+        
+        if isinstance(graph.nodes[node]['ast_type'], str):
+            ast_type = graph.nodes[node]['ast_type']
+        else:
+            ast_type = graph.nodes[node]['ast_type'].numpy()[0]
+            ast_type = GraphNodeLabel(ast_type).name
+
         span = graph.nodes[node]['span']
         relpos = graph.nodes[node]['relpos']
         
@@ -157,8 +162,12 @@ def nx_to_program_graph(graph: nx.DiGraph):
         nxnode_to_pgnode[node] = new_node.id
 
     for edge in graph.edges:
-        edge_type = graph.edges[edge]['flow_type'].numpy()[0]
-        edge_type = GraphEdgeLabel(edge_type)
+        if isinstance(graph.edges[edge]['flow_type'], str):
+            edge_type = graph.edges[edge]['flow_type']
+        else:
+            edge_type = graph.edges[edge]['flow_type'].numpy()[0]
+            edge_type = GraphEdgeLabel(edge_type).name
+
         n1 = nxnode_to_pgnode[edge[0]]
         n2 = nxnode_to_pgnode[edge[1]]
 
