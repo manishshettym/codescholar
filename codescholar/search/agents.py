@@ -3,7 +3,6 @@ import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
 
-
 import torch
 import networkx as nx
 from deepsnap.batch import Batch
@@ -23,21 +22,21 @@ class SearchAgent:
         increasing pattern size by 1
     """
     def __init__(
-            self, min_pattern_size, max_pattern_size,
-            model, dataset, embs, analyze=False, out_batch_size=20):
+            self, min_idiom_size, max_idiom_size,
+            model, dataset, embs, out_batch_size=20):
 
-        self.min_pattern_size = min_pattern_size
-        self.max_pattern_size = max_pattern_size
+        self.min_idiom_size = min_idiom_size
+        self.max_idiom_size = max_idiom_size
         self.model = model
         self.dataset = dataset
         self.embs = embs
-        self.analyze = analyze
         self.out_batch_size = out_batch_size
 
         # size (#nodes) -> List[(score, graph)]
         self.cand_patterns = defaultdict(list)
+
         # size (#nodes) -> hash(graph) -> List[graph]
-        self.counts = defaultdict(lambda: defaultdict(list))
+        self.idiommine = defaultdict(lambda: defaultdict(list))
 
     def search(self):
         '''Abstract method to run the search procedure'''
@@ -60,27 +59,40 @@ class SearchAgent:
         """Condition to stop search
         """
         raise NotImplemented
+    
+    def _print_mine(self):
+        print("========== CODESCHOLAR MINE ==========")
+        print(".")
+        for size, hashed_idioms in self.idiommine.items():
+            print(f"├── size {size}")
+            fin_idx = len(hashed_idioms.keys()) - 1
+
+            for idx, (hash_id, idioms) in enumerate(hashed_idioms.items()):
+                if idx == fin_idx:
+                    print(f"    └── [{idx}] {len(idioms)} idiom(s)")
+                else:
+                    print(f"    ├── [{idx}] {len(idioms)} idiom(s)")
+        print("==========+================+==========")
 
 
 class GreedySearch(SearchAgent):
     def __init__(
-            self, min_pattern_size, max_pattern_size,
-            model, dataset, embs, n_beams=1,
-            analyze=False, out_batch_size=20):
+            self, min_idiom_size, max_idiom_size,
+            model, dataset, embs, n_beams=1, out_batch_size=20):
         super().__init__(
-            min_pattern_size, max_pattern_size,
-            model, dataset, embs, analyze, out_batch_size)
+            min_idiom_size, max_idiom_size,
+            model, dataset, embs, out_batch_size)
 
         self.n_beams = n_beams
-        # List of [neighborhood nodes + neighbors, visited, and graph_idx]
         self.beam_sets = None
-
-    def search(self, n_trials=1000):
+    
+    def search(self, n_trials):
         self.n_trials = n_trials
         self.init_search()
-        
+            
         while not self.is_search_done():
             self.grow()
+            self._print_mine()
         
         return self.finish_search()
 
@@ -92,10 +104,12 @@ class GreedySearch(SearchAgent):
         beams = []
         for trial in range(self.n_trials):
             # choose random graph
+            # TODO @manish: choose interesting programs instead?
             graph_idx = np.arange(len(self.dataset))[graph_dist.rvs()]
             graph = self.dataset[graph_idx]
 
             # choose random start node
+            # TODO @manish: choose interesting node instead?
             start_node = random.choice(list(graph.nodes))
             neigh = [start_node]
             
@@ -113,17 +127,17 @@ class GreedySearch(SearchAgent):
     
     def grow(self):
         new_beam_sets = []
-        dist_graphs = len(set(b[0][-1] for b in self.beam_sets))
-        print(f"seeds from {dist_graphs} distinct graphs")
+        # dist_graphs = len(set(b[0][-1] for b in self.beam_sets))
                 
         for beam_set in tqdm(self.beam_sets):
             new_beams = []
 
             # STEP 1: Explore all candidate nodes in the beam_set
-            for _, neigh, frontier, visited, graph_idx in beam_set:
+            for beam in beam_set:
+                _, neigh, frontier, visited, graph_idx = beam
                 graph = self.dataset[graph_idx]
 
-                if len(neigh) >= self.max_pattern_size or not frontier:
+                if len(neigh) >= self.max_idiom_size or not frontier:
                     continue
 
                 cand_neighs = []
@@ -139,8 +153,6 @@ class GreedySearch(SearchAgent):
                 cand_embs = self.model.encoder(cand_batch)
                     
                 # SCORE CANDIDATES
-                # best_score = float("inf")
-
                 for cand_node, cand_emb in zip(frontier, cand_embs):
                     score, n_embs = 0, 0
 
@@ -156,10 +168,6 @@ class GreedySearch(SearchAgent):
                                     emb_batch.to(get_device()),
                                     cand_emb)).unsqueeze(1)), axis=1)).item()
 
-                    # # adding cand_node reduces total_violation
-                    # if score < best_score:
-                    #     best_score = score
-
                     new_neigh = neigh + [cand_node]
                     new_frontier = list(((
                         set(frontier) | set(graph.neighbors(cand_node)))
@@ -174,7 +182,8 @@ class GreedySearch(SearchAgent):
                 new_beams, key=lambda x: x[0]))[:self.n_beams]
             
             # STEP 3: Select candidates from the top scoring beam
-            for score, neigh, frontier, visited, graph_idx in new_beams[:1]:
+            for new_beam in new_beams[:1]:
+                score, neigh, frontier, visited, graph_idx = new_beam
                 graph = self.dataset[graph_idx]
 
                 neigh_g = graph.subgraph(neigh).copy()
@@ -185,25 +194,27 @@ class GreedySearch(SearchAgent):
                 
                 # update the results
                 self.cand_patterns[len(neigh_g)].append((score, neigh_g))
-                self.counts[len(neigh_g)][wl_hash(neigh_g)].append(neigh_g)
+                self.idiommine[len(neigh_g)][wl_hash(neigh_g)].append(neigh_g)
 
             if len(new_beams) > 0:
                 new_beam_sets.append(new_beams)
 
         self.beam_sets = new_beam_sets
 
-    def finish_search(self):
+    def finish_search(self):        
         cand_patterns_uniq = []
-        for pattern_size in range(
-                self.min_pattern_size,
-                self.max_pattern_size + 1):
+        for idiom_size in range(
+                self.min_idiom_size,
+                self.max_idiom_size + 1):
 
-            patterns = self.counts[pattern_size].items()
-            patterns = list(sorted(
-                patterns, key=lambda x: len(x[1]), reverse=True))
+            hashed_idioms = self.idiommine[idiom_size].items()
+            hashed_idioms = list(sorted(
+                hashed_idioms, key=lambda x: len(x[1]), reverse=True))
 
-            for _, neighs in patterns[:self.out_batch_size]:
+            for _, idioms in hashed_idioms[:self.out_batch_size]:
                 # choose any one because they all map to the same hash
-                cand_patterns_uniq.append(random.choice(neighs))
+                # cand_patterns_uniq.append(random.choice(idioms))
+                for idiom in idioms:
+                    cand_patterns_uniq.append(idiom)
 
         return cand_patterns_uniq
