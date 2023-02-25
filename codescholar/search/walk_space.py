@@ -54,6 +54,7 @@ def main():
 
     # build greedy beam search agent
     # hyperparams: idiom size, n_trials
+    # TODO: parallelize the search procedure
     agent = GreedySearch(
         min_idiom_size=args.min_idiom_size,
         max_idiom_size=args.max_idiom_size,
