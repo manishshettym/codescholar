@@ -24,11 +24,11 @@ def init_search_configs(parser, arg_str=None):
     
 
     search_args.set_defaults(
-        prog_samples=15000,
-        n_trials=20,
+        prog_samples=150000,
+        n_trials=10000,
         n_beams=1,
         rank=20,
-        min_idiom_size=5,
+        min_idiom_size=10,
         max_idiom_size=20,
         subgraph_sample_size=10,
         radius=3)

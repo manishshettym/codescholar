@@ -237,9 +237,9 @@ def finish_search(args, idiommine):
 
         for _, idioms in hashed_idioms[:args.rank]:
             # choose any one because they all map to the same hash
-            # cand_patterns_uniq.append(random.choice(idioms))
-            for idiom in idioms:
-                cand_patterns_uniq.append(idiom)
+            cand_patterns_uniq.append(random.choice(idioms))
+            # for idiom in idioms:
+                # cand_patterns_uniq.append(idiom)
     return cand_patterns_uniq
 
 

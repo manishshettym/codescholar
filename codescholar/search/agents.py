@@ -213,8 +213,8 @@ class GreedySearch(SearchAgent):
 
             for _, idioms in hashed_idioms[:self.rank]:
                 # choose any one because they all map to the same hash
-                # cand_patterns_uniq.append(random.choice(idioms))
-                for idiom in idioms:
-                    cand_patterns_uniq.append(idiom)
+                cand_patterns_uniq.append(random.choice(idioms))
+                # for idiom in idioms:
+                    # cand_patterns_uniq.append(idiom)
 
         return cand_patterns_uniq
