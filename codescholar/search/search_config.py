@@ -12,9 +12,22 @@ def init_search_configs(parser, arg_str=None):
     search_args.add_argument(
         '--n_trials', type=int,
         help='number of search trials = #initial program nodes')
+    search_args.add_argument(
+        '--n_beams', type=int,
+        help='number of beams to filter into after each round')
+    search_args.add_argument(
+        '--prog_samples', type=int,
+        help='number of programs in the search space')
+    search_args.add_argument(
+        '--rank', type=int,
+        help='number of most frequent idioms of a particular size')
+    
 
     search_args.set_defaults(
+        prog_samples=15000,
         n_trials=20,
+        n_beams=1,
+        rank=20,
         min_idiom_size=5,
         max_idiom_size=20,
         subgraph_sample_size=10,

@@ -45,7 +45,7 @@ def main():
         os.makedirs(args.idiom_p_dir)
 
     # init search space = sample K programs
-    embs, emb_paths, _ = sample_prog_embs(args.emb_dir, k=15000, seed=4)
+    embs, emb_paths, _ = sample_prog_embs(args.emb_dir, k=args.prog_samples, seed=4)
     dataset: List[nx.Digraph] = graphs_from_embs(args.source_dir, emb_paths)
 
     # build subgraph embedding model
@@ -60,8 +60,8 @@ def main():
         model=model,
         dataset=dataset,
         embs=embs,
-        n_beams=1,
-        out_batch_size=20)
+        n_beams=args.n_beams,
+        rank=args.rank)
 
     out_graphs = agent.search(n_trials=args.n_trials)
     count_by_size = defaultdict(int)

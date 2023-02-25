@@ -23,14 +23,14 @@ class SearchAgent:
     """
     def __init__(
             self, min_idiom_size, max_idiom_size,
-            model, dataset, embs, out_batch_size=20):
+            model, dataset, embs, rank):
 
         self.min_idiom_size = min_idiom_size
         self.max_idiom_size = max_idiom_size
         self.model = model
         self.dataset = dataset
         self.embs = embs
-        self.out_batch_size = out_batch_size
+        self.rank = rank
 
         # size (#nodes) -> List[(score, graph)]
         self.cand_patterns = defaultdict(list)
@@ -78,10 +78,10 @@ class SearchAgent:
 class GreedySearch(SearchAgent):
     def __init__(
             self, min_idiom_size, max_idiom_size,
-            model, dataset, embs, n_beams=1, out_batch_size=20):
+            model, dataset, embs, n_beams, rank):
         super().__init__(
             min_idiom_size, max_idiom_size,
-            model, dataset, embs, out_batch_size)
+            model, dataset, embs, rank)
 
         self.n_beams = n_beams
         self.beam_sets = None
@@ -211,7 +211,7 @@ class GreedySearch(SearchAgent):
             hashed_idioms = list(sorted(
                 hashed_idioms, key=lambda x: len(x[1]), reverse=True))
 
-            for _, idioms in hashed_idioms[:self.out_batch_size]:
+            for _, idioms in hashed_idioms[:self.rank]:
                 # choose any one because they all map to the same hash
                 # cand_patterns_uniq.append(random.choice(idioms))
                 for idiom in idioms:
