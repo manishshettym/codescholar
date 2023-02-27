@@ -152,18 +152,30 @@ def grow(args, model, prog_indices, in_queue, out_queue):
             for cand_node, cand_emb in zip(frontier, cand_embs):
                 score, n_embs = 0, 0
 
-                for emb_batch in embs:
+                # for emb_batch in embs:
+                for i in range(len(embs) // args.batch_size):
+                    emb_batch = embs[i*args.batch_size : (i+1)*args.batch_size]
+                    emb_batch = torch.cat(emb_batch, dim=0)
                     n_embs += len(emb_batch)
 
-                    ''' NOTE: score = total_violation :=
-                        #neighborhoods not containing the pattern.
+                    '''score = total_violation := #nhoods !containing cand.
+                    1. get embed of target prog(s) [k, 64] where k=#nodes/points
+                    2. get embed of cand [64]
+                    3. is subgraph rel satisified: 
+                            model.predict:= sum(max{0, prog_emb - cand}**2) [k]
+                    4. is_subgraph: 
+                            model.classifier:= logsoftmax(mlp) [k, 2]
+                            logsoftmax \in [-inf (prob:0), 0 (prob:1)]
+                    5. score = sum(argmax(is_subgraph)) 
                     '''
                     with torch.no_grad():
-                        score -= torch.sum(torch.argmax(
-                            model.classifier(
-                                model.predict((
+                        is_subgraph_rel = model.predict((
                                     emb_batch.to(get_device()),
-                                    cand_emb)).unsqueeze(1)), axis=1)).item()
+                                    cand_emb))
+                        is_subgraph = model.classifier(
+                                is_subgraph_rel.unsqueeze(1))
+                        score -= torch.sum(torch.argmax(
+                                    is_subgraph, axis=1)).item()
 
                 new_neigh = neigh + [cand_node]
                 new_frontier = list(((
@@ -267,6 +279,7 @@ def main():
     
     # init model
     model = build_model(models.SubgraphEmbedder, args)
+    model.eval()
     model.share_memory()
 
     # search for idioms

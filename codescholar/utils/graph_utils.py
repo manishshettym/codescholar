@@ -164,9 +164,10 @@ def nx_to_program_graph(graph: nx.DiGraph):
     for edge in graph.edges:
         if isinstance(graph.edges[edge]['flow_type'], str):
             edge_type = graph.edges[edge]['flow_type']
+            edge_type = GraphEdgeLabel[edge_type]
         else:
             edge_type = graph.edges[edge]['flow_type'].numpy()[0]
-            edge_type = GraphEdgeLabel(edge_type).name
+            edge_type = GraphEdgeLabel(edge_type)
 
         n1 = nxnode_to_pgnode[edge[0]]
         n2 = nxnode_to_pgnode[edge[1]]
