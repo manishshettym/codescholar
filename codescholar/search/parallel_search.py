@@ -23,6 +23,8 @@ from codescholar.utils.graph_utils import nx_to_program_graph
 from codescholar.sast.visualizer import render_sast
 from codescholar.sast.sast_utils import sast_to_prog
 
+######## IDIOM MINE UTILS ##########
+
 def save_idiom(path, idiom):
     try:
         idiom = black.format_str(idiom, mode=black.FileMode())
@@ -31,6 +33,26 @@ def save_idiom(path, idiom):
     
     with open(path, 'w') as fp:
         fp.write(idiom)
+
+
+def _save_mine(args, idiommine, gen):
+    hashed_idioms = idiommine[gen].items()
+    hashed_idioms = list(sorted(
+        hashed_idioms, key=lambda x: len(x[1]), reverse=True))
+    count = 0
+
+    for _, idioms in hashed_idioms[:args.rank]:
+        # choose any one because they all map to the same hash
+        idiom = random.choice(idioms)
+        file = "idiom_{}_{}".format(len(idiom), count)
+    
+        path = f"{args.idiom_g_dir}{file}.png"
+        sast = nx_to_program_graph(idiom)
+        render_sast(sast, path, spans=True, relpos=True)
+
+        path = f"{args.idiom_p_dir}{file}.py"
+        prog = sast_to_prog(sast).replace('#', '_')
+        save_idiom(path, prog)
 
     
 def _print_mine(idiommine):
@@ -49,6 +71,7 @@ def _print_mine(idiommine):
 
 
 ######## DISK READING UTILS ##########
+
 def read_graph(args, idx):
     graph_path = f'data_{idx}.pt'
     graph_path = osp.join(args.source_dir, graph_path)
@@ -103,7 +126,7 @@ def init_search(args, prog_indices):
 
 def start_workers_grow(model, prog_indices, in_queue, out_queue, args):
     workers = []
-    for _ in tqdm(range(args.n_workers), desc="Workers"):
+    for _ in tqdm(range(args.n_workers), desc="[workers]"):
         worker = mp.Process(
             target=grow,
             args=(args, model, prog_indices, in_queue, out_queue)
@@ -196,6 +219,7 @@ def grow(args, model, prog_indices, in_queue, out_queue):
 def search(args, model, prog_indices):
     beam_sets = init_search(args, prog_indices)
     idiommine = defaultdict(lambda: defaultdict(list))
+    size = 1
 
     in_queue, out_queue = mp.Queue(), mp.Queue()
     workers = start_workers_grow(model, prog_indices, in_queue, out_queue, args)
@@ -227,6 +251,10 @@ def search(args, model, prog_indices):
         
         beam_sets = new_beam_sets
         _print_mine(idiommine)
+        size += 1
+        
+        if(size >= args.min_idiom_size and size <= args.max_idiom_size):
+            _save_mine(args, idiommine, gen=size)
 
     for _ in range(args.n_workers):
         in_queue.put(("done", None))

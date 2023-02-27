@@ -173,7 +173,7 @@ def nx_to_program_graph(graph: nx.DiGraph):
         n2 = nxnode_to_pgnode[edge[1]]
 
         new_edge = pgdata.Edge(
-            id1=n1, id2=n2, type=edge_type)
+            id1=n1, id2=n2, type=edge_type.name)
 
         pgraph.add_edge(new_edge)
 
