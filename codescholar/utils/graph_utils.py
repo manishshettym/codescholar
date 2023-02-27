@@ -137,8 +137,13 @@ def nx_to_program_graph(graph: nx.DiGraph):
         key=lambda x: x[1]['relpos'])
 
     for node in OrderedDict(graph_nodes):
-        ast_type = graph.nodes[node]['ast_type'].numpy()[0]
-        ast_type = GraphNodeLabel(ast_type).name
+        
+        if isinstance(graph.nodes[node]['ast_type'], str):
+            ast_type = graph.nodes[node]['ast_type']
+        else:
+            ast_type = graph.nodes[node]['ast_type'].numpy()[0]
+            ast_type = GraphNodeLabel(ast_type).name
+
         span = graph.nodes[node]['span']
         relpos = graph.nodes[node]['relpos']
         
@@ -157,13 +162,18 @@ def nx_to_program_graph(graph: nx.DiGraph):
         nxnode_to_pgnode[node] = new_node.id
 
     for edge in graph.edges:
-        edge_type = graph.edges[edge]['flow_type'].numpy()[0]
-        edge_type = GraphEdgeLabel(edge_type)
+        if isinstance(graph.edges[edge]['flow_type'], str):
+            edge_type = graph.edges[edge]['flow_type']
+            edge_type = GraphEdgeLabel[edge_type]
+        else:
+            edge_type = graph.edges[edge]['flow_type'].numpy()[0]
+            edge_type = GraphEdgeLabel(edge_type)
+
         n1 = nxnode_to_pgnode[edge[0]]
         n2 = nxnode_to_pgnode[edge[1]]
 
         new_edge = pgdata.Edge(
-            id1=n1, id2=n2, type=edge_type)
+            id1=n1, id2=n2, type=edge_type.name)
 
         pgraph.add_edge(new_edge)
 
@@ -187,10 +197,13 @@ def program_graph_to_nx(program_graph, directed=False):
     graphviz_repr = program_graph_to_graphviz(program_graph)
 
     # translate graphviz to networkx
-    if directed:
-        return nx.DiGraph(graphviz_repr)
-    else:
-        return nx.Graph(graphviz_repr)
+    try:
+        if directed:
+            return nx.DiGraph(graphviz_repr)
+        else:
+            return nx.Graph(graphviz_repr)
+    except:
+        return None
 
 
 # note: this method is adapted from the python_graphs library

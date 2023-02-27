@@ -8,18 +8,28 @@ import torch
 import networkx as nx
 
 
-def sample_prog_embs(src_dir: str, k=10000, seed=24):
+def sample_programs(src_dir: str, k=10000, seed=24):
     np.random.seed(seed)
-
-    prog_embs = []
-    prog_sizes = []
     files = [f for f in sorted(glob.glob(osp.join(src_dir, '*.pt')))]
     random_files = np.random.choice(files, min(len(files), k))
+    random_index = [f.split('_')[-1][:-3] for f in random_files]
 
-    for file in random_files:
+    return random_files, random_index
+
+
+def read_embeddings(files):
+    prog_embs, prog_sizes = [], []
+    for file in files:
         embs = torch.load(file, map_location=torch.device('cpu'))
         prog_embs.append(embs)
         prog_sizes.append(len(embs))
+    
+    return prog_embs, prog_sizes
+
+
+def sample_prog_embs(src_dir: str, k=10000, seed=24):
+    random_files, _ = sample_programs(src_dir, k, seed)
+    prog_embs, prog_sizes = read_embeddings(random_files)
 
     return prog_embs, random_files, prog_sizes
 

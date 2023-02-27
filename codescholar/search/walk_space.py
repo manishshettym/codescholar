@@ -33,7 +33,7 @@ def main():
     search_config.init_search_configs(parser)
     args = parser.parse_args()
 
-    args.source_dir = f"../representation/tmp/{args.dataset}/train/graphs/"
+    args.source_dir = f"../data/{args.dataset}/graphs/"
     args.emb_dir = f"./tmp/{args.dataset}/emb/"
     args.idiom_g_dir = f"./results/idioms/graphs/"
     args.idiom_p_dir = f"./results/idioms/progs/"
@@ -44,23 +44,25 @@ def main():
     if not osp.exists(args.idiom_p_dir):
         os.makedirs(args.idiom_p_dir)
 
-    embs, emb_paths, _ = sample_prog_embs(
-        args.emb_dir, k=1000, seed=4)
-
+    # init search space = sample K programs
+    embs, emb_paths, _ = sample_prog_embs(args.emb_dir, k=args.prog_samples, seed=4)
     dataset: List[nx.Digraph] = graphs_from_embs(args.source_dir, emb_paths)
 
+    # build subgraph embedding model
     model = build_model(models.SubgraphEmbedder, args)
     model.share_memory()
 
+    # build greedy beam search agent
+    # hyperparams: idiom size, n_trials
+    # TODO: parallelize the search procedure
     agent = GreedySearch(
-        min_pattern_size=args.min_pattern_size,
-        max_pattern_size=args.max_pattern_size,
+        min_idiom_size=args.min_idiom_size,
+        max_idiom_size=args.max_idiom_size,
         model=model,
         dataset=dataset,
         embs=embs,
-        n_beams=1,
-        analyze=True,
-        out_batch_size=20)
+        n_beams=args.n_beams,
+        rank=args.rank)
 
     out_graphs = agent.search(n_trials=args.n_trials)
     count_by_size = defaultdict(int)
@@ -68,7 +70,6 @@ def main():
     for idiom in out_graphs:
         pat_len, pat_count = len(idiom), count_by_size[len(idiom)]
         file = "idiom_{}_{}".format(pat_len, pat_count)
-        print(f"Saving {file}")
         
         path = f"{args.idiom_g_dir}{file}.png"
         sast = nx_to_program_graph(idiom)

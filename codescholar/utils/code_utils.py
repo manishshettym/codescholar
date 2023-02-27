@@ -3,6 +3,7 @@ import ast
 import ast
 import black
 import astunparse
+import textwrap
 
 
 def create_dummy_function(body) -> ast.FunctionDef:
@@ -62,8 +63,11 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str):
     example_id = 0
     code = None
     with open(path, 'r', encoding='utf-8') as fp:
-        source = fp.read()
-        code = ast.parse(source, mode='exec')
+        try:
+            source = fp.read()
+            code = ast.parse(source, mode='exec')
+        except:
+            return None
 
     # process methods
     classes = [n for n in code.body if isinstance(n, ast.ClassDef)]
