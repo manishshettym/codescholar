@@ -35,8 +35,8 @@ def save_idiom(path, idiom):
         fp.write(idiom)
 
 
-def _save_mine(args, idiommine, gen):
-    hashed_idioms = idiommine[gen].items()
+def _save_idiom_generation(args, idiommine_gen):
+    hashed_idioms = idiommine_gen.items()
     hashed_idioms = list(sorted(
         hashed_idioms, key=lambda x: len(x[1]), reverse=True))
     count = 0
@@ -53,20 +53,21 @@ def _save_mine(args, idiommine, gen):
         path = f"{args.idiom_p_dir}{file}.py"
         prog = sast_to_prog(sast).replace('#', '_')
         save_idiom(path, prog)
+        count += 1
 
     
-def _print_mine(idiommine):
+def _print_mine(mine_summary):
     print("========== CODESCHOLAR MINE ==========")
     print(".")
-    for size, hashed_idioms in idiommine.items():
+    for size, hashed_idioms in mine_summary.items():
         print(f"├── size {size}")
         fin_idx = len(hashed_idioms.keys()) - 1
 
-        for idx, (hash_id, idioms) in enumerate(hashed_idioms.items()):
+        for idx, (hash_id, count) in enumerate(hashed_idioms.items()):
             if idx == fin_idx:
-                print(f"    └── [{idx}] {len(idioms)} idiom(s)")
+                print(f"    └── [{idx}] {count} idiom(s)")
             else:
-                print(f"    ├── [{idx}] {len(idioms)} idiom(s)")
+                print(f"    ├── [{idx}] {count} idiom(s)")
     print("==========+================+==========")
 
 
@@ -218,7 +219,8 @@ def grow(args, model, prog_indices, in_queue, out_queue):
 
 def search(args, model, prog_indices):
     beam_sets = init_search(args, prog_indices)
-    idiommine = defaultdict(lambda: defaultdict(list))
+    # idiommine = defaultdict(lambda: defaultdict(list))
+    mine_summary = defaultdict(lambda: defaultdict(int))
     size = 1
 
     in_queue, out_queue = mp.Queue(), mp.Queue()
@@ -229,7 +231,10 @@ def search(args, model, prog_indices):
         for beam_set in beam_sets:
             in_queue.put(("beam_set", beam_set))
         
+        # idioms for generation i
+        idiommine_gen = defaultdict(list)
         new_beam_sets = []
+
         for _ in tqdm(range(len(beam_sets))):
             msg, new_beams = out_queue.get()
 
@@ -244,17 +249,19 @@ def search(args, model, prog_indices):
                 for v in neigh_g.nodes:
                     neigh_g.nodes[v]["anchor"] = 1 if v == neigh[0] else 0
 
-                idiommine[len(neigh_g)][wl_hash(neigh_g)].append(neigh_g)
+                # idiommine[len(neigh_g)][wl_hash(neigh_g)].append(neigh_g)
+                idiommine_gen[wl_hash(neigh_g)].append(neigh_g)
+                mine_summary[len(neigh_g)][wl_hash(neigh_g)] += 1
 
             if len(new_beams) > 0:
                 new_beam_sets.append(new_beams)
         
         beam_sets = new_beam_sets
-        _print_mine(idiommine)
+        _print_mine(mine_summary)
         size += 1
         
         if(size >= args.min_idiom_size and size <= args.max_idiom_size):
-            _save_mine(args, idiommine, gen=size)
+            _save_idiom_generation(args, idiommine_gen)
 
     for _ in range(args.n_workers):
         in_queue.put(("done", None))
@@ -262,26 +269,7 @@ def search(args, model, prog_indices):
     for worker in workers:
         worker.join()
     
-    return finish_search(args, idiommine)
-
-
-def finish_search(args, idiommine):        
-    cand_patterns_uniq = []
-    for idiom_size in range(
-            args.min_idiom_size,
-            args.max_idiom_size + 1):
-
-        hashed_idioms = idiommine[idiom_size].items()
-        hashed_idioms = list(sorted(
-            hashed_idioms, key=lambda x: len(x[1]), reverse=True))
-
-        for _, idioms in hashed_idioms[:args.rank]:
-            # choose any one because they all map to the same hash
-            cand_patterns_uniq.append(random.choice(idioms))
-            # for idiom in idioms:
-                # cand_patterns_uniq.append(idiom)
-    return cand_patterns_uniq
-
+    return mine_summary
 
 def main():
     parser = argparse.ArgumentParser()
@@ -310,24 +298,8 @@ def main():
     model.eval()
     model.share_memory()
 
-    # search for idioms
-    out_graphs = search(args, model, prog_indices)
-    count_by_size = defaultdict(int)
-
-    for idiom in out_graphs:
-        pat_len, pat_count = len(idiom), count_by_size[len(idiom)]
-        file = "idiom_{}_{}".format(pat_len, pat_count)
-        
-        path = f"{args.idiom_g_dir}{file}.png"
-        sast = nx_to_program_graph(idiom)
-        render_sast(sast, path, spans=True, relpos=True)
-
-        path = f"{args.idiom_p_dir}{file}.py"
-        prog = sast_to_prog(sast).replace('#', '_')
-        save_idiom(path, prog)
-
-        count_by_size[len(idiom)] += 1
-
+    # search for idioms; saves idioms gradually
+    idiommine = search(args, model, prog_indices)
 
 if __name__ == "__main__":
     torch.multiprocessing.set_start_method('spawn')
