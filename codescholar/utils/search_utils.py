@@ -78,3 +78,47 @@ def wl_hash(g, dim=64):
         vecs = newvecs
 
     return tuple(np.sum(vecs, axis=0))
+
+
+
+######## IDIOM MINE UTILS ##########
+
+def save_idiom(path, idiom):
+    try:
+        idiom = black.format_str(idiom, mode=black.FileMode())
+    except:
+        pass
+    
+    with open(path, 'w') as fp:
+        fp.write(idiom)
+
+
+def _print_mine_logs(mine_summary):
+    print("========== CODESCHOLAR MINE ==========")
+    print(".")
+    for size, hashed_idioms in mine_summary.items():
+        print(f"├── size {size}")
+        fin_idx = len(hashed_idioms.keys()) - 1
+
+        for idx, (hash_id, count) in enumerate(hashed_idioms.items()):
+            if idx == fin_idx:
+                print(f"    └── [{idx}] {count} idiom(s)")
+            else:
+                print(f"    ├── [{idx}] {count} idiom(s)")
+    print("==========+================+==========")
+
+
+def _write_mine_logs(mine_summary, filepath):
+    with open(filepath, 'w') as fp:
+        fp.write("========== CODESCHOLAR MINE ==========" + '\n')
+        fp.write("." + '\n')
+        for size, hashed_idioms in mine_summary.items():
+            fp.write(f"├── size {size}" + '\n')
+            fin_idx = len(hashed_idioms.keys()) - 1
+
+            for idx, (hash_id, count) in enumerate(hashed_idioms.items()):
+                if idx == fin_idx:
+                    fp.write(f"    └── [{idx}] {count} idiom(s)" + '\n')
+                else:
+                    fp.write(f"    ├── [{idx}] {count} idiom(s)" + '\n')
+        fp.write("==========+================+==========" + '\n')

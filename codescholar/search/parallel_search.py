@@ -15,25 +15,17 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 import torch.multiprocessing as mp
 
-from codescholar.representation import models, config
-from codescholar.search import search_config
-from codescholar.utils.search_utils import sample_programs, wl_hash
-from codescholar.utils.train_utils import build_model, get_device, featurize_graph
-from codescholar.utils.graph_utils import nx_to_program_graph
 from codescholar.sast.visualizer import render_sast
 from codescholar.sast.sast_utils import sast_to_prog
+from codescholar.representation import models, config
+from codescholar.search import search_config
+from codescholar.utils.search_utils import (sample_programs, wl_hash, 
+    save_idiom, _print_mine_logs, _write_mine_logs)
+from codescholar.utils.train_utils import build_model, get_device, featurize_graph
+from codescholar.utils.graph_utils import nx_to_program_graph
+from codescholar.utils.perf import perftimer 
 
-######## IDIOM MINE UTILS ##########
-
-def save_idiom(path, idiom):
-    try:
-        idiom = black.format_str(idiom, mode=black.FileMode())
-    except:
-        pass
-    
-    with open(path, 'w') as fp:
-        fp.write(idiom)
-
+######## DISK UTILS ##########
 
 def _save_idiom_generation(args, idiommine_gen):
     hashed_idioms = idiommine_gen.items()
@@ -54,24 +46,6 @@ def _save_idiom_generation(args, idiommine_gen):
         prog = sast_to_prog(sast).replace('#', '_')
         save_idiom(path, prog)
         count += 1
-
-    
-def _print_mine(mine_summary):
-    print("========== CODESCHOLAR MINE ==========")
-    print(".")
-    for size, hashed_idioms in mine_summary.items():
-        print(f"├── size {size}")
-        fin_idx = len(hashed_idioms.keys()) - 1
-
-        for idx, (hash_id, count) in enumerate(hashed_idioms.items()):
-            if idx == fin_idx:
-                print(f"    └── [{idx}] {count} idiom(s)")
-            else:
-                print(f"    ├── [{idx}] {count} idiom(s)")
-    print("==========+================+==========")
-
-
-######## DISK READING UTILS ##########
 
 def read_graph(args, idx):
     graph_path = f'data_{idx}.pt'
@@ -216,7 +190,7 @@ def grow(args, model, prog_indices, in_queue, out_queue):
 
         out_queue.put(("complete", new_beams))
 
-
+@perftimer
 def search(args, model, prog_indices):
     beam_sets = init_search(args, prog_indices)
     # idiommine = defaultdict(lambda: defaultdict(list))
@@ -257,7 +231,7 @@ def search(args, model, prog_indices):
                 new_beam_sets.append(new_beams)
         
         beam_sets = new_beam_sets
-        _print_mine(mine_summary)
+        _print_mine_logs(mine_summary)
         size += 1
         
         if(size >= args.min_idiom_size and size <= args.max_idiom_size):
@@ -299,7 +273,8 @@ def main():
     model.share_memory()
 
     # search for idioms; saves idioms gradually
-    idiommine = search(args, model, prog_indices)
+    mine_summary = search(args, model, prog_indices)
+    _write_mine_logs(mine_summary, "./results/mine_summary.log")
 
 if __name__ == "__main__":
     torch.multiprocessing.set_start_method('spawn')
