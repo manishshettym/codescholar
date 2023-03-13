@@ -36,7 +36,8 @@ def _save_idiom_generation(args, idiommine_gen):
     for _, idioms in hashed_idioms[:args.rank]:
         # choose any one because they all map to the same hash
         idiom = random.choice(idioms)
-        file = "idiom_{}_{}".format(len(idiom), count)
+        freq = len(idioms)
+        file = "idiom_{}_{}_{}".format(len(idiom), count, freq)
     
         path = f"{args.idiom_g_dir}{file}.png"
         sast = nx_to_program_graph(idiom)
@@ -47,10 +48,18 @@ def _save_idiom_generation(args, idiommine_gen):
         save_idiom(path, prog)
         count += 1
 
+
 def read_graph(args, idx):
     graph_path = f'data_{idx}.pt'
     graph_path = osp.join(args.source_dir, graph_path)
     return torch.load(graph_path, map_location=torch.device('cpu'))
+
+
+def read_prog(args, idx):
+    prog_path = f"example_{idx}.py"
+    prog_path = osp.join(args.prog_dir, prog_path)
+    with open(prog_path,'r') as f:
+        return f.read()
 
 
 def read_embedding(args, idx):
@@ -69,6 +78,7 @@ def read_embeddings(args, prog_indices):
 
 ######### IDIOM SEARCH ############
 
+# init_search for --mode mine (idiom mine)
 def init_search(args, prog_indices):
 
     ps = []
@@ -95,6 +105,33 @@ def init_search(args, prog_indices):
         visited = set([start_node])
 
         beam_sets.append([(0, neigh, frontier, visited, graph_idx)])
+
+    return beam_sets
+
+# init_search for --mode search (idiom search)
+def init_search(args, prog_indices, keywords):
+    beam_sets = []
+    for idx in tqdm(prog_indices, desc="[init_search]"):
+        prog = read_prog(args, idx)
+        matches = [k for k in keywords if k in prog]
+        
+        if len(matches) > 0 and len(set(matches)) == len(keywords):
+            graph = read_graph(args, idx)
+            nodes = list(graph.nodes)
+            nodes = [n for n in nodes for m in matches if m in graph.nodes[n]['span']]
+            
+            if len(nodes) == 0:
+                continue
+
+            start_node = random.choice(nodes)
+            neigh = [start_node]
+            
+            # find frontier = {neighbors} - {itself} = {supergraphs}
+            frontier = list(set(graph.neighbors(start_node)) - set(neigh))
+            # print([graph.nodes[n]['span'] for n in frontier])
+            visited = set([start_node])
+
+            beam_sets.append([(0, neigh, frontier, visited, idx)])
 
     return beam_sets
 
@@ -179,6 +216,7 @@ def grow(args, model, prog_indices, in_queue, out_queue):
                 new_frontier = list(((
                     set(frontier) | set(graph.neighbors(cand_node)))
                     - visited) - set([cand_node]))
+                # print(graph.nodes[cand_node]['span'], [graph.nodes[n]['span'] for n in new_frontier])
                 new_visited = visited | set([cand_node])
                 new_beams.append((
                     score, new_neigh, new_frontier,
@@ -192,10 +230,18 @@ def grow(args, model, prog_indices, in_queue, out_queue):
 
 @perftimer
 def search(args, model, prog_indices):
-    beam_sets = init_search(args, prog_indices)
+    if args.mode == "search":
+        beam_sets = init_search(args, prog_indices, args.keywords)
+    else:
+        beam_sets = init_search(args, prog_indices)
+    
     # idiommine = defaultdict(lambda: defaultdict(list))
     mine_summary = defaultdict(lambda: defaultdict(int))
     size = 1
+
+    if not beam_sets:
+        print("Oops, BEAM SETS ARE EMPTY!")
+        return mine_summary
 
     in_queue, out_queue = mp.Queue(), mp.Queue()
     workers = start_workers_grow(model, prog_indices, in_queue, out_queue, args)
@@ -252,6 +298,10 @@ def main():
     search_config.init_search_configs(parser)
     args = parser.parse_args()
 
+    if args.mode == "search" and args.keywords is None:
+        parser.error("search mode requires --keywords to begin search.")
+    
+    args.prog_dir = f"../data/{args.dataset}/source/"
     args.source_dir = f"../data/{args.dataset}/graphs/"
     args.emb_dir = f"./tmp/{args.dataset}/emb/"
     args.searchspace_dir = f"./tmp/{args.dataset}/searchspace/"

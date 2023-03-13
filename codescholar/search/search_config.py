@@ -21,14 +21,21 @@ def init_search_configs(parser, arg_str=None):
     search_args.add_argument(
         '--rank', type=int,
         help='number of most frequent idioms of a particular size')
-    
+    search_args.add_argument(
+        '--mode', type=str, choices=['search', 'mine'], required=True,
+        help='mode in which to run the search agent'
+    )
+    search_args.add_argument(
+        '--keywords', type=str, nargs='+',
+        help='keywords to start idiomatic search'
+    )
 
     search_args.set_defaults(
-        prog_samples=200000,
-        n_trials=50000,
+        prog_samples=100000,
+        n_trials=10,
         n_beams=1,
         rank=30,
-        min_idiom_size=10,
-        max_idiom_size=35,
+        min_idiom_size=2,
+        max_idiom_size=15,
         subgraph_sample_size=10,
         radius=3)
