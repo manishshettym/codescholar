@@ -22,12 +22,16 @@ def init_search_configs(parser, arg_str=None):
         '--rank', type=int,
         help='number of most frequent idioms of a particular size')
     search_args.add_argument(
-        '--mode', type=str, choices=['search', 'mine'], required=True,
-        help='mode in which to run the search agent'
+        '--mode', type=str, choices=['k', 'g',  'm'], required=True,
+        help='mode in which to run the search agent; k: keyword, g: graph, m: mine'
     )
     search_args.add_argument(
         '--keywords', type=str, nargs='+',
-        help='keywords to start idiomatic search'
+        help='keywords to start idiomatic search in keyword mode'
+    )
+    search_args.add_argument(
+        '--seed', type=str,
+        help='graph to start idiomatic search in graph mode'
     )
 
     search_args.set_defaults(
