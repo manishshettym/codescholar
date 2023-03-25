@@ -53,12 +53,38 @@ def normalize_code_ast(code_ast: ast.AST) -> str:
     return result.strip()
 
 
-def breakdown_code_methods(outdir: str, path: str, file_id: str):
+def is_library_used(filepath: str, lib: str) -> bool:
+    """Check if a library is used in a python file.
+    (Note: this is a quick and dirty check; A more precise check
+    can be done by using the AST of each file => #TODO)
+
+    Args:
+        filepath (str): path to the .py file
+        lib (str): library name (e.g. "numpy")
+
+    Returns:
+        bool: True if the library is used in the file 
+    """
+    keywords = [f'import {lib}', f'from {lib}']
+
+    with open(filepath, encoding="utf8", errors='ignore') as fp:
+        text = fp.read()
+
+        if any(usage in text for usage in keywords):
+            return True
+
+    return False
+
+
+def breakdown_code_methods(outdir: str, path: str, file_id: str) -> int:
     """Breakdown a python file into methods.
     Save the methods into seperate files.
 
     Args:
         path (str): path to the .py file
+    
+    Returns:
+        int: number of methods found
     """
     example_id = 0
     code = None
@@ -106,6 +132,10 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str):
 
         with open(osp.join(outdir, example_name), 'w') as fp:
             fp.write(astunparse.unparse(main_code))
+        
+        example_id += 1
+    
+    return example_id
 
 
 class ASTMethodDropper(ast.NodeTransformer):
