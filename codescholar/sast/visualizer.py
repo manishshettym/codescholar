@@ -5,7 +5,7 @@ from python_graphs.program_graph import ProgramGraph
 from python_graphs import program_graph_dataclasses as pb
 
 
-def to_graphviz(graph: ProgramGraph, spans=False, relpos=False):
+def to_graphviz(graph: ProgramGraph, spans=False, relpos=False, edgelabel=False):
     """Creates a grapvhviz representation of a ProgramGraph.
 
     Args:
@@ -46,7 +46,8 @@ def to_graphviz(graph: ProgramGraph, spans=False, relpos=False):
 
     for edge in graph.edges:
         edge_attrs = {}
-        edge_attrs['label'] = edge.type
+        if edgelabel:
+            edge_attrs['label'] = edge.type
         edge_colors = {
             pb.EdgeType.LAST_READ: 'red',
             pb.EdgeType.LAST_WRITE: 'blue',
@@ -60,6 +61,7 @@ def to_graphviz(graph: ProgramGraph, spans=False, relpos=False):
     return g
 
 
-def render_sast(graph: ProgramGraph, path='/tmp/graph.png', spans=False, relpos=False):
-    g = to_graphviz(graph, spans, relpos)
+def render_sast(graph: ProgramGraph, 
+    path='/tmp/graph.png', spans=False, relpos=False, edgelabel=False):
+    g = to_graphviz(graph, spans, relpos, edgelabel)
     g.draw(path, prog='dot')
