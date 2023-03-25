@@ -233,11 +233,16 @@ def main():
     search_config.init_search_configs(parser)
     args = parser.parse_args()
 
+    # data config
     args.format = "source"  # {graphs, source}
     args.source_dir = f"../data/{args.dataset}/source/"
     args.graphs_dir = f"../data/{args.dataset}/graphs/"
     args.processed_dir = f"./tmp/{args.dataset}/processed/"
     args.emb_dir = f"./tmp/{args.dataset}/emb/"
+
+    # model config
+    args.test = True
+    args.model_path = f"../representation/ckpt/model.pt"
 
     embed_main(args)
 
