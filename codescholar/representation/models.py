@@ -6,8 +6,8 @@ import torch_geometric.utils as pyg_utils
 
 from codescholar.utils.train_utils import get_device
 
-NODE_FEAT = ['ast_type', 'node_degree', 'node_pagerank', 'node_cc']
-NODE_FEAT_DIMS = [1, 1, 1, 1]
+NODE_FEAT = ['ast_type', 'node_degree', 'node_pagerank', 'node_cc', 'node_span']
+NODE_FEAT_DIMS = [1, 1, 1, 1, 768]
 EDGE_FEAT = ['flow_type']
 EDGE_FEAT_DIMS = [1]
 
@@ -26,7 +26,11 @@ class Preprocess(nn.Module):
         edge_feat_list = []
 
         for key in NODE_FEAT:
-            node_feat_list.append(batch[key])
+            if key == 'node_span':
+                # reshape [batch_size, 1, 768] to [batch_size, 768]
+                node_feat_list.append(batch[key].squeeze(1))
+            else:
+                node_feat_list.append(batch[key])
         
         for key in EDGE_FEAT:
             edge_feat_list.append(batch[key])
@@ -98,6 +102,33 @@ class SubgraphEmbedder(nn.Module):
             )**2, dim=1)
 
         return is_subgraph
+
+    def predictv2(self, pred):
+        """Inference API v2: predict if queries are subgraphs of targets
+
+        Args:
+            pred (List<emb_t, emb_q>): embeddings of pairs of graphs
+        """
+        emb_targets, emb_queries = pred
+        batch_size, emb_size = emb_targets.shape
+
+        DIM_RATIO = 0.1 # 50% of the embedding dimension
+        MAX_VIO_DIMS = int(DIM_RATIO * emb_size)
+        
+        subtract = emb_queries - emb_targets
+
+        # 1 if violating the order constraint
+        indicator = (subtract > 0).type(torch.FloatTensor)
+        indicator_sum = torch.sum(indicator, dim=1)
+
+        
+
+        # 1 indicates violation is in < DIM_RATIO*emb_size dimensions => subgraph
+        # 0 indicates otherwise. => !subgraph
+        predictions = (indicator_sum < MAX_VIO_DIMS).view(-1,1).type(torch.cuda.FloatTensor)
+        scores = 1 - indicator_sum / emb_size
+
+        return predictions, scores
         
 
 class BasicGNN(nn.Module):
@@ -183,6 +214,8 @@ class BasicGNN(nn.Module):
                 data.preprocessed = True
 
         x = data.node_feature
+        assert x.shape[1] == sum(NODE_FEAT_DIMS) + 1        
+
         edge_index, edge_attr = data.edge_index, data.edge_feature
         batch = data.batch
         

@@ -201,20 +201,16 @@ def train_loop(args):
             for worker in workers:
                 worker.join()
 
-
-def main(testing=False):
+ 
+def main():
     parser = argparse.ArgumentParser()
     config.init_optimizer_configs(parser)
     config.init_encoder_configs(parser)
     args = parser.parse_args()
 
-    if testing:
-        args.test = True
-    
     args.n_train = args.n_batches * args.batch_size
     args.n_test = int(0.2 * args.n_train)
-    # args.n_test = 100000
-    # args.test = True
+    # args.n_test = 1000 # use for valid w/ memory hits limits
 
     train_loop(args)
 
