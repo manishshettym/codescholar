@@ -22,8 +22,8 @@ def init_search_configs(parser, arg_str=None):
         '--rank', type=int,
         help='number of most frequent idioms of a particular size')
     search_args.add_argument(
-        '--mode', type=str, choices=['k', 'g',  'm'], required=True,
-        help='mode in which to run the search agent; k: keyword, g: graph, m: mine'
+        '--mode', type=str, choices=['k', 'g',  'm'], default='g',
+        help='mode in which to run the search agent; k: keyword, m: mine, g: graph (def)'
     )
     search_args.add_argument(
         '--keywords', type=str, nargs='+',

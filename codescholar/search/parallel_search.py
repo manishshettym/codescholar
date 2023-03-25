@@ -50,7 +50,8 @@ def _frontier(graph, node, type='neigh'):
         return set(graph.neighbors(node))
     elif type == 'radial':
         return set(graph.successors(node)) | set(graph.predecessors(node))
-    
+
+
 ######## DISK UTILS ##########
 
 def _save_idiom_generation(args, idiommine_gen):
@@ -182,7 +183,6 @@ def init_search_g(args, prog_indices, seed):
     
     module_nid = list(seed_sast.get_ast_nodes_of_type('Module'))[0].id
     remove_node(seed_sast, module_nid)
-    render_sast(seed_sast, 'seed.png', spans=True, relpos=True)
 
     seed_graph = program_graph_to_nx(seed_sast, directed=True)
 
@@ -210,6 +210,7 @@ def init_search_g(args, prog_indices, seed):
         beam_sets.append([(0, neigh, frontier, visited, idx)])
     
     return beam_sets
+
 
 ######### GROW ############
 
@@ -244,6 +245,8 @@ def grow(args, model, prog_indices, in_queue, out_queue):
         for beam in beam_set:
             _, neigh, frontier, visited, graph_idx = beam
             graph = read_graph(args, graph_idx)
+            # print("\n\nBeam: {}".format([graph.nodes[n] for n in neigh]))
+            # print(">> Graph: {}".format(graph_idx))
 
             if len(neigh) >= args.max_idiom_size or not frontier:
                 continue
@@ -255,6 +258,7 @@ def grow(args, model, prog_indices, in_queue, out_queue):
                 cand_neigh = graph.subgraph(neigh + [cand_node])
                 cand_neigh = featurize_graph(cand_neigh, neigh[0])
                 cand_neighs.append(cand_neigh)
+                # print(">>>> Candidate: {}".format(graph.nodes[cand_node]['span']))
             
             cand_batch = Batch.from_data_list(cand_neighs).to(get_device())
             with torch.no_grad():
@@ -282,6 +286,7 @@ def grow(args, model, prog_indices, in_queue, out_queue):
                     5. score = sum(argmax(is_subgraph)) 
                     '''
                     with torch.no_grad():
+                        # predictv1
                         is_subgraph_rel = model.predict((
                                     emb_batch.to(get_device()),
                                     cand_emb))
@@ -290,6 +295,12 @@ def grow(args, model, prog_indices, in_queue, out_queue):
                         score -= torch.sum(torch.argmax(
                                     is_subgraph, axis=1)).item()
 
+                        # predictv2 #NOTE: dev-only
+                        # predictions, scores = model.predictv2((
+                        #             emb_batch.to(get_device()),
+                        #             cand_emb))
+                        # score += torch.sum(predictions).item()
+                
                 new_neigh = neigh + [cand_node]
 
                 # new frontier = {prev frontier} U {outgoing neighbors of cand_node} - {visited}
@@ -308,10 +319,15 @@ def grow(args, model, prog_indices, in_queue, out_queue):
                 new_beams.append((
                     score, new_neigh, new_frontier,
                     new_visited, graph_idx))
-
-        # STEP 2: Sort new beams by score (total_violation)
+        
+        # STEP 2: Sort new beams by score (i.e., least vio = better)
         new_beams = list(sorted(
             new_beams, key=lambda x: x[0]))[:args.n_beams]
+
+        # for beam in new_beams:
+        #     print("score: ", beam[0])
+        #     print("nodes: ", [graph.nodes[n]['span'] for n in beam[1]])
+        #     print("frontier: ", [graph.nodes[n]['span'] for n in beam[2]])
 
         out_queue.put(("complete", new_beams))
 
@@ -407,12 +423,17 @@ if __name__ == "__main__":
     config.init_encoder_configs(parser)
     search_config.init_search_configs(parser)
     args = parser.parse_args()
-
+    
+    # data config
     args.prog_dir = f"../data/{args.dataset}/source/"
     args.source_dir = f"../data/{args.dataset}/graphs/"
     args.emb_dir = f"./tmp/{args.dataset}/emb/" #TODO: move to data dir
     args.idiom_g_dir = f"./results/idioms/graphs/"
     args.idiom_p_dir = f"./results/idioms/progs/"
+
+    # model config
+    args.test = True
+    args.model_path = f"../representation/ckpt/model.pt"
 
     if not osp.exists(args.idiom_g_dir):
         os.makedirs(args.idiom_g_dir)
