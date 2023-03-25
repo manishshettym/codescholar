@@ -34,11 +34,16 @@ if __name__ == "__main__":
     search_config.init_search_configs(parser)
     args = parser.parse_args()
     
+    # data config
     args.prog_dir = f"../data/{args.dataset}/source/"
     args.source_dir = f"../data/{args.dataset}/graphs/"
     args.emb_dir = f"../search/tmp/{args.dataset}/emb/"
     args.idiom_g_dir = f"./results/idioms/graphs/"
     args.idiom_p_dir = f"./results/idioms/progs/"
+
+    # model config
+    args.test = True
+    args.model_path = f"../representation/ckpt/model.pt"
 
     if not osp.exists(args.idiom_g_dir):
         os.makedirs(args.idiom_g_dir)
