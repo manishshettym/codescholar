@@ -25,6 +25,7 @@ from codescholar.utils.search_utils import (sample_programs, wl_hash,
 from codescholar.utils.train_utils import build_model, get_device, featurize_graph
 from codescholar.utils.graph_utils import nx_to_program_graph, program_graph_to_nx
 from codescholar.utils.perf import perftimer
+import yappi
 
 
 ######### MACROS ############
@@ -133,42 +134,12 @@ def init_search_m(args, prog_indices):
         start_node = random.choice(list(graph.nodes))
         neigh = [start_node]
         
-        #TODO: convert to undirected search?
-
+        #TODO: convert to undirected search like --mode g
         # find frontier = {neighbors} - {itself} = {supergraphs}
         frontier = list(set(graph.neighbors(start_node)) - set(neigh))
         visited = set([start_node])
 
-        beam_sets.append([(0, neigh, frontier, visited, graph_idx)])
-
-    return beam_sets
-
-# init_search for --mode k (idiom keyword-search)
-def init_search_k(args, prog_indices, keywords):
-    beam_sets = []
-    for idx in tqdm(prog_indices, desc="[init_search]"):
-        prog = read_prog(args, idx)
-        matches = [k for k in keywords if k in prog]
-        
-        if len(matches) > 0 and len(set(matches)) == len(keywords):
-            graph = read_graph(args, idx)
-            nodes = list(graph.nodes)
-            nodes = [n for n in nodes for m in matches if m in graph.nodes[n]['span']]
-            
-            if len(nodes) == 0:
-                continue
-
-            start_node = random.choice(nodes)
-            neigh = [start_node]
-            
-            #TODO: convert to undirected search?
-
-            # find frontier = {neighbors} - {itself} = {supergraphs}
-            frontier = list(set(graph.neighbors(start_node)) - set(neigh))
-            # print([graph.nodes[n]['span'] for n in frontier])
-            visited = set([start_node])
-
-            beam_sets.append([(0, neigh, frontier, visited, idx)])
+        beam_sets.append([(0, 0, neigh, frontier, visited, graph_idx)])
 
     return beam_sets
 
@@ -178,8 +149,7 @@ def init_search_g(args, prog_indices, seed):
 
     # generate seed graph for query
     seed_sast = get_simplified_ast(seed)
-    if seed_sast is None:
-        raise ValueError("Seed program is invalid!")
+    if seed_sast is None: raise ValueError("Seed program is invalid!")
     
     module_nid = list(seed_sast.get_ast_nodes_of_type('Module'))[0].id
     remove_node(seed_sast, module_nid)
@@ -196,18 +166,16 @@ def init_search_g(args, prog_indices, seed):
         seed_matches = list(DiGM.subgraph_isomorphisms_iter())
         
         # no matches
-        if len(seed_matches) == 0:
-            continue
+        if len(seed_matches) == 0: continue
 
         # randomly select one of the matches as the starting point
         neigh = list(random.choice(seed_matches).keys())
         
         # find frontier = {successors} U {predecessors} - {itself} = {supergraphs}
         frontier = set(_reduce(list(_frontier(graph, n, type='radial') for n in neigh))) - set(neigh)
-        # print([graph.nodes[n]['span'] for n in frontier])
-
         visited = set(neigh)
-        beam_sets.append([(0, neigh, frontier, visited, idx)])
+        
+        beam_sets.append([(0,  0, neigh, frontier, visited, idx)])
     
     return beam_sets
 
@@ -227,6 +195,57 @@ def start_workers_grow(model, prog_indices, in_queue, out_queue, args):
     return workers
 
 
+def score_candidate_freq(args, model, embs, cand_emb):
+    '''score candidate program embedding against target program embeddings
+    in a batched manner. 
+    
+    Args:
+        args: args
+        model: model
+        embs: target program embeddings [n, 64]
+        cand_emb: candidate program embedding [64]
+    
+    Returns:
+        score: number of target programs of which candidate is a subgraph
+
+    Algorithm v1:
+    score = total_violation := #nhoods !containing cand.
+        1. get embed of target prog(s) [k, 64] where k=#nodes/points
+        2. get embed of cand [64]
+        3. is subgraph rel satisified: 
+                model.predict:= sum(max{0, prog_emb - cand}**2) [k]
+        4. is_subgraph: 
+                model.classifier:= logsoftmax(mlp) [k, 2]
+                logsoftmax \in [-inf (prob:0), 0 (prob:1)]
+        5. argmax(is_subgraph) := [k] (0 or 1) where 0: !subgraph 1: subgraph
+        5. score = sum(argmax(is_subgraph))
+    '''
+    
+    score = 0
+
+    for i in range(len(embs) // args.batch_size):
+        emb_batch = embs[i*args.batch_size : (i+1)*args.batch_size]
+        emb_batch = torch.cat(emb_batch, dim=0)
+
+        with torch.no_grad():
+            # predictv1
+            # is_subgraph_rel = model.predict((
+            #             emb_batch.to(get_device()),
+            #             cand_emb))
+            # is_subgraph = model.classifier(
+            #         is_subgraph_rel.unsqueeze(1))
+            # score -= torch.sum(torch.argmax(
+            #             is_subgraph, axis=1)).item()
+
+            # predictv2 (better)
+            predictions, scores = model.predictv2((
+                        emb_batch.to(get_device()),
+                        cand_emb))
+            score += torch.sum(predictions).item()
+    
+    return score
+
+
 def grow(args, model, prog_indices, in_queue, out_queue):
     done = False
     embs = read_embeddings(args, prog_indices)
@@ -241,12 +260,10 @@ def grow(args, model, prog_indices, in_queue, out_queue):
         
         new_beams = []
 
-        # STEP 1: Explore all candidate nodes in the beam_set
+        # STEP 1: Explore all candidates in each beam of the beam_set
         for beam in beam_set:
-            _, neigh, frontier, visited, graph_idx = beam
+            _, holes, neigh, frontier, visited, graph_idx = beam
             graph = read_graph(args, graph_idx)
-            # print("\n\nBeam: {}".format([graph.nodes[n] for n in neigh]))
-            # print(">> Graph: {}".format(graph_idx))
 
             if len(neigh) >= args.max_idiom_size or not frontier:
                 continue
@@ -254,81 +271,59 @@ def grow(args, model, prog_indices, in_queue, out_queue):
             cand_neighs = []
 
             # EMBED CANDIDATES
-            for cand_node in frontier:
+            for i, cand_node in enumerate(frontier):
                 cand_neigh = graph.subgraph(neigh + [cand_node])
                 cand_neigh = featurize_graph(cand_neigh, neigh[0])
                 cand_neighs.append(cand_neigh)
-                # print(">>>> Candidate: {}".format(graph.nodes[cand_node]['span']))
             
             cand_batch = Batch.from_data_list(cand_neighs).to(get_device())
             with torch.no_grad():
                 cand_embs = model.encoder(cand_batch)
             
-            # SCORE CANDIDATES
+            # SCORE CANDIDATES (freq)
             for cand_node, cand_emb in zip(frontier, cand_embs):
-                score, n_embs = 0, 0
-
-                # for emb_batch in embs:
-                for i in range(len(embs) // args.batch_size):
-                    emb_batch = embs[i*args.batch_size : (i+1)*args.batch_size]
-                    emb_batch = torch.cat(emb_batch, dim=0)
-                    n_embs += len(emb_batch)
-
-                    '''score = total_violation := #nhoods !containing cand.
-                    1. get embed of target prog(s) [k, 64] where k=#nodes/points
-                    2. get embed of cand [64]
-                    3. is subgraph rel satisified: 
-                            model.predict:= sum(max{0, prog_emb - cand}**2) [k]
-                    4. is_subgraph: 
-                            model.classifier:= logsoftmax(mlp) [k, 2]
-                            logsoftmax \in [-inf (prob:0), 0 (prob:1)]
-                    5. argmax(is_subgraph) := [k] (0 or 1) where 0: !subgraph 1: subgraph
-                    5. score = sum(argmax(is_subgraph)) 
-                    '''
-                    with torch.no_grad():
-                        # predictv1
-                        is_subgraph_rel = model.predict((
-                                    emb_batch.to(get_device()),
-                                    cand_emb))
-                        is_subgraph = model.classifier(
-                                is_subgraph_rel.unsqueeze(1))
-                        score -= torch.sum(torch.argmax(
-                                    is_subgraph, axis=1)).item()
-
-                        # predictv2 #NOTE: dev-only
-                        # predictions, scores = model.predictv2((
-                        #             emb_batch.to(get_device()),
-                        #             cand_emb))
-                        # score += torch.sum(predictions).item()
-                
+                score = score_candidate_freq(args, model, embs, cand_emb)                
                 new_neigh = neigh + [cand_node]
 
-                # new frontier = {prev frontier} U {outgoing neighbors of cand_node} - {visited}
-                # NOTE: @manish - this only adds subgraph neighbors, not supergraph neighbors => grow in one direction
-                new_frontier = list(((
-                    set(frontier) | _frontier(graph, cand_node, type='neigh'))
-                    - visited) - set([cand_node]))
-
                 # new frontier = {prev frontier} U {outgoing and incoming neighbors of cand_node} - {visited}
-                # NOTE: @manish - this adds both subgraph and supergraph neighbors => grow in both directions
-                # new_frontier = list(((
-                #     set(frontier) | _frontier(graph, cand_node, type='radial'))
-                #     - visited) - set([cand_node]))
-
+                # note: one can use type='neigh' to add only outgoing neighbors
+                new_frontier = list(((
+                    set(frontier) | _frontier(graph, cand_node, type='radial'))
+                    - visited) - set([cand_node]))
+                
                 new_visited = visited | set([cand_node])
+
+                # compute addition/deletion of holes
+                # any edge: add new holes introduced
+                # is outgoing edge: remove the hole you filled in neigh
+                # if incoming edge: remove the hole you filled in cand_node
+                new_holes = holes + graph.nodes[cand_node]['span'].count("#") - 1
+
+                # overcome bugs in graph construction 
+                # TODO: remove once sast is fixed
+                if new_holes < 0 or new_holes > MAX_HOLES: continue
+                assert new_holes >= 0
+                
                 new_beams.append((
-                    score, new_neigh, new_frontier,
+                    score, new_holes, new_neigh, new_frontier,
                     new_visited, graph_idx))
         
-        # STEP 2: Sort new beams by score (i.e., least vio = better)
+        # STEP 3: Sort new beams by freq_score/#holes
         new_beams = list(sorted(
-            new_beams, key=lambda x: x[0]))[:args.n_beams]
+            new_beams, key=lambda x: x[0]/x[1] if x[1] > 0 else x[0], reverse=True))
 
+        # print("===== [debugger] new beams =====")
         # for beam in new_beams:
-        #     print("score: ", beam[0])
-        #     print("nodes: ", [graph.nodes[n]['span'] for n in beam[1]])
-        #     print("frontier: ", [graph.nodes[n]['span'] for n in beam[2]])
-
+        #     print("freq: ", beam[0])
+        #     print("holes: ", beam[1])
+        #     print("nodes: ", [graph.nodes[n]['span'] for n in beam[2]])
+        #     print("frontier: ", [graph.nodes[n]['span'] for n in beam[3]])
+        #     print()
+        # print("================================")
+        
+        
+        # STEP 3: filter top-k beams
+        new_beams = new_beams[:args.n_beams]
         out_queue.put(("complete", new_beams))
 
 
@@ -354,7 +349,7 @@ def search(args, model, prog_indices):
     workers = start_workers_grow(model, prog_indices, in_queue, out_queue, args)
 
     while len(beam_sets) != 0:
-        
+
         for beam_set in beam_sets:
             in_queue.put(("beam_set", beam_set))
         
@@ -362,12 +357,12 @@ def search(args, model, prog_indices):
         idiommine_gen = defaultdict(list)
         new_beam_sets = []
 
-        for _ in tqdm(range(len(beam_sets))):
+        for i in tqdm(range(len(beam_sets))):
             msg, new_beams = out_queue.get()
-
-            # Select candidates from the top-k scoring beam
-            for new_beam in new_beams[:1]:
-                score, neigh, frontier, visited, graph_idx = new_beam
+            
+            #  candidates from only top-scoring beams in the beam set
+            for j, new_beam in enumerate(new_beams[:1]):
+                score, holes, neigh, frontier, visited, graph_idx = new_beam
                 graph = read_graph(args, graph_idx)
 
                 neigh_g = graph.subgraph(neigh).copy()
@@ -376,14 +371,15 @@ def search(args, model, prog_indices):
                 for v in neigh_g.nodes:
                     neigh_g.nodes[v]["anchor"] = 1 if v == neigh[0] else 0
 
-                idiommine_gen[wl_hash(neigh_g)].append(neigh_g)
-                mine_summary[len(neigh_g)][wl_hash(neigh_g)] += 1
+                neigh_g_hash = wl_hash(neigh_g)
+                idiommine_gen[neigh_g_hash)].append(neigh_g)
+                mine_summary[len(neigh_g)][neigh_g_hash] += 1
 
             if len(new_beams) > 0:
                 new_beam_sets.append(new_beams)
-        
+
         beam_sets = new_beam_sets
-        _print_mine_logs(mine_summary)
+        # _print_mine_logs(mine_summary)
         size += 1
         
         if(size >= args.min_idiom_size and size <= args.max_idiom_size):
@@ -399,9 +395,6 @@ def search(args, model, prog_indices):
 
 
 def main(args):
-    if args.mode == "k" and args.keywords is None:
-        parser.error("keywords mode requires --keywords to begin search.")
-    
     if args.mode == "g" and args.seed is None:
         parser.error("graph mode requires --seed to begin search.")
     
