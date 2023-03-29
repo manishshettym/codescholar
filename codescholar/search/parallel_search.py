@@ -293,10 +293,8 @@ def grow(args, model, prog_indices, in_queue, out_queue):
                 
                 new_visited = visited | set([cand_node])
 
-                # compute addition/deletion of holes
-                # any edge: add new holes introduced
-                # is outgoing edge: remove the hole you filled in neigh
-                # if incoming edge: remove the hole you filled in cand_node
+                # first, add new holes introduced
+                # remove hole filled in/by cand_node (incoming/outgoing edge respectively)
                 new_holes = holes + graph.nodes[cand_node]['span'].count("#") - 1
 
                 # overcome bugs in graph construction 
