@@ -403,7 +403,7 @@ def main(args):
 
     # search for idioms; saves idioms gradually
     mine_summary = search(args, model, prog_indices)
-    _write_mine_logs(mine_summary, "./results/mine_summary.log")
+    _write_mine_logs(mine_summary, f"{args.result_dir}/mine_summary.log")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -416,12 +416,9 @@ if __name__ == "__main__":
     args.prog_dir = f"../data/{args.dataset}/source/"
     args.source_dir = f"../data/{args.dataset}/graphs/"
     args.emb_dir = f"./tmp/{args.dataset}/emb/" #TODO: move to data dir
-    if args.mode == "g":
-        args.idiom_g_dir = f"./results/{args.seed}/idioms/graphs/"
-        args.idiom_p_dir = f"./results/{args.seed}/idioms/progs/"
-    else:
-        args.idiom_g_dir = f"./results/idioms/graphs/"
-        args.idiom_p_dir = f"./results/idioms/progs/"
+    args.result_dir = f"./results/{args.seed}/" if args.mode == 'g' else "./results/"
+    args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
+    args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
 
     # model config
     args.test = True

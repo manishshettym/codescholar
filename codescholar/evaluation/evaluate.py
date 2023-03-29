@@ -38,8 +38,9 @@ if __name__ == "__main__":
     args.prog_dir = f"../data/{args.dataset}/source/"
     args.source_dir = f"../data/{args.dataset}/graphs/"
     args.emb_dir = f"../search/tmp/{args.dataset}/emb/"
-    args.idiom_g_dir = f"./results/idioms/graphs/"
-    args.idiom_p_dir = f"./results/idioms/progs/"
+    args.result_dir = f"./results/{args.seed}/" if args.mode == 'g' else "./results/"
+    args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
+    args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
 
     # model config
     args.test = True
