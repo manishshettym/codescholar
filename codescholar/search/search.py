@@ -1,12 +1,13 @@
 import os
 import os.path as osp
 import argparse
-from typing import List
 import random
 import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
 from itertools import chain
+from cachetools import cached, LRUCache
+from cachetools.keys import hashkey
 
 import torch
 import networkx as nx
@@ -25,8 +26,6 @@ from codescholar.utils.search_utils import (sample_programs, wl_hash,
 from codescholar.utils.train_utils import build_model, get_device, featurize_graph
 from codescholar.utils.graph_utils import nx_to_program_graph, program_graph_to_nx
 from codescholar.utils.perf import perftimer
-import yappi
-
 
 ######### MACROS ############
 
@@ -83,6 +82,7 @@ def _save_idiom_generation(args, idiommine_gen):
         count += 1
 
 
+# @cached(cache=LRUCache(maxsize=1000), key=lambda args, idx: hashkey(idx))
 def read_graph(args, idx):
     graph_path = f'data_{idx}.pt'
     graph_path = osp.join(args.source_dir, graph_path)
@@ -228,7 +228,7 @@ def score_candidate_freq(args, model, embs, cand_emb):
         emb_batch = torch.cat(emb_batch, dim=0)
 
         with torch.no_grad():
-            # predictv1
+            # predictv1 (classifier based)
             # is_subgraph_rel = model.predict((
             #             emb_batch.to(get_device()),
             #             cand_emb))
@@ -237,8 +237,8 @@ def score_candidate_freq(args, model, embs, cand_emb):
             # score -= torch.sum(torch.argmax(
             #             is_subgraph, axis=1)).item()
 
-            # predictv2 (better)
-            predictions, scores = model.predictv2((
+            # predictv2 (dim-ratio based)
+            predictions, _ = model.predictv2((
                         emb_batch.to(get_device()),
                         cand_emb))
             score += torch.sum(predictions).item()
@@ -352,12 +352,13 @@ def search(args, model, prog_indices):
         idiommine_gen = defaultdict(list)
         new_beam_sets = []
 
-        for i in tqdm(range(len(beam_sets))):
+        # beam search over this generation
+        for _ in tqdm(range(len(beam_sets)), desc="[search]"):
             msg, new_beams = out_queue.get()
             
             #  candidates from only top-scoring beams in the beam set
-            for j, new_beam in enumerate(new_beams[:1]):
-                score, holes, neigh, frontier, visited, graph_idx = new_beam
+            for new_beam in new_beams[:1]:
+                _, _, neigh, _, _, graph_idx = new_beam
                 graph = read_graph(args, graph_idx)
 
                 neigh_g = graph.subgraph(neigh).copy()
@@ -373,9 +374,10 @@ def search(args, model, prog_indices):
             if len(new_beams) > 0:
                 new_beam_sets.append(new_beams)
 
+        # save generation
         beam_sets = new_beam_sets
-        # _print_mine_logs(mine_summary)
         size += 1
+        # _print_mine_logs(mine_summary)
         
         if(size >= args.min_idiom_size and size <= args.max_idiom_size):
             _save_idiom_generation(args, idiommine_gen)

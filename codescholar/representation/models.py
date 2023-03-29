@@ -112,16 +112,21 @@ class SubgraphEmbedder(nn.Module):
         emb_targets, emb_queries = pred
         batch_size, emb_size = emb_targets.shape
 
-        DIM_RATIO = 0.1 # 50% of the embedding dimension
-        MAX_VIO_DIMS = int(DIM_RATIO * emb_size)
+        DIM_RATIO = 0.1 # 10% of the embedding dimension
+        MAX_VIO_DIMS = int(DIM_RATIO * emb_size) #10% of 64 = 6
         
-        subtract = emb_queries - emb_targets
+        # subtract emb_targets from emb_queries
+        subtract = torch.sub(emb_queries, emb_targets)
+        assert subtract.shape == (batch_size, emb_size)
 
         # 1 if violating the order constraint
-        indicator = (subtract > 0).type(torch.FloatTensor)
-        indicator_sum = torch.sum(indicator, dim=1)
-
+        indicator = (subtract > 0).type(torch.cuda.FloatTensor)
+        # note: if no gpu, comment above and uncomment below
+        # indicator = (subtract > 0).type(torch.FloatTensor)
         
+        # count #dim with violations using einsum (faster than .sum)
+        indicator_sum = torch.einsum('ij->i', indicator)
+        assert indicator_sum.shape == (batch_size,)
 
         # 1 indicates violation is in < DIM_RATIO*emb_size dimensions => subgraph
         # 0 indicates otherwise. => !subgraph
