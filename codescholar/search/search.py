@@ -294,13 +294,12 @@ def grow(args, model, prog_indices, in_queue, out_queue):
                 new_visited = visited | set([cand_node])
 
                 # first, add new holes introduced
-                # remove hole filled in/by cand_node (incoming/outgoing edge respectively)
+                # then, remove hole filled in/by cand_node (incoming/outgoing edge resp)
                 new_holes = holes + graph.nodes[cand_node]['span'].count("#") - 1
 
                 # overcome bugs in graph construction 
                 # TODO: remove once sast is fixed
-                if new_holes < 0 or new_holes > MAX_HOLES: continue
-                assert new_holes >= 0
+                if new_holes < 0 or new_holes > args.max_holes: continue
                 
                 new_beams.append((
                     score, new_holes, new_neigh, new_frontier,
@@ -370,7 +369,7 @@ def search(args, model, prog_indices):
                     neigh_g.nodes[v]["anchor"] = 1 if v == neigh[0] else 0
 
                 neigh_g_hash = wl_hash(neigh_g)
-                idiommine_gen[neigh_g_hash)].append(neigh_g)
+                idiommine_gen[neigh_g_hash].append(neigh_g)
                 mine_summary[len(neigh_g)][neigh_g_hash] += 1
 
             if len(new_beams) > 0:

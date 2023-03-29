@@ -7,7 +7,7 @@ import torch
 
 from codescholar.sast.visualizer import render_sast
 from codescholar.representation import config
-from codescholar.search.parallel_search import main as search_main
+from codescholar.search.search import main as search_main
 from codescholar.search import search_config
 
 def main(args):
