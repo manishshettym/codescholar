@@ -328,9 +328,7 @@ def grow(args, model, prog_indices, in_queue, out_queue):
 
 @perftimer
 def search(args, model, prog_indices):
-    if args.mode == 'k':
-        beam_sets = init_search_k(args, prog_indices, keywords=args.keywords)
-    elif args.mode == 'g':
+    if args.mode == 'g':
         beam_sets = init_search_g(args, prog_indices, seed=args.seed)
     else:
         beam_sets = init_search_m(args, prog_indices)
@@ -418,8 +416,12 @@ if __name__ == "__main__":
     args.prog_dir = f"../data/{args.dataset}/source/"
     args.source_dir = f"../data/{args.dataset}/graphs/"
     args.emb_dir = f"./tmp/{args.dataset}/emb/" #TODO: move to data dir
-    args.idiom_g_dir = f"./results/idioms/graphs/"
-    args.idiom_p_dir = f"./results/idioms/progs/"
+    if args.mode == "g":
+        args.idiom_g_dir = f"./results/{args.seed}/idioms/graphs/"
+        args.idiom_p_dir = f"./results/{args.seed}/idioms/progs/"
+    else:
+        args.idiom_g_dir = f"./results/idioms/graphs/"
+        args.idiom_p_dir = f"./results/idioms/progs/"
 
     # model config
     args.test = True
