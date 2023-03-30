@@ -110,6 +110,28 @@ def read_embeddings(args, prog_indices):
     return embs
 
 
+def read_embeddings_batched(args, prog_indices):
+    embs, batch_embs = [], []
+    count = 0
+
+    for i, idx in enumerate(prog_indices):
+        batch_embs.append(read_embedding(args, idx))
+
+        if i > 0 and i % args.batch_size == 0:
+            embs.append(torch.cat(batch_embs, dim=0))
+            count += len(batch_embs)
+            batch_embs = []
+    
+    # add remaining embs as a batch
+    if len(batch_embs) > 0:
+        embs.append(torch.cat(batch_embs, dim=0))
+        count += len(batch_embs)
+    
+    assert count == len(prog_indices)
+
+    return embs
+
+
 ######### INIT ############
 
 # init_search for --mode m (idiom mine)
@@ -198,37 +220,24 @@ def start_workers_grow(model, prog_indices, in_queue, out_queue, args):
 def score_candidate_freq(args, model, embs, cand_emb):
     '''score candidate program embedding against target program embeddings
     in a batched manner. 
-    
-    Args:
-        args: args
-        model: model
-        embs: target program embeddings [n, 64]
-        cand_emb: candidate program embedding [64]
-    
-    Returns:
-        score: number of target programs of which candidate is a subgraph
 
-    Algorithm v1:
-    score = total_violation := #nhoods !containing cand.
-        1. get embed of target prog(s) [k, 64] where k=#nodes/points
-        2. get embed of cand [64]
-        3. is subgraph rel satisified: 
-                model.predict:= sum(max{0, prog_emb - cand}**2) [k]
-        4. is_subgraph: 
-                model.classifier:= logsoftmax(mlp) [k, 2]
-                logsoftmax \in [-inf (prob:0), 0 (prob:1)]
-        5. argmax(is_subgraph) := [k] (0 or 1) where 0: !subgraph 1: subgraph
-        5. score = sum(argmax(is_subgraph))
+    Algorithm:
+    v1: softmax based classifier on top of emb-diff
+        score = total_violation 
+        = #nhoods !containing cand.
+        = count(cand_emb - embs > 0) 
+            --> classifier: 0/1
+    v2: dim-ratio based classifier on top of emb-diff
+        score = total_violation 
+        = #nhoods !containing cand.
+        = count(cand_emb - embs > 0) 
+            --> #dims where cand_emb > embs < dim_ratio: 0/1
     '''
-    
     score = 0
 
-    for i in range(len(embs) // args.batch_size):
-        emb_batch = embs[i*args.batch_size : (i+1)*args.batch_size]
-        emb_batch = torch.cat(emb_batch, dim=0)
-
+    for emb_batch in embs:
         with torch.no_grad():
-            # predictv1 (classifier based)
+            # predict v1 (classifier based)
             # is_subgraph_rel = model.predict((
             #             emb_batch.to(get_device()),
             #             cand_emb))
@@ -237,7 +246,7 @@ def score_candidate_freq(args, model, embs, cand_emb):
             # score -= torch.sum(torch.argmax(
             #             is_subgraph, axis=1)).item()
 
-            # predictv2 (dim-ratio based)
+            # predict v2 (dim-ratio based)
             predictions, _ = model.predictv2((
                         emb_batch.to(get_device()),
                         cand_emb))
@@ -248,7 +257,7 @@ def score_candidate_freq(args, model, embs, cand_emb):
 
 def grow(args, model, prog_indices, in_queue, out_queue):
     done = False
-    embs = read_embeddings(args, prog_indices)
+    embs = read_embeddings_batched(args, prog_indices)
 
     while not done:
         msg, beam_set = in_queue.get()
@@ -282,7 +291,7 @@ def grow(args, model, prog_indices, in_queue, out_queue):
             
             # SCORE CANDIDATES (freq)
             for cand_node, cand_emb in zip(frontier, cand_embs):
-                score = score_candidate_freq(args, model, embs, cand_emb)                
+                score = score_candidate_freq(args, model, embs, cand_emb)
                 new_neigh = neigh + [cand_node]
 
                 # new frontier = {prev frontier} U {outgoing and incoming neighbors of cand_node} - {visited}
@@ -305,7 +314,7 @@ def grow(args, model, prog_indices, in_queue, out_queue):
                     score, new_holes, new_neigh, new_frontier,
                     new_visited, graph_idx))
         
-        # STEP 3: Sort new beams by freq_score/#holes
+        # STEP 2: Sort new beams by freq_score/#holes
         new_beams = list(sorted(
             new_beams, key=lambda x: x[0]/x[1] if x[1] > 0 else x[0], reverse=True))
 
@@ -317,7 +326,6 @@ def grow(args, model, prog_indices, in_queue, out_queue):
         #     print("frontier: ", [graph.nodes[n]['span'] for n in beam[3]])
         #     print()
         # print("================================")
-        
         
         # STEP 3: filter top-k beams
         new_beams = new_beams[:args.n_beams]
