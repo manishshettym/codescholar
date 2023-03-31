@@ -335,12 +335,7 @@ def grow(args, model, prog_indices, in_queue, out_queue):
 ######### MAIN ############
 
 @perftimer
-def search(args, model, prog_indices):
-    if args.mode == 'g':
-        beam_sets = init_search_g(args, prog_indices, seed=args.seed)
-    else:
-        beam_sets = init_search_m(args, prog_indices)
-    
+def search(args, model, prog_indices, beam_sets):    
     mine_summary = defaultdict(lambda: defaultdict(int))
     size = 1
 
@@ -411,8 +406,14 @@ def main(args):
     model.eval()
     model.share_memory()
 
+    # init search space
+    if args.mode == 'g':
+        beam_sets = init_search_g(args, prog_indices, seed=args.seed)
+    else:
+        beam_sets = init_search_m(args, prog_indices)
+
     # search for idioms; saves idioms gradually
-    mine_summary = search(args, model, prog_indices)
+    mine_summary = search(args, model, prog_indices, beam_sets)
     _write_mine_logs(mine_summary, f"{args.result_dir}/mine_summary.log")
 
 if __name__ == "__main__":
