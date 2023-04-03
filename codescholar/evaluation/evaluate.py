@@ -18,8 +18,9 @@ def main(args):
             print(f"EVALUATING [{lib}] [{api}]")
             print("=====================================")
 
+            args.mode = 'g'
             args.seed = api
-            args.result_dir = f"./results/{args.seed}/" if args.mode == 'g' else "./results/"
+            args.result_dir = f"./results/{lib}/{args.seed}/"
             args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
             args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
 
