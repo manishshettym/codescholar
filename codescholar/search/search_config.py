@@ -37,6 +37,10 @@ def init_search_configs(parser, arg_str=None):
         '--max_holes', type=int,
         help='maximum number of holes that can be added to a candidate program'
     )
+    search_args.add_argument(
+        '--max_init_beams', type=int,
+        help='maximum number of beams to filter into during initialization of search'
+    )
 
     search_args.set_defaults(
         mode='g',
@@ -47,5 +51,6 @@ def init_search_configs(parser, arg_str=None):
         max_holes=8,
         min_idiom_size=3,
         max_idiom_size=30,
+        max_init_beams=200,
         subgraph_sample_size=10,
         radius=3)

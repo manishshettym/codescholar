@@ -1,0 +1,1 @@
+python evaluate.py --prog_samples 250000 --min_idiom_size 2 --max_idiom_size 35  --max_init_beams 300 --rank 30

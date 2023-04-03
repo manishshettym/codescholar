@@ -168,6 +168,7 @@ def init_search_m(args, prog_indices):
 # init_search for --mode g (idiom seed-graph-search)
 def init_search_g(args, prog_indices, seed):
     beam_sets = []
+    count = 0
 
     # generate seed graph for query
     seed_sast = get_simplified_ast(seed)
@@ -179,6 +180,9 @@ def init_search_g(args, prog_indices, seed):
     seed_graph = program_graph_to_nx(seed_sast, directed=True)
 
     for idx in tqdm(prog_indices, desc="[init_search]"):
+        if count >= args.max_init_beams: 
+            continue
+
         graph = read_graph(args, idx)
         
         # find all matches of the seed graph in the program graph
@@ -198,6 +202,7 @@ def init_search_g(args, prog_indices, seed):
         visited = set(neigh)
         
         beam_sets.append([(0,  0, neigh, frontier, visited, idx)])
+        count += 1
     
     return beam_sets
 
