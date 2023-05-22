@@ -2,6 +2,7 @@ import json
 import argparse
 import os
 import os.path as osp
+from datetime import date
 
 import torch
 from codescholar.representation import config
@@ -20,7 +21,7 @@ def main(args):
 
             args.mode = 'g'
             args.seed = api
-            args.result_dir = f"./results/{lib}/{args.seed}/"
+            args.result_dir = f"./results/{date.today()}/{lib}_res/{args.seed}/"
             args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
             args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
 
