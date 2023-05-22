@@ -60,11 +60,15 @@ def _save_idiom_generation(args, idiommine_gen):
         hashed_idioms, key=lambda x: len(x[1]), reverse=True))
     count = 0
 
-    for _, idioms in hashed_idioms[:args.rank]:
-        # choose any one because they all map to the same hash
-        idiom = random.choice(idioms)
+    for _, idioms in hashed_idioms: #[:args.rank]:
+        # # choose any one because they all map to the same hash
+        # idiom = random.choice(idioms)
+
+        idioms = list(sorted(idioms, key=lambda x: x[1], reverse=True))
+        idiom, score, holes = idioms[0]
+
         freq = len(idioms)
-        file = "idiom_{}_{}_{}".format(len(idiom), count, freq)
+        file = "idiom_{}_{}_{}_{}_{}".format(len(idiom), count, freq, int(score), holes)
     
         path = f"{args.idiom_g_dir}{file}.png"
         sast = nx_to_program_graph(idiom)
@@ -228,13 +232,11 @@ def score_candidate_freq(args, model, embs, cand_emb):
 
     Algorithm:
     v1: softmax based classifier on top of emb-diff
-        score = total_violation 
-        = #nhoods !containing cand.
+        score = #nhoods !containing cand.
         = count(cand_emb - embs > 0) 
             --> classifier: 0/1
     v2: dim-ratio based classifier on top of emb-diff
-        score = total_violation 
-        = #nhoods !containing cand.
+        score = #nhoods containing cand.
         = count(cand_emb - embs > 0) 
             --> #dims where cand_emb > embs < dim_ratio: 0/1
     '''
@@ -242,20 +244,20 @@ def score_candidate_freq(args, model, embs, cand_emb):
 
     for emb_batch in embs:
         with torch.no_grad():
-            # predict v1 (classifier based)
-            # is_subgraph_rel = model.predict((
-            #             emb_batch.to(get_device()),
-            #             cand_emb))
-            # is_subgraph = model.classifier(
-            #         is_subgraph_rel.unsqueeze(1))
-            # score -= torch.sum(torch.argmax(
-            #             is_subgraph, axis=1)).item()
-
-            # predict v2 (dim-ratio based)
-            predictions, _ = model.predictv2((
+            # predict v1 (learned mlp based)
+            is_subgraph_rel = model.predict((
                         emb_batch.to(get_device()),
                         cand_emb))
-            score += torch.sum(predictions).item()
+            is_subgraph = model.classifier(
+                    is_subgraph_rel.unsqueeze(1))
+            score += torch.sum(torch.argmax(
+                        is_subgraph, axis=1)).item()
+
+            # predict v2 (dim-ratio based)
+            # predictions, _ = model.predictv2((
+            #             emb_batch.to(get_device()),
+            #             cand_emb))
+            # score += torch.sum(predictions).item()
     
     return score
 
@@ -364,9 +366,9 @@ def search(args, model, prog_indices, beam_sets):
         for _ in tqdm(range(len(beam_sets)), desc="[search]"):
             msg, new_beams = out_queue.get()
             
-            #  candidates from only top-scoring beams in the beam set
+            # candidates from only top-scoring beams in the beam set
             for new_beam in new_beams[:1]:
-                _, _, neigh, _, _, graph_idx = new_beam
+                score, holes, neigh, _, _, graph_idx = new_beam
                 graph = read_graph(args, graph_idx)
 
                 neigh_g = graph.subgraph(neigh).copy()
@@ -376,7 +378,7 @@ def search(args, model, prog_indices, beam_sets):
                     neigh_g.nodes[v]["anchor"] = 1 if v == neigh[0] else 0
 
                 neigh_g_hash = wl_hash(neigh_g)
-                idiommine_gen[neigh_g_hash].append(neigh_g)
+                idiommine_gen[neigh_g_hash].append((neigh_g, score, holes))
                 mine_summary[len(neigh_g)][neigh_g_hash] += 1
 
             if len(new_beams) > 0:
