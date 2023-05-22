@@ -108,6 +108,10 @@ class SubgraphEmbedder(nn.Module):
 
         Args:
             pred (List<emb_t, emb_q>): embeddings of pairs of graphs
+        
+        NOTE: @manish: this prediction API might not be useful in all cases. 
+            It ignores what each dim might represent, and decides to predict 
+            just based on #dims violating the constraint.
         """
         emb_targets, emb_queries = pred
         batch_size, emb_size = emb_targets.shape
