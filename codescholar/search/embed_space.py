@@ -69,8 +69,9 @@ def get_neighborhoods(args, graph):
             # NOTE: G.subgraph([nodes]) returns the subG induced on [nodes]
             # i.e., the subG containing the nodes in [nodes] and 
             # edges between these nodes => in this case, a (sampled) radial n'hood
+            
             neigh = graph.subgraph(neighbors)
-            neigh = featurize_graph(neigh, anchor=0)
+            neigh = featurize_graph(neigh, anchor=node)
             neighs.append(neigh)
     
     return neighs
