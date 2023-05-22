@@ -25,7 +25,6 @@
         "np.linalg.inv"
     ],
     "os": [
-        "os.path",
         "os.path.join",
         "os.path.dirname",
         "os.path.basename",
