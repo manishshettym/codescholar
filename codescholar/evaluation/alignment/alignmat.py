@@ -68,10 +68,7 @@ def get_alignmat(args, query, target):
     mat = np.zeros((len(q), len(t)))
     for i, u in enumerate(q.nodes):
         for j, v in enumerate(t.nodes):
-            # print("query anchored at:", q.nodes[u]['span'])
             qneigh = get_anchor_neigh(args, q, u)
-            
-            # print("target anchored at:", t.nodes[v]['span'])
             tneigh = get_anchor_neigh(args, t, v)
 
             with torch.no_grad():
