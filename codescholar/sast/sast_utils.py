@@ -154,6 +154,21 @@ def collapse_nodes(sast: ProgramGraph):
             if node.ast_node.range == child.ast_node.range:
                 sast.add_new_edge(parent, child, pb.EdgeType.FIELD)
                 nodes_to_pop.append(node.id)
+        
+        # if JoinedStr-->FormattedValue, Constant
+        elif (isinstance(node.ast_node, ast.JoinedStr)):
+            parent = sast.parent(node)
+            
+            if (len(children) == 2
+                and isinstance(children[0].ast_node, ast.FormattedValue)
+                and isinstance(children[1].ast_node, ast.Constant)):                
+                
+                # add edge from parent to FormattedValue
+                sast.add_new_edge(parent, children[0], pb.EdgeType.FIELD)
+                
+                # remove the Constant and JoinedStr nodes
+                nodes_to_pop.append(children[1].id)
+                nodes_to_pop.append(node.id)
             
     for i in nodes_to_pop:
         remove_node(sast, i)

@@ -42,8 +42,7 @@ def mask_var_names(sast):
             node.span = "VAR"
     return sast
 
-
-def get_alignmat(args, query, target):
+def get_alignmat(args, query, target, qfile):
     args.radius = 7
     model = build_model(models.SubgraphEmbedder, args)
     model.eval()
@@ -59,7 +58,7 @@ def get_alignmat(args, query, target):
     remove_node(t, module_nid)
     # t = mask_var_names(t)
     
-    render_sast(q, './plots/q.png', spans=True, relpos=True)
+    render_sast(q, f'./plots/{qfile}.png', spans=True, relpos=True)
     render_sast(t, './plots/t.png', spans=True, relpos=True)
     
     q = program_graph_to_nx(q, directed=True)
@@ -75,18 +74,9 @@ def get_alignmat(args, query, target):
                 qemb = model.encoder(Batch.from_data_list([qneigh]).to(get_device()))
                 temb = model.encoder(Batch.from_data_list([tneigh]).to(get_device()))
                 vio_score = model.predict((temb, qemb))
-                mat[i][j] = torch.log(vio_score + 1e-7).item()    
+                mat[i][j] = torch.log(vio_score + 1e-7).item() 
     
-    y_labels = [q.nodes[i]['span'] for i in q.nodes]
-    x_labels = [t.nodes[i]['span'] for i in t.nodes]
-    
-    plt.figure(figsize=(15, 10))
-
-    plt.xticks(np.arange(len(x_labels)), x_labels, rotation=45)
-    plt.yticks(np.arange(len(y_labels)), y_labels)
-    plt.imshow(mat, interpolation="nearest")
-    plt.colorbar()
-    plt.savefig("./plots/alignment.png")
+    return mat, q, t
         
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -95,13 +85,39 @@ if __name__ == "__main__":
     search_config.init_search_configs(parser)
     args = parser.parse_args()
     
-    with open('./data/query.py', 'r') as fp:
-        query_prog = fp.read()
+    with open('./data/goodquery.py', 'r') as fp:
+        gquery_prog = fp.read()
+    
+    with open('./data/badquery.py', 'r') as fp:
+        bquery_prog = fp.read()
     
     with open('./data/target.py', 'r') as fp:
         target_prog = fp.read()
         
     args.test = True
     args.model_path = f"../../representation/ckpt/model.pt"
+    
+    matg, gq, _  = get_alignmat(args, gquery_prog, target_prog, qfile="gq")
+    matb, bq, t = get_alignmat(args, bquery_prog, target_prog, qfile="bq")
+    vmin = min(np.min(matg), np.min(matb))
+    vmax = max(np.max(matg), np.max(matb))
+    
+    fig, (ax1, ax2) = plt.subplots(2, 1, 
+                        sharex=True, figsize=(15,15),
+                        gridspec_kw={'height_ratios': [matg.shape[1], matb.shape[1]]})
+    x_labels = [t.nodes[i]['span'] for i in t.nodes]
 
-    get_alignmat(args, query_prog, target_prog)
+    # plot gq
+    y_labels = [gq.nodes[i]['span'] for i in gq.nodes]
+    ax1.set_yticks(np.arange(len(y_labels)), y_labels)
+    ax1.set_xticks(np.arange(len(x_labels)), x_labels, rotation=45)
+    im1 = ax1.imshow(matg, interpolation="nearest", vmin=vmin, vmax=vmax)
+    
+    # plot bq
+    y_labels = [bq.nodes[i]['span'] for i in bq.nodes]
+    ax2.set_yticks(np.arange(len(y_labels)), y_labels)
+    ax2.set_xticks(np.arange(len(x_labels)), x_labels, rotation=45)
+    im2 = ax2.imshow(matb, interpolation="nearest", vmin=vmin, vmax=vmax)
+    
+    cbar = fig.colorbar(im1, ax=[ax1, ax2], orientation='vertical')
+    plt.savefig(f"./plots/alignment.png")
