@@ -187,20 +187,20 @@ def embed_main(args):
     # for idx, p in enumerate(raw_paths):
     #     os.rename(p, osp.join(args.source_dir, f"example_{idx}.py"))
     
-    # in_queue, out_queue = mp.Queue(), mp.Queue()
-    # workers = start_workers_process(in_queue, out_queue, args)
+    in_queue, out_queue = mp.Queue(), mp.Queue()
+    workers = start_workers_process(in_queue, out_queue, args)
 
-    # for i in range(1010579, len(raw_paths)):
-    #     in_queue.put(("idx", i))
+    for i in range(1010579, len(raw_paths)):
+        in_queue.put(("idx", i))
         
-    # for _ in tqdm(range(1010579, len(raw_paths))):
-    #     msg = out_queue.get()
+    for _ in tqdm(range(1010579, len(raw_paths))):
+        msg = out_queue.get()
     
-    # for _ in range(args.n_workers):
-    #     in_queue.put(("done", None))
+    for _ in range(args.n_workers):
+        in_queue.put(("done", None))
 
-    # for worker in workers:
-    #     worker.join()
+    for worker in workers:
+        worker.join()
 
     # ######### PHASE2: EMBED GRAPHS #########
 

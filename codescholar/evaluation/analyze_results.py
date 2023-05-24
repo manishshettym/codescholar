@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 
-DATE = "2023-05-21"
+DATE = "2023-05-23"
 
 with open('benchmarks.json') as f:
     benchmarks = json.load(f)
