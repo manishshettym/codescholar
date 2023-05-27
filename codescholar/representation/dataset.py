@@ -35,12 +35,14 @@ class Corpus:
             self.train_dataset = ProgramDataset(
                 root=f"./tmp/{dataset}/train",
                 name=dataset,
+                task="train",
                 n_samples=n_train,
                 save_json=save_json)
         
         self.test_dataset = ProgramDataset(
             root=f"./tmp/{dataset}/test",
             name=dataset,
+            task="test",
             n_samples=n_test,
             save_json=save_json)
     
@@ -66,6 +68,7 @@ class ProgramDataset(Dataset):
         self,
         root: str,
         name: str,
+        task: str,
         n_samples: int,
         transform: Optional[Callable] = None,
         pre_transform: Optional[Callable] = None,
@@ -73,12 +76,16 @@ class ProgramDataset(Dataset):
         save_json: Optional[bool] = False,
         min_size=2, max_size=20
     ):
+        if not os.path.exists(root):
+            raise ValueError(f"Dataset for {name} not found in {root}")
+        
         self.name = name
         self.graph_dir = osp.join(root, 'graphs')
         
         if not os.path.exists(self.graph_dir):
             os.makedirs(self.graph_dir)
         
+        self.task = task
         self.n_samples = n_samples
         self.min_size = min_size
         self.max_size = max_size
@@ -131,8 +138,8 @@ class ProgramDataset(Dataset):
         count = 0
         program_size = []
 
-        # Convert each python file to networkx graphs and save json
-        for raw_path in tqdm(self.raw_paths, desc="Preprocess"):
+        # Convert each python file to networkx graphs and save in self.graph_dir
+        for raw_path in tqdm(self.raw_paths, desc=f"Preprocess-{self.task}"):
             data = self.create_prog_datapoint(raw_path)
 
             if data is None:
@@ -166,7 +173,7 @@ class ProgramDataset(Dataset):
         for the query"""
         
         idx = 0
-        pbar = tqdm(total=self.n_samples + 1)
+        pbar = tqdm(total=self.n_samples + 1, desc=f"RandBFSSample-{self.task}")
 
         while idx < self.n_samples:
             size = random.randint(self.min_size + 1, self.max_size)

@@ -6,8 +6,8 @@ import torch_geometric.utils as pyg_utils
 
 from codescholar.utils.train_utils import get_device
 
-NODE_FEAT = ['ast_type', 'node_degree', 'node_pagerank', 'node_cc']
-NODE_FEAT_DIMS = [1, 1, 1, 1]
+NODE_FEAT = ['ast_type', 'node_degree', 'node_pagerank', 'node_cc', 'node_span']
+NODE_FEAT_DIMS = [1, 1, 1, 1, 768]
 EDGE_FEAT = ['flow_type']
 EDGE_FEAT_DIMS = [1]
 
@@ -26,7 +26,11 @@ class Preprocess(nn.Module):
         edge_feat_list = []
 
         for key in NODE_FEAT:
-            node_feat_list.append(batch[key])
+            if key == 'node_span':
+                # reshape [batch_size, 1, 768] to [batch_size, 768]
+                node_feat_list.append(batch[key].squeeze(1))
+            else:
+                node_feat_list.append(batch[key])
         
         for key in EDGE_FEAT:
             edge_feat_list.append(batch[key])
@@ -98,6 +102,42 @@ class SubgraphEmbedder(nn.Module):
             )**2, dim=1)
 
         return is_subgraph
+
+    def predictv2(self, pred):
+        """Inference API v2: predict if queries are subgraphs of targets
+
+        Args:
+            pred (List<emb_t, emb_q>): embeddings of pairs of graphs
+        
+        NOTE: @manish: this prediction API might not be useful in all cases. 
+            It ignores what each dim might represent, and decides to predict 
+            just based on #dims violating the constraint.
+        """
+        emb_targets, emb_queries = pred
+        batch_size, emb_size = emb_targets.shape
+
+        DIM_RATIO = 0.1 # 10% of the embedding dimension
+        MAX_VIO_DIMS = int(DIM_RATIO * emb_size) #10% of 64 = 6
+        
+        # subtract emb_targets from emb_queries
+        subtract = torch.sub(emb_queries, emb_targets)
+        assert subtract.shape == (batch_size, emb_size)
+
+        # 1 if violating the order constraint
+        indicator = (subtract > 0).type(torch.cuda.FloatTensor)
+        # note: if no gpu, comment above and uncomment below
+        # indicator = (subtract > 0).type(torch.FloatTensor)
+        
+        # count #dim with violations using einsum (faster than .sum)
+        indicator_sum = torch.einsum('ij->i', indicator)
+        assert indicator_sum.shape == (batch_size,)
+
+        # 1 indicates violation is in < DIM_RATIO*emb_size dimensions => subgraph
+        # 0 indicates otherwise. => !subgraph
+        predictions = (indicator_sum < MAX_VIO_DIMS).view(-1,1).type(torch.cuda.FloatTensor)
+        scores = 1 - indicator_sum / emb_size
+
+        return predictions, scores
         
 
 class BasicGNN(nn.Module):
@@ -183,6 +223,8 @@ class BasicGNN(nn.Module):
                 data.preprocessed = True
 
         x = data.node_feature
+        assert x.shape[1] == sum(NODE_FEAT_DIMS) + 1        
+
         edge_index, edge_attr = data.edge_index, data.edge_feature
         batch = data.batch
         

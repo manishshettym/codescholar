@@ -127,4 +127,7 @@ def featurize_graph(g, anchor=None):
             edge_type_val = GraphEdgeLabel[edge_type_name].value
             g.edges[e]["flow_type"] = torch.tensor([edge_type_val])
     
+    # Note: no need to sort the nodes of the graph 
+    # to maintain an order. GNN is permutation invariant.
+
     return DSGraph(g)

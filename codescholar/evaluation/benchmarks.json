@@ -1,0 +1,79 @@
+{
+    "pandas": [
+        "pd.read_csv",
+        "pd.concat",
+        "pd.merge",
+        "pd.split",
+        "pd.map",
+        "pd.append",
+        "pd.factorize",
+        "pd.pivot_table",
+        "pd.unique",
+        "pd.cut",
+        "df.groupby"
+    ],
+    "numpy": [
+        "np.mean",
+        "np.matmul",
+        "np.dot",
+        "np.stack",
+        "np.reshape",
+        "np.einsum",
+        "np.cov",
+        "np.corrcoef",
+        "np.transpose",
+        "np.linalg.inv"
+    ],
+    "os": [
+        "os.path.join",
+        "os.path.dirname",
+        "os.path.basename",
+        "os.path.abspath",
+        "os.path.split",
+        "os.listdir",
+        "os.mkdir",
+        "os.chdir",
+        "os.walk"
+    ],
+    "sklearn": [
+        "f1_score",
+        "mean_squared_error",
+        "model_selection",
+        "train_test_split",
+        "OneHotEncoder",
+        "StandardScaler",
+        "TfidfVectorizer",
+        "LinearRegression",
+        "DecisionTreeClassifier",
+        "StratifiedKFold"
+    ],
+    "matplotlib": [
+        "matplotlib.pyplot",
+        "plt.plot",
+        "plt.style",
+        "plt.colors",
+        "plt.figure",
+        "plt.title",
+        "plt.ylabel",
+        "plt.ylim",
+        "plt.xticks",
+        "plt.subplot"
+    ],
+    "torch": [
+        "torch.sigmoid",
+        "torch.softmax",
+        "torch.argmax",
+        "torch.stack",
+        "torch.einsum",
+        "torch.load",
+        "torch.optim",
+        "nn.Linear",
+        "nn.Conv2d",
+        "nn.Sequential",
+        "nn.ReLU",
+        "nn.Softmax",
+        "nn.Sigmoid",
+        "nn.Embedding",
+        "nn.LSTM"
+    ]
+}

@@ -10,6 +10,17 @@ from deepsnap.batch import Batch
 
 from codescholar.utils.train_utils import get_device
 
+def write_metrics(metrics, path):
+    with open(path, "w") as f:
+        predlen, acc, prec, rec, auroc, avg_prec, tn, fp, fn, tp = metrics
+        f.write("\n{}".format(str(datetime.now())))
+        f.write(
+            "Epoch: {}. Count: {}. Acc: {:.4f}. "
+            "P: {:.4f}. R: {:.4f}. AUROC: {:.4f}. AP: {:.4f}.\n     "
+            "TN: {}. FP: {}. FN: {}. TP: {}".format(
+                epoch, predlen, acc, prec, rec, auroc, avg_prec, tn, fp, fn, tp))
+        f.write("\n")
+
 
 def precision(pred, labels):
     if torch.sum(pred) > 0:
@@ -157,13 +168,16 @@ def validation(args, model, test_pts, logger, batch_n, epoch):
     tn, fp, fn, tp = confusion_matrix(labels, pred).ravel()
 
     print("\n{}".format(str(datetime.now())))
-    print(
-        "Validation. Epoch {}. Count: {}. Acc: {:.4f}. "
+    print("Validation. Epoch {}. Count: {}. Acc: {:.4f}. "
         "P: {:.4f}. R: {:.4f}. AUROC: {:.4f}. AP: {:.4f}.\n     "
         "TN: {}. FP: {}. FN: {}. TP: {}".format(
             epoch, len(pred), acc, prec, rec, auroc, avg_prec,
             tn, fp, fn, tp))
-    
+
+    write_metrics(metrics=[
+        epoch, len(pred), acc, prec, rec, auroc, avg_prec,
+        tn, fp, fn, tp], path='train-logs.log')
+
     if not args.test:
         logger.add_scalar("Accuracy/test", acc, batch_n)
         logger.add_scalar("Precision/test", prec, batch_n)

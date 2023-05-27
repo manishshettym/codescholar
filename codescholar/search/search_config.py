@@ -21,14 +21,36 @@ def init_search_configs(parser, arg_str=None):
     search_args.add_argument(
         '--rank', type=int,
         help='number of most frequent idioms of a particular size')
-    
+    search_args.add_argument(
+        '--mode', type=str, choices=['g',  'm'],
+        help='mode in which to run the search agent; m: mine, g: graph (def)'
+    )
+    search_args.add_argument(
+        '--keywords', type=str, nargs='+',
+        help='keywords to start idiomatic search in keyword mode'
+    )
+    search_args.add_argument(
+        '--seed', type=str,
+        help='graph to start idiomatic search in graph mode'
+    )
+    search_args.add_argument(
+        '--max_holes', type=int,
+        help='maximum number of holes that can be added to a candidate program'
+    )
+    search_args.add_argument(
+        '--max_init_beams', type=int,
+        help='maximum number of beams to filter into during initialization of search'
+    )
 
     search_args.set_defaults(
-        prog_samples=200000,
-        n_trials=50000,
+        mode='g',
+        prog_samples=100000,
+        n_trials=10,
         n_beams=1,
         rank=30,
-        min_idiom_size=10,
-        max_idiom_size=35,
+        max_holes=8,
+        min_idiom_size=3,
+        max_idiom_size=30,
+        max_init_beams=200,
         subgraph_sample_size=10,
         radius=3)

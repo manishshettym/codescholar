@@ -69,8 +69,9 @@ def get_neighborhoods(args, graph):
             # NOTE: G.subgraph([nodes]) returns the subG induced on [nodes]
             # i.e., the subG containing the nodes in [nodes] and 
             # edges between these nodes => in this case, a (sampled) radial n'hood
+            
             neigh = graph.subgraph(neighbors)
-            neigh = featurize_graph(neigh, anchor=0)
+            neigh = featurize_graph(neigh, anchor=node)
             neighs.append(neigh)
     
     return neighs
@@ -186,20 +187,20 @@ def embed_main(args):
     # for idx, p in enumerate(raw_paths):
     #     os.rename(p, osp.join(args.source_dir, f"example_{idx}.py"))
     
-    # in_queue, out_queue = mp.Queue(), mp.Queue()
-    # workers = start_workers_process(in_queue, out_queue, args)
+    in_queue, out_queue = mp.Queue(), mp.Queue()
+    workers = start_workers_process(in_queue, out_queue, args)
 
-    # for i in range(1010579, len(raw_paths)):
-    #     in_queue.put(("idx", i))
+    for i in range(1010579, len(raw_paths)):
+        in_queue.put(("idx", i))
         
-    # for _ in tqdm(range(1010579, len(raw_paths))):
-    #     msg = out_queue.get()
+    for _ in tqdm(range(1010579, len(raw_paths))):
+        msg = out_queue.get()
     
-    # for _ in range(args.n_workers):
-    #     in_queue.put(("done", None))
+    for _ in range(args.n_workers):
+        in_queue.put(("done", None))
 
-    # for worker in workers:
-    #     worker.join()
+    for worker in workers:
+        worker.join()
 
     # ######### PHASE2: EMBED GRAPHS #########
 
@@ -233,11 +234,16 @@ def main():
     search_config.init_search_configs(parser)
     args = parser.parse_args()
 
+    # data config
     args.format = "source"  # {graphs, source}
     args.source_dir = f"../data/{args.dataset}/source/"
     args.graphs_dir = f"../data/{args.dataset}/graphs/"
     args.processed_dir = f"./tmp/{args.dataset}/processed/"
     args.emb_dir = f"./tmp/{args.dataset}/emb/"
+
+    # model config
+    args.test = True
+    args.model_path = f"../representation/ckpt/model.pt"
 
     embed_main(args)
 
