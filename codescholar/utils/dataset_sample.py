@@ -1,3 +1,4 @@
+"""sample files from a directory and breakdow code into methods/functions"""
 import glob
 import numpy as np
 import argparse
