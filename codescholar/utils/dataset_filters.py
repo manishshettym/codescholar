@@ -2,6 +2,7 @@
 import os
 import os.path as osp
 import glob
+import shutil
 from tqdm import tqdm
 import argparse
 import torch.multiprocessing as mp
@@ -78,8 +79,7 @@ def create_dataset(args, files):
 def flatten_dataset(args, files):
     # flatten a directory of directories into a single directory
     # maintain a mapping of file to directory and store it in csv
-    
-    DEST_DIR = "../data/pnosmt_flat/"
+
     if not os.path.exists(DEST_DIR):
         os.makedirs(DEST_DIR)
     
@@ -101,11 +101,22 @@ if __name__ == "__main__":
     parser.add_argument("--n_workers", type=int, default=4, help="number of workers")
     args = parser.parse_args()
 
+    # move a github snapshot into SRC_DIR before running this script
     SRC_DIR = "../data/pnosmt/"
+    
+    # the final filtered and flattened dataset will be stored in DEST_DIR
+    DEST_DIR = "../data/pnosmt_flat/"
 
     files = [file for file in glob.glob(SRC_DIR + '/**', recursive=True) 
                 if os.path.isfile(file) and file.endswith('.py')
             ]
     print("Total number of files originally: {}".format(len(files)))
-    # create_dataset(args, files)
+    
+    create_dataset(args, files)
     flatten_dataset(args, files)
+    
+    # remove src_dir
+    shutil.rmtree(SRC_DIR)
+    
+    # move the flattened dataset to src_dir/raw
+    shutil.move(DEST_DIR, SRC_DIR + "/raw")
