@@ -75,6 +75,26 @@ def create_dataset(args, files):
     print("Total number of files retained: {}".format(idx))
 
 
+def flatten_dataset(args, files):
+    # flatten a directory of directories into a single directory
+    # maintain a mapping of file to directory and store it in csv
+    
+    DEST_DIR = "../data/pnosmt_flat/"
+    if not os.path.exists(DEST_DIR):
+        os.makedirs(DEST_DIR)
+    
+    mapping = {}
+    for file in tqdm(files, desc="Files"):
+        if os.path.isfile(file):
+            filename = os.path.basename(file)
+            dir = os.path.dirname(file)
+            mapping[filename] = dir
+            os.rename(file, os.path.join(DEST_DIR, filename))
+            
+    with open(os.path.join(DEST_DIR, "mapping.csv"), "w") as fp:
+        for filename, dir in mapping.items():
+            fp.write("{},{}\n".format(filename, dir))
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--libs", nargs="+", help="list of libraries to filter")
@@ -87,4 +107,5 @@ if __name__ == "__main__":
                 if os.path.isfile(file) and file.endswith('.py')
             ]
     print("Total number of files originally: {}".format(len(files)))
-    create_dataset(args, files)
+    # create_dataset(args, files)
+    flatten_dataset(args, files)
