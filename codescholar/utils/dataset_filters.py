@@ -80,18 +80,19 @@ def flatten_dataset(args, files):
     if not os.path.exists(DEST_DIR):
         os.makedirs(DEST_DIR)
 
-    mapping = []  # [[fileid, repo]]
+    src_to_repo = []  # [[fileid, filename, repo]]
     idx = 0
 
     for file in tqdm(files, desc="Flattening"):
         fileid = "file{}.py".format(idx)
+        filename = os.path.basename(file)
         repo = os.path.basename(os.path.dirname(file))
-        mapping.append([fileid, repo])
+        src_to_repo.append([fileid, filename, repo])
         shutil.copyfile(file, os.path.join(DEST_DIR, fileid))
         idx += 1
 
-    mapping_df = pd.DataFrame(mapping, columns=["fileid", "repo"])
-    mapping_df.to_csv(os.path.join(DEST_DIR, "mapping.csv"), sep=";", index=False)
+    src_to_repo_df = pd.DataFrame(src_to_repo, columns=["fileid", "filename", "repo"])
+    src_to_repo_df.to_csv(os.path.join(DEST_DIR, "src_to_repo.csv"), sep=";", index=False)
 
 
 if __name__ == "__main__":

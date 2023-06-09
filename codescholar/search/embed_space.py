@@ -182,10 +182,6 @@ def embed_main(args):
         raw_paths = sorted(glob.glob(osp.join(args.graphs_dir, '*.pt')))
 
     # ######### PHASE1: PROCESS GRAPHS #########
-
-    # util: to rename .py files into a standard filename format
-    # for idx, p in enumerate(raw_paths):
-    #     os.rename(p, osp.join(args.source_dir, f"example_{idx}.py"))
     
     in_queue, out_queue = mp.Queue(), mp.Queue()
     workers = start_workers_process(in_queue, out_queue, args)

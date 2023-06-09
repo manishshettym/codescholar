@@ -4,7 +4,7 @@ import ast
 import black
 import astunparse
 import textwrap
-
+from typing import Tuple
 
 def create_dummy_function(body) -> ast.FunctionDef:
     """
@@ -76,7 +76,7 @@ def is_library_used(filepath: str, lib: str) -> bool:
     return False
 
 
-def breakdown_code_methods(outdir: str, path: str, file_id: str) -> int:
+def breakdown_code_methods(outdir: str, path: str, file_id: str) -> Tuple[int, list]:
     """Breakdown a python file into methods.
     Save the methods into seperate files.
 
@@ -85,7 +85,9 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str) -> int:
     
     Returns:
         int: number of methods found
+        list: list of methods created
     """
+    methods_created = []
     example_id = 0
     code = None
     with open(path, 'r', encoding='utf-8') as fp:
@@ -93,7 +95,7 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str) -> int:
             source = fp.read()
             code = ast.parse(source, mode='exec')
         except:
-            return None
+            return 0, []
 
     # process methods
     classes = [n for n in code.body if isinstance(n, ast.ClassDef)]
@@ -108,7 +110,8 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str) -> int:
                 example_name = "{}_{}.py".format(file_id, example_id)
                 with open(osp.join(outdir, example_name), 'w') as fp:
                     fp.write(astunparse.unparse(meth))
-                
+                    
+                methods_created.append(example_name)
                 example_id += 1
 
     # process functions
@@ -120,6 +123,7 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str) -> int:
             with open(osp.join(outdir, example_name), 'w') as fp:
                 fp.write(astunparse.unparse(func))
             
+            methods_created.append(example_name)
             example_id += 1
     
     # drop all class and function defs
@@ -133,9 +137,10 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str) -> int:
         with open(osp.join(outdir, example_name), 'w') as fp:
             fp.write(astunparse.unparse(main_code))
         
+        methods_created.append(example_name)
         example_id += 1
     
-    return example_id
+    return example_id, methods_created
 
 
 class ASTMethodDropper(ast.NodeTransformer):
