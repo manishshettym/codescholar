@@ -108,6 +108,9 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str) -> Tuple[int, l
                 if isinstance(n, ast.FunctionDef)]
             
             for meth in methods:
+                if meth.name.startswith("test"):
+                    continue
+
                 try:
                     example_name = "{}_{}.py".format(file_id, example_id)
                     with open(osp.join(outdir, example_name), 'w') as fp:
@@ -124,6 +127,8 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str) -> Tuple[int, l
     
     if len(functions) > 0:
         for func in functions:
+            if func.name.startswith("test"):
+                    continue
             try:
                 example_name = "{}_{}.py".format(file_id, example_id)
                 with open(osp.join(outdir, example_name), 'w') as fp:
@@ -139,24 +144,26 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str) -> Tuple[int, l
     try:
         code = ASTMethodDropper().visit(code)
     except RecursionError:
-        # recursion max depth errors propagated from previous steps
+        # NOTE: recursion max depth errors propagated from previous steps
         # cannot be fixed to clean up the code. skip the next steps
         return example_id, methods_created
 
-    # wrap the rest in a FunctionDef
-    if ast.unparse(code).strip() != "":
-        try:
-            main_code = create_dummy_function(code.body)
-            example_name = "{}_{}.py".format(file_id, example_id)
+    # @manish: not sure we need this if we care about idiomatic code
+    # since it changes the natural flow of the code
+    # NOTE: uncomment to wrap leftover code in a function
+    # if ast.unparse(code).strip() != "":
+    #     try:
+    #         main_code = create_dummy_function(code.body)
+    #         example_name = "{}_{}.py".format(file_id, example_id)
 
-            with open(osp.join(outdir, example_name), 'w') as fp:
-                fp.write(astunparse.unparse(main_code))
+    #         with open(osp.join(outdir, example_name), 'w') as fp:
+    #             fp.write(astunparse.unparse(main_code))
 
-            methods_created.append(example_name)
-            example_id += 1
-        except RecursionError:
-            os.remove(osp.join(outdir, example_name))
-            pass
+    #         methods_created.append(example_name)
+    #         example_id += 1
+    #     except RecursionError:
+    #         os.remove(osp.join(outdir, example_name))
+    #         pass
     
     return example_id, methods_created
 
