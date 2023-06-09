@@ -72,8 +72,6 @@ def create_search_dataset(args, files):
         count += c
         idx += 1
 
-    print(methods_to_fileid)
-
     src_to_repo_df = pd.read_csv(
         SRC_2_REPO,
         header=0,
@@ -81,7 +79,6 @@ def create_search_dataset(args, files):
         on_bad_lines="skip",
     )
 
-    print(src_to_repo_df.head())
     method_to_repo = []
 
     # rename to a standard filename format

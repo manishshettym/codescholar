@@ -1,3 +1,4 @@
+import os
 import os.path as osp
 import ast
 import ast
@@ -107,38 +108,55 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str) -> Tuple[int, l
                 if isinstance(n, ast.FunctionDef)]
             
             for meth in methods:
-                example_name = "{}_{}.py".format(file_id, example_id)
-                with open(osp.join(outdir, example_name), 'w') as fp:
-                    fp.write(astunparse.unparse(meth))
-                    
-                methods_created.append(example_name)
-                example_id += 1
+                try:
+                    example_name = "{}_{}.py".format(file_id, example_id)
+                    with open(osp.join(outdir, example_name), 'w') as fp:
+                        fp.write(astunparse.unparse(meth))
+                        
+                    methods_created.append(example_name)
+                    example_id += 1
+                except RecursionError:
+                    os.remove(osp.join(outdir, example_name))
+                    continue
 
     # process functions
     functions = [n for n in code.body if isinstance(n, ast.FunctionDef)]
-
+    
     if len(functions) > 0:
         for func in functions:
-            example_name = "{}_{}.py".format(file_id, example_id)
-            with open(osp.join(outdir, example_name), 'w') as fp:
-                fp.write(astunparse.unparse(func))
+            try:
+                example_name = "{}_{}.py".format(file_id, example_id)
+                with open(osp.join(outdir, example_name), 'w') as fp:
+                    fp.write(astunparse.unparse(func))
+                
+                methods_created.append(example_name)
+                example_id += 1
+            except RecursionError:
+                os.remove(osp.join(outdir, example_name))
+                continue
             
-            methods_created.append(example_name)
-            example_id += 1
-    
     # drop all class and function defs
-    code = ASTMethodDropper().visit(code)
+    try:
+        code = ASTMethodDropper().visit(code)
+    except RecursionError:
+        # recursion max depth errors propagated from previous steps
+        # cannot be fixed to clean up the code. skip the next steps
+        return example_id, methods_created
 
     # wrap the rest in a FunctionDef
     if ast.unparse(code).strip() != "":
-        main_code = create_dummy_function(code.body)
-        example_name = "{}_{}.py".format(file_id, example_id)
+        try:
+            main_code = create_dummy_function(code.body)
+            example_name = "{}_{}.py".format(file_id, example_id)
 
-        with open(osp.join(outdir, example_name), 'w') as fp:
-            fp.write(astunparse.unparse(main_code))
-        
-        methods_created.append(example_name)
-        example_id += 1
+            with open(osp.join(outdir, example_name), 'w') as fp:
+                fp.write(astunparse.unparse(main_code))
+
+            methods_created.append(example_name)
+            example_id += 1
+        except RecursionError:
+            os.remove(osp.join(outdir, example_name))
+            pass
     
     return example_id, methods_created
 
