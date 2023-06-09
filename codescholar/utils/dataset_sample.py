@@ -1,14 +1,20 @@
 """script: sample files from a directory and breakdow code into methods/functions"""
+import os
+import json
+import os.path as osp
+from tqdm import tqdm
+import argparse
+
 import glob
 import pandas as pd
 import numpy as np
-import argparse
-
-from tqdm import tqdm
-import os
-import os.path as osp
+import torch.multiprocessing as mp
 
 from codescholar.utils.code_utils import breakdown_code_methods, is_library_used
+
+#############################################
+######### Create Train/Test Dataset #########
+#############################################
 
 
 def create_train_test_dataset(args, files):
@@ -48,6 +54,38 @@ def create_train_test_dataset(args, files):
     )
 
 
+#############################################
+########## Create Search Dataset ############
+#############################################
+
+
+def start_workers_breakdown(in_queue, out_queue, args):
+    workers = []
+    for _ in tqdm(range(args.n_workers), desc="Workers"):
+        worker = mp.Process(target=mp_breakdown, args=(args, in_queue, out_queue))
+        worker.start()
+        workers.append(worker)
+
+    return workers
+
+
+def mp_breakdown(args, in_queue, out_queue):
+    done = False
+    while not done:
+        msg, file, file_idx = in_queue.get()
+
+        if msg == "done":
+            done = True
+            break
+
+        meth_count, methods = breakdown_code_methods(
+            outdir=args.dest_dir, path=file, 
+            file_id="example{}".format(file_idx)
+        )
+
+        out_queue.put((meth_count, methods))
+
+
 def create_search_dataset(args, files):
     """create search dataset from a list of files
 
@@ -58,45 +96,85 @@ def create_search_dataset(args, files):
     if not osp.exists(osp.dirname(DEST_DIR)):
         os.makedirs(os.path.dirname(DEST_DIR))
 
-    idx, count = 0, 0
-    methods_to_fileid = {}
+    args.dest_dir = DEST_DIR
+    in_queue, out_queue = mp.Queue(), mp.Queue()
+    workers = start_workers_breakdown(in_queue, out_queue, args)
 
-    for file in tqdm(files):
-        c, methods = breakdown_code_methods(
-            outdir=DEST_DIR, path=file, file_id="example{}".format(idx)
-        )
+    count, methods_to_fileid = 0, {}
+
+    for idx, file in enumerate(files):
+        in_queue.put(("file", file, idx))
+
+    for _ in tqdm(range(len(files)), desc="Breakdown"):
+        meth_count, methods = out_queue.get()
+        count += meth_count
 
         for m in methods:
             methods_to_fileid[m] = osp.basename(file)
 
-        count += c
-        idx += 1
+    for _ in range(args.n_workers):
+        in_queue.put(("done", None, None))
 
-    src_to_repo_df = pd.read_csv(
-        SRC_2_REPO,
-        header=0,
-        sep=";",
-        on_bad_lines="skip",
-    )
-
-    method_to_repo = []
-
-    # rename to a standard filename format
-    meth_idx = 0
-    method_paths = sorted(glob.glob(osp.join(DEST_DIR, "*.py")))
-    for idx, mp in enumerate(method_paths):
-        method_filename = osp.basename(mp)
-        source_fileid = methods_to_fileid[method_filename]
-        src_info = src_to_repo_df.loc[src_to_repo_df["fileid"] == source_fileid].values.tolist()[0]
-        
-        methodid = f"example_{meth_idx}.py"
-        method_to_repo.append([methodid] + src_info)
-        os.rename(mp, osp.join(DEST_DIR, methodid))
-        meth_idx += 1
+    for worker in workers:
+        worker.join()
     
-    meth_to_repo_df = pd.DataFrame(method_to_repo, columns=["methodid", "fileid", "file", "repo"])
-    meth_to_repo_df.to_csv(METH_2_REPO, sep=";", index=False)
     print("Total number of methods generated: {}".format(count))
+
+    return methods_to_fileid
+
+
+#############################################
+########## Standardize File Names ###########
+#############################################
+
+def start_workers_rename(in_queue, out_queue, methods_to_fileid, args):
+    workers = []
+    for _ in tqdm(range(args.n_workers), desc="Workers"):
+        worker = mp.Process(target=mp_rename, 
+                    args=(args, methods_to_fileid, in_queue, out_queue))
+        worker.start()
+        workers.append(worker)
+
+    return workers
+
+
+def mp_rename(args, methods_to_fileid, in_queue, out_queue):
+    done = False    
+    while not done:
+        msg, methpath, meth_idx = in_queue.get()
+
+        if msg == "done":
+            done = True
+            break
+
+        method_filename = osp.basename(methpath)
+        example_id = f"example_{meth_idx}.py"
+        os.rename(methpath, osp.join(args.dest_dir, example_id))
+        out_queue.put((method_filename, example_id))
+
+
+def standardize_dataset_files(methods_to_fileid):
+    method_paths = sorted(glob.glob(osp.join(DEST_DIR, "*.py")))
+    
+    args.dest_dir = DEST_DIR
+    in_queue, out_queue = mp.Queue(), mp.Queue()
+    workers = start_workers_rename(in_queue, out_queue, methods_to_fileid, args)
+    
+    for idx, methpath in enumerate(method_paths):
+        in_queue.put(("method", methpath, idx))
+    
+    for _ in tqdm(range(len(method_paths)), desc="Rename"):
+        method_filename, example_id = out_queue.get()
+        methods_to_fileid[example_id] = methods_to_fileid.pop(method_filename)
+    
+    for _ in range(args.n_workers):
+        in_queue.put(("done", None, None))
+
+    for worker in workers:
+        worker.join()
+
+    with open(f"../data/{args.dataset}/example_to_fileid.json", "w") as f:
+        json.dump(methods_to_fileid, f)
 
 
 if __name__ == "__main__":
@@ -112,14 +190,14 @@ if __name__ == "__main__":
         "--samples", type=int, default=-1, help="Number of samples to use"
     )
     parser.add_argument("--dataset", type=str, help="Dataset to use")
+    parser.add_argument("--n_workers", type=int, default=4, help="Number of workers")
     args = parser.parse_args()
 
     SRC_DIR = f"../data/{args.dataset}/raw"
-    SRC_2_REPO = f"../data/{args.dataset}/src_to_repo.csv"
-    METH_2_REPO = f"../data/{args.dataset}/meth_to_repo.csv"
+    METH_2_FILE = f"../data/{args.dataset}/meth_to_file.csv"
 
     files = [f for f in sorted(glob.glob(osp.join(SRC_DIR, "*.py")))]
-
+    
     if args.samples != -1:
         sampled_files = np.random.choice(files, min(len(files), args.samples))
         train_len = int(0.8 * len(sampled_files))
@@ -137,4 +215,9 @@ if __name__ == "__main__":
     # create methods to build search space
     elif args.task == "search":
         DEST_DIR = f"../data/{args.dataset}/source/"
-        create_search_dataset(args, sampled_files)
+        methods_to_fileid = create_search_dataset(args, sampled_files)
+        
+        with open(f"../data/{args.dataset}/meth_to_fileid.json", "w") as f:
+            json.dump(methods_to_fileid, f)
+        
+        standardize_dataset_files(methods_to_fileid)
