@@ -1,8 +1,9 @@
-"""create a custom dataset from a github snapshot w/ filters (mainly library usage)"""
+"""script: create a custom dataset from a github snapshot w/ filters (mainly library usage)"""
 import os
 import os.path as osp
 import glob
 import shutil
+import pandas as pd
 from tqdm import tqdm
 import argparse
 import torch.multiprocessing as mp
@@ -77,23 +78,21 @@ def create_dataset(args, files):
 
 
 def flatten_dataset(args, files):
-    # flatten a directory of directories into a single directory
-    # maintain a mapping of file to directory and store it in csv
-
     if not os.path.exists(DEST_DIR):
         os.makedirs(DEST_DIR)
-    
-    mapping = {}
+
+    mapping = []  # [[fullpath, filename, repo]]
+
     for file in tqdm(files, desc="Files"):
         if os.path.isfile(file):
             filename = os.path.basename(file)
-            dir = os.path.dirname(file)
-            mapping[filename] = dir
+            repo = os.path.dirname(file)
+            mapping.append([file, filename, repo])
             os.rename(file, os.path.join(DEST_DIR, filename))
-            
-    with open(os.path.join(DEST_DIR, "mapping.csv"), "w") as fp:
-        for filename, dir in mapping.items():
-            fp.write("{},{}\n".format(filename, dir))
+
+    mapping_df = pd.DataFrame(mapping, columns=["fullpath", "filename", "repo"])
+    mapping_df.to_csv(os.path.join(DEST_DIR, "mapping.csv"), sep=";", index=False)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -101,22 +100,15 @@ if __name__ == "__main__":
     parser.add_argument("--n_workers", type=int, default=4, help="number of workers")
     args = parser.parse_args()
 
-    # move a github snapshot into SRC_DIR before running this script
     SRC_DIR = "../data/pnosmt/"
-    
-    # the final filtered and flattened dataset will be stored in DEST_DIR
     DEST_DIR = "../data/pnosmt_flat/"
 
-    files = [file for file in glob.glob(SRC_DIR + '/**', recursive=True) 
-                if os.path.isfile(file) and file.endswith('.py')
-            ]
+    files = [
+        file
+        for file in glob.glob(SRC_DIR + "/**", recursive=True)
+        if os.path.isfile(file) and file.endswith(".py")
+    ]
     print("Total number of files originally: {}".format(len(files)))
-    
+
     create_dataset(args, files)
     flatten_dataset(args, files)
-    
-    # remove src_dir
-    shutil.rmtree(SRC_DIR)
-    
-    # move the flattened dataset to src_dir/raw
-    shutil.move(DEST_DIR, SRC_DIR + "/raw")
