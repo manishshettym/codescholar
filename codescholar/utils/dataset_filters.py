@@ -1,4 +1,5 @@
-"""script: create a custom dataset from a github snapshot w/ filters (mainly library usage)"""
+"""script: create a custom dataset from a github snapshot w/ filters (mainly library usage)
+"""
 import os
 import os.path as osp
 import glob
@@ -65,7 +66,7 @@ def create_dataset(args, files):
     for file in files:
         in_queue.put(("file", file))
 
-    for _ in tqdm(range(len(files)), desc="Files"):
+    for _ in tqdm(range(len(files)), desc="Processing"):
         idx += out_queue.get()
 
     for _ in range(args.n_workers):
@@ -74,23 +75,22 @@ def create_dataset(args, files):
     for worker in workers:
         worker.join()
 
-    print("Total number of files retained: {}".format(idx))
-
 
 def flatten_dataset(args, files):
     if not os.path.exists(DEST_DIR):
         os.makedirs(DEST_DIR)
 
-    mapping = []  # [[fullpath, filename, repo]]
+    mapping = []  # [[fileid, repo]]
+    idx = 0
 
-    for file in tqdm(files, desc="Files"):
-        if os.path.isfile(file):
-            filename = os.path.basename(file)
-            repo = os.path.dirname(file)
-            mapping.append([file, filename, repo])
-            os.rename(file, os.path.join(DEST_DIR, filename))
+    for file in tqdm(files, desc="Flattening"):
+        fileid = "file{}.py".format(idx)
+        repo = os.path.basename(os.path.dirname(file))
+        mapping.append([fileid, repo])
+        shutil.copyfile(file, os.path.join(DEST_DIR, fileid))
+        idx += 1
 
-    mapping_df = pd.DataFrame(mapping, columns=["fullpath", "filename", "repo"])
+    mapping_df = pd.DataFrame(mapping, columns=["fileid", "repo"])
     mapping_df.to_csv(os.path.join(DEST_DIR, "mapping.csv"), sep=";", index=False)
 
 
@@ -109,6 +109,15 @@ if __name__ == "__main__":
         if os.path.isfile(file) and file.endswith(".py")
     ]
     print("Total number of files originally: {}".format(len(files)))
-
     create_dataset(args, files)
+
+    files = [
+        file
+        for file in glob.glob(SRC_DIR + "/**", recursive=True)
+        if os.path.isfile(file) and file.endswith(".py")
+    ]
+    print("Total number of files [after library filtering]: {}".format(len(files)))
     flatten_dataset(args, files)
+
+    # Note: creates DEST_DIR w/ mapping.csv and files of the form fileid.py
+    # mapping.csv maps fileid to repo
