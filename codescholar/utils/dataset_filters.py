@@ -92,7 +92,7 @@ def flatten_dataset(args, files):
         idx += 1
 
     src_to_repo_df = pd.DataFrame(src_to_repo, columns=["fileid", "filename", "repo"])
-    src_to_repo_df.to_csv(os.path.join(DEST_DIR, "src_to_repo.csv"), sep=";", index=False)
+    src_to_repo_df.to_csv(os.path.join(DEST_DIR, "file_to_repo.csv"), sep=";", index=False)
 
 
 if __name__ == "__main__":
