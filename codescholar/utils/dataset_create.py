@@ -1,4 +1,4 @@
-"""script: sample files from a directory and breakdow code into methods/functions"""
+"""script: create dataset from a directory by breaking down code into methods/functions"""
 import os
 import json
 import os.path as osp
@@ -123,60 +123,6 @@ def create_search_dataset(args, files):
     return methods_to_fileid
 
 
-#############################################
-########## Standardize File Names ###########
-#############################################
-
-def start_workers_rename(in_queue, out_queue, methods_to_fileid, args):
-    workers = []
-    for _ in tqdm(range(args.n_workers), desc="Workers"):
-        worker = mp.Process(target=mp_rename, 
-                    args=(args, methods_to_fileid, in_queue, out_queue))
-        worker.start()
-        workers.append(worker)
-
-    return workers
-
-
-def mp_rename(args, methods_to_fileid, in_queue, out_queue):
-    done = False    
-    while not done:
-        msg, methpath, meth_idx = in_queue.get()
-
-        if msg == "done":
-            done = True
-            break
-
-        method_filename = osp.basename(methpath)
-        example_id = f"example_{meth_idx}.py"
-        os.rename(methpath, osp.join(args.dest_dir, example_id))
-        out_queue.put((method_filename, example_id))
-
-
-def standardize_dataset_files(methods_to_fileid):
-    method_paths = sorted(glob.glob(osp.join(DEST_DIR, "*.py")))
-    
-    args.dest_dir = DEST_DIR
-    in_queue, out_queue = mp.Queue(), mp.Queue()
-    workers = start_workers_rename(in_queue, out_queue, methods_to_fileid, args)
-    
-    for idx, methpath in enumerate(method_paths):
-        in_queue.put(("method", methpath, idx))
-    
-    for _ in tqdm(range(len(method_paths)), desc="Rename"):
-        method_filename, example_id = out_queue.get()
-        methods_to_fileid[example_id] = methods_to_fileid.pop(method_filename)
-    
-    for _ in range(args.n_workers):
-        in_queue.put(("done", None, None))
-
-    for worker in workers:
-        worker.join()
-
-    with open(f"../data/{args.dataset}/example_to_fileid.json", "w") as f:
-        json.dump(methods_to_fileid, f)
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -194,8 +140,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     SRC_DIR = f"../data/{args.dataset}/raw"
-    METH_2_FILE = f"../data/{args.dataset}/meth_to_file.csv"
-
     files = [f for f in sorted(glob.glob(osp.join(SRC_DIR, "*.py")))]
     
     if args.samples != -1:
@@ -214,10 +158,8 @@ if __name__ == "__main__":
 
     # create methods to build search space
     elif args.task == "search":
-        DEST_DIR = f"../data/{args.dataset}/source/"
+        DEST_DIR = f"../data/{arogs.dataset}/source/"
         methods_to_fileid = create_search_dataset(args, sampled_files)
         
-        with open(f"../data/{args.dataset}/meth_to_fileid.json", "w") as f:
+        with open(f"../data/{args.dataset}/mappings/meth_to_fileid.json", "w") as f:
             json.dump(methods_to_fileid, f)
-        
-        standardize_dataset_files(methods_to_fileid)
