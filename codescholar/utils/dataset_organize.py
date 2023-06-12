@@ -66,7 +66,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_workers", type=int, default=4, help="Number of workers")
     args = parser.parse_args()
 
-    SRC_DIR = f"../data/{args.dataset}/sourcetmp"
+    SRC_DIR = f"../data/{args.dataset}/methods"
     method_paths = sorted(glob.glob(osp.join(SRC_DIR, "*.py")))
 
     args.dest_dir = f"../data/{args.dataset}/source"

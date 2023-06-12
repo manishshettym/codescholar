@@ -83,7 +83,7 @@ def mp_breakdown(args, in_queue, out_queue):
             file_id="example{}".format(file_idx)
         )
 
-        out_queue.put((meth_count, methods))
+        out_queue.put((file, meth_count, methods))
 
 
 def create_search_dataset(args, files):
@@ -106,7 +106,7 @@ def create_search_dataset(args, files):
         in_queue.put(("file", file, idx))
 
     for _ in tqdm(range(len(files)), desc="Breakdown"):
-        meth_count, methods = out_queue.get()
+        file, meth_count, methods = out_queue.get()
         count += meth_count
 
         for m in methods:
@@ -158,7 +158,7 @@ if __name__ == "__main__":
 
     # create methods to build search space
     elif args.task == "search":
-        DEST_DIR = f"../data/{arogs.dataset}/source/"
+        DEST_DIR = f"../data/{args.dataset}/methods/"
         methods_to_fileid = create_search_dataset(args, sampled_files)
         
         with open(f"../data/{args.dataset}/mappings/meth_to_fileid.json", "w") as f:
