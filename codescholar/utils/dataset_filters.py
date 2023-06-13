@@ -1,4 +1,4 @@
-"""script: create a custom dataset from a github snapshot w/ filters (mainly library usage)
+"""[script] create a custom dataset from a github snapshot w/ filters (mainly library usage)
 """
 import os
 import os.path as osp
