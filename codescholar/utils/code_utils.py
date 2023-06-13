@@ -77,6 +77,12 @@ def is_library_used(filepath: str, lib: str) -> bool:
     return False
 
 
+def save_example(code_str: str, path: str):
+    """save a code example to disk"""
+    with open(path, 'w') as fp:
+        fp.write(code_str)
+
+
 def breakdown_code_methods(outdir: str, path: str, file_id: str) -> Tuple[int, list]:
     """Breakdown a python file into methods.
     Save the methods into seperate files.
@@ -110,12 +116,10 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str) -> Tuple[int, l
             for meth in methods:
                 if meth.name.startswith("test"):
                     continue
-
                 try:
                     example_name = "{}_{}.py".format(file_id, example_id)
-                    with open(osp.join(outdir, example_name), 'w') as fp:
-                        fp.write(astunparse.unparse(meth))
-                        
+                    code_str = astunparse.unparse(meth)
+                    save_example(code_str, osp.join(outdir, example_name))          
                     methods_created.append(example_name)
                     example_id += 1
                 except RecursionError:
@@ -131,39 +135,13 @@ def breakdown_code_methods(outdir: str, path: str, file_id: str) -> Tuple[int, l
                     continue
             try:
                 example_name = "{}_{}.py".format(file_id, example_id)
-                with open(osp.join(outdir, example_name), 'w') as fp:
-                    fp.write(astunparse.unparse(func))
-                
+                code_str = astunparse.unparse(func)
+                save_example(code_str, osp.join(outdir, example_name))  
                 methods_created.append(example_name)
                 example_id += 1
             except RecursionError:
                 os.remove(osp.join(outdir, example_name))
                 continue
-            
-    # drop all class and function defs
-    try:
-        code = ASTMethodDropper().visit(code)
-    except RecursionError:
-        # NOTE: recursion max depth errors propagated from previous steps
-        # cannot be fixed to clean up the code. skip the next steps
-        return example_id, methods_created
-
-    # @manish: not sure we need this if we care about idiomatic code
-    # since it changes the natural flow of the code
-    # NOTE: uncomment to wrap leftover code in a function
-    # if ast.unparse(code).strip() != "":
-    #     try:
-    #         main_code = create_dummy_function(code.body)
-    #         example_name = "{}_{}.py".format(file_id, example_id)
-
-    #         with open(osp.join(outdir, example_name), 'w') as fp:
-    #             fp.write(astunparse.unparse(main_code))
-
-    #         methods_created.append(example_name)
-    #         example_id += 1
-    #     except RecursionError:
-    #         os.remove(osp.join(outdir, example_name))
-    #         pass
     
     return example_id, methods_created
 
