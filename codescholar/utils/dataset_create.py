@@ -13,7 +13,7 @@ import pandas as pd
 import numpy as np
 import torch.multiprocessing as mp
 
-from codescholar.utils.code_utils import breakdown_code_methods, is_library_used
+from codescholar.utils.code_utils import breakdown_code_methods
 
 #############################################
 ######### Create Train/Test Dataset #########
