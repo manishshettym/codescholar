@@ -1,7 +1,6 @@
 """[script] for the search dataset:
-1. apply any filters to to reduce search space
-2. organize methods into a standard format (example_*.py)
-3. update mappings to reflect the new file names
+1. organize methods into a standard format (example_*.py)
+2. update mappings to reflect the new file names
 """
 import os
 import json

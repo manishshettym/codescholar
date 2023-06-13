@@ -1,4 +1,7 @@
-"""script: create dataset from a directory by breaking down code into methods/functions"""
+"""[script] for search dataset:
+1. create dataset from a directory by breaking down code into methods/functions
+2. apply any filters on methods generated to to reduce search space
+"""
 import os
 import json
 import os.path as osp
