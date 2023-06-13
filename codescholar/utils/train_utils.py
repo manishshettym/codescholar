@@ -3,23 +3,21 @@ import torch.optim as optim
 
 import re
 import networkx as nx
-from transformers import RobertaTokenizer, RobertaModel
 from deepsnap.graph import Graph as DSGraph
 
 from codescholar.utils.graph_utils import GraphEdgeLabel, GraphNodeLabel
 
-
-def get_device():
-    global device_cache
-
-    if device_cache is None:
+def get_device(device_id=None):
+    if device_id is None:
         if torch.cuda.is_available():
             # print("GPU is available!!!")
-            device_cache = torch.device("cuda")
+            device = torch.device("cuda")
         else:
-            device_cache = torch.device("cpu")
+            device = torch.device("cpu")
+    else:
+        device = torch.device(f"cuda:{device_id}")
 
-    return device_cache
+    return device
 
 
 def build_model(model_type, args):
@@ -66,14 +64,7 @@ def build_optimizer(args, params):
     return scheduler, optimizer
 
 
-device_cache = None
-codebert_name = "microsoft/codebert-base"
-CodeBertTokenizer = RobertaTokenizer.from_pretrained(codebert_name)
-CodeBertModel = RobertaModel.from_pretrained(codebert_name).to(get_device())
-CodeBertModel.eval()
-
-
-def featurize_graph(g, anchor=None):
+def featurize_graph(g, feat_tokenizer, feat_model, anchor=None, device_id=None):
 
     assert len(g.nodes) > 0
     assert len(g.edges) > 0
@@ -102,12 +93,12 @@ def featurize_graph(g, anchor=None):
                 # remove format #TODO @manishs: is this is better/worse
                 node_span = re.sub('\s+', ' ', node_span)
 
-                tokens_ids = CodeBertTokenizer.encode(
+                tokens_ids = feat_tokenizer.encode(
                     node_span, truncation=True)
-                tokens_tensor = torch.tensor(tokens_ids, device=get_device())
-                
+                tokens_tensor = torch.tensor(tokens_ids, device=get_device(device_id))
+                            
                 with torch.no_grad():
-                    context_embeddings = CodeBertModel(
+                    context_embeddings = feat_model(
                         tokens_tensor[None, :])[0]
                 
                 # torch.cuda.empty_cache()
