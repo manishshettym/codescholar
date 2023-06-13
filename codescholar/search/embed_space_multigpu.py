@@ -194,7 +194,7 @@ def embed_main(args):
         os.makedirs(osp.dirname(args.emb_dir))
     
     if args.format == "source":
-        raw_paths = sorted(glob.glob(osp.join(args.source_dir, '*.py')))[:100]
+        raw_paths = sorted(glob.glob(osp.join(args.source_dir, '*.py')))
     else:
         raw_paths = sorted(glob.glob(osp.join(args.graphs_dir, '*.pt')))
         
