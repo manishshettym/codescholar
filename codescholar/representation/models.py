@@ -44,9 +44,9 @@ class Preprocess(nn.Module):
 
 
 class SubgraphEmbedder(nn.Module):
-    def __init__(self, input_dim, hidden_dim, args):
+    def __init__(self, input_dim, hidden_dim, args, device_id=None):
         super(SubgraphEmbedder, self).__init__()
-        self.encoder = BasicGNN(input_dim, hidden_dim, hidden_dim, args)
+        self.encoder = BasicGNN(input_dim, hidden_dim, hidden_dim, args, device_id=device_id)
         self.margin = args.margin
         self.use_intersection = False
 
@@ -54,6 +54,9 @@ class SubgraphEmbedder(nn.Module):
             nn.Linear(1, 2),
             nn.LogSoftmax(dim=1)
         )
+        
+        # device on which the model is present
+        self.device_id = device_id
         
     def forward(self, emb_targets, emb_queries):
         return emb_targets, emb_queries
@@ -71,7 +74,7 @@ class SubgraphEmbedder(nn.Module):
             torch.max(
                 torch.zeros_like(
                     emb_targets,
-                    device=get_device()),
+                    device=get_device(self.device_id)),
                 emb_queries - emb_targets
             )**2, dim=1)
         
@@ -79,7 +82,7 @@ class SubgraphEmbedder(nn.Module):
 
         # rewrite loss for -ve examples
         error[labels == 0] = torch.max(
-            torch.tensor(0.0, device=get_device()),
+            torch.tensor(0.0, device=get_device(self.device_id)),
             margin - error)[labels == 0]
         
         relation_loss = torch.sum(error)
@@ -141,12 +144,15 @@ class SubgraphEmbedder(nn.Module):
         
 
 class BasicGNN(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim, args):
+    def __init__(self, input_dim, hidden_dim, output_dim, args, device_id=None):
         super(BasicGNN, self).__init__()
         self.dropout = args.dropout
         self.n_layers = args.n_layers
         self.skip = args.skip
         self.agg_type = args.agg_type
+        
+        # device on which the model is present
+        self.device_id = device_id
 
         # add a preprocessor
         self.feat_preprocess = Preprocess(input_dim)
@@ -229,9 +235,9 @@ class BasicGNN(nn.Module):
         batch = data.batch
         
         # MOVE TO DEVICE
-        x = x.to(get_device())
-        edge_index = edge_index.to(get_device())
-        edge_attr = edge_attr.to(get_device())
+        x = x.to(get_device(self.device_id))
+        edge_index = edge_index.to(get_device(self.device_id))
+        edge_attr = edge_attr.to(get_device(self.device_id))
         
         # pre mlp
         x = self.pre_mp(x)

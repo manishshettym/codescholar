@@ -20,14 +20,14 @@ def get_device(device_id=None):
     return device
 
 
-def build_model(model_type, args):
+def build_model(model_type, args, device_id=None):
     # build model
-    model = model_type(1, args.hidden_dim, args)
-    model.to(get_device())
+    model = model_type(1, args.hidden_dim, args, device_id=device_id)
+    model.to(get_device(device_id))
 
     if args.test and args.model_path:
         model.load_state_dict(
-            torch.load(args.model_path, map_location=get_device())
+            torch.load(args.model_path, map_location=get_device(device_id))
         )
 
     return model

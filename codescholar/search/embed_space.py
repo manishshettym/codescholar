@@ -59,11 +59,11 @@ def get_neighborhoods(args, graph):
             graph, node, cutoff=args.radius).items(), key = lambda x: x[1])
         neighbors = list(map(lambda x: x[0], shortest_paths))
 
-        if args.subgraph_sample_size != 0:
+        if args.neighborhood_size != 0:
             # NOTE: random sampling of radius-hop neighbors, 
             # results in nodes w/o any edges between them!!
             # Instead, sort neighbors by hops and chose top-K closest neighbors
-            neighbors = neighbors[: args.subgraph_sample_size]
+            neighbors = neighbors[: args.neighborhood_size]
 
         if len(neighbors) > 1:
             # NOTE: G.subgraph([nodes]) returns the subG induced on [nodes]

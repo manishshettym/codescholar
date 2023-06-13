@@ -23,7 +23,6 @@ from codescholar.search import search_config
 # ########## MULTI PROC ##########
 
 def start_workers_process(in_queue, out_queue, args, gpu):
-    # print(f"Starting {args.n_workers} workers on GPU {gpu}...")
     torch.cuda.set_device(gpu)
     workers = []
     for _ in tqdm(range(args.n_workers), desc="Workers"):
@@ -37,12 +36,13 @@ def start_workers_process(in_queue, out_queue, args, gpu):
     return workers
 
 
-def start_workers_embed(model, in_queue, out_queue, args):
+def start_workers_embed(in_queue, out_queue, args, gpu):
+    torch.cuda.set_device(gpu)
     workers = []
     for _ in tqdm(range(args.n_workers), desc="Workers"):
         worker = mp.Process(
             target=generate_embeddings,
-            args=(args, model, in_queue, out_queue)
+            args=(args, in_queue, out_queue, gpu)
         )
         worker.start()
         workers.append(worker)
@@ -52,21 +52,24 @@ def start_workers_embed(model, in_queue, out_queue, args):
 
 # ########## UTILITIES ##########
 
-# returns a featurized (sampled) radial neighborhood for all nodes in the graph
+# returns a featurized (sampled) radial neighborhood for (sampled) nodes in the graph
 def get_neighborhoods(args, graph, feat_tokenizer, feat_model, device_id=None):
     neighs = []
+    
+    # choose top args.num_neighborhoods nodes with high degree to sample neighborhoods from
+    sampled_nodes = sorted(graph.nodes, key=lambda x: graph.degree[x], reverse=True)[:args.num_neighborhoods]
 
     # find each node's neighbors via SSSP
-    for j, node in enumerate(graph.nodes):
+    for j, node in enumerate(sampled_nodes):
         shortest_paths = sorted(nx.single_source_shortest_path_length(
             graph, node, cutoff=args.radius).items(), key = lambda x: x[1])
         neighbors = list(map(lambda x: x[0], shortest_paths))
 
-        if args.subgraph_sample_size != 0:
+        if args.neighborhood_size != 0:
             # NOTE: random sampling of radius-hop neighbors, 
             # results in nodes w/o any edges between them!!
             # Instead, sort neighbors by hops and chose top-K closest neighbors
-            neighbors = neighbors[: args.subgraph_sample_size]
+            neighbors = neighbors[: args.neighborhood_size]
 
         if len(neighbors) > 1:
             # NOTE: G.subgraph([nodes]) returns the subG induced on [nodes]
@@ -111,7 +114,11 @@ def process_program(path, format="source"):
 
 # ########## PIPELINE FUNCTIONS ##########
 
-def generate_embeddings(args, model, in_queue, out_queue):
+def generate_embeddings(args, in_queue, out_queue, device_id=None):
+    print("Moving model to device:", get_device(device_id))
+    model = build_model(models.SubgraphEmbedder, args, device_id=device_id)
+    model.eval()
+    
     done = False
     while not done:
         msg, idx = in_queue.get()
@@ -128,19 +135,18 @@ def generate_embeddings(args, model, in_queue, out_queue):
             continue
 
         with torch.no_grad():
-            emb = model.encoder(Batch.from_data_list(neighs).to(get_device()))
+            emb = model.encoder(Batch.from_data_list(neighs).to(get_device(device_id)))
             torch.save(emb, osp.join(args.emb_dir, f'emb_{idx}.pt'))
-        
+
         out_queue.put(("complete"))
 
 
-def generate_neighborhoods(args, in_queue, out_queue, device_id=None): 
-    # print(f"Loading CodeBERT on GPU: {get_device(device_id)}")
+def generate_neighborhoods(args, in_queue, out_queue, device_id=None):
     codebert_name = "microsoft/codebert-base"
     CodeBertTokenizer = RobertaTokenizer.from_pretrained(codebert_name)
     CodeBertModel = RobertaModel.from_pretrained(codebert_name).to(get_device(device_id))
     CodeBertModel.eval()
-    
+
     done = False
     while not done:
         msg, idx = in_queue.get()
@@ -188,7 +194,7 @@ def embed_main(args):
         os.makedirs(osp.dirname(args.emb_dir))
     
     if args.format == "source":
-        raw_paths = sorted(glob.glob(osp.join(args.source_dir, '*.py')))
+        raw_paths = sorted(glob.glob(osp.join(args.source_dir, '*.py')))[:100]
     else:
         raw_paths = sorted(glob.glob(osp.join(args.graphs_dir, '*.pt')))
         
@@ -209,9 +215,15 @@ def embed_main(args):
         gpu = i % num_gpus
         in_queues[gpu].put(("idx", i))
 
-    for _ in tqdm(range(len(raw_paths))):
-        gpu = i % num_gpus
-        msg = out_queues[gpu].get()
+    results_collected = 0
+    pbar = tqdm(total=len(raw_paths), desc="Process Graphs")
+    while results_collected < len(raw_paths):
+        for gpu in range(num_gpus):
+            while not out_queues[gpu].empty():
+                msg = out_queues[gpu].get()
+                results_collected += 1
+                pbar.update(1)
+    pbar.close()
     
     for in_queue in in_queues:
         for _ in range(args.n_workers):
@@ -222,29 +234,38 @@ def embed_main(args):
             worker.join()
 
     # ######### PHASE2: EMBED GRAPHS #########
-    # TODO: Implement for multi GPU
-
-    # model = build_model(models.SubgraphEmbedder, args)
-    # model.share_memory()
-
-    # print("Moving model to device:", get_device())
-    # model = model.to(get_device())
-    # model.eval()
-
-    # in_queue, out_queue = mp.Queue(), mp.Queue()
-    # workers = start_workers_embed(model, in_queue, out_queue, args)
-
-    # for i in range(len(raw_paths)):
-    #     in_queue.put(("idx", i))
-        
-    # for _ in tqdm(range(len(raw_paths))):
-    #     msg = out_queue.get()
     
-    # for _ in range(args.n_workers):
-    #     in_queue.put(("done", None))
+    workers_list = []
+    in_queues, out_queues = [], []
+    
+    for gpu in range(num_gpus):
+        in_queue, out_queue = mp.Queue(), mp.Queue()
+        workers = start_workers_embed(in_queue, out_queue, args, gpu)
+        workers_list.append(workers)
+        in_queues.append(in_queue)
+        out_queues.append(out_queue)
 
-    # for worker in workers:
-        # worker.join()
+    for i in range(len(raw_paths)):
+        gpu = i % num_gpus
+        in_queues[gpu].put(("idx", i))
+    
+    results_collected = 0
+    pbar = tqdm(total=len(raw_paths), desc="Embed Graphs")
+    while results_collected < len(raw_paths):
+        for gpu in range(num_gpus):
+            while not out_queues[gpu].empty():
+                msg = out_queues[gpu].get()
+                results_collected += 1
+                pbar.update(1)
+    pbar.close()
+
+    for in_queue in in_queues:
+        for _ in range(args.n_workers):
+            in_queue.put(("done", None))
+
+    for workers in workers_list:
+        for worker in workers:
+            worker.join()
 
 
 def main():
