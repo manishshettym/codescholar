@@ -104,7 +104,10 @@ def process_program(path, format="source"):
         if prog_graph is None:
             return None
 
-        graph = program_graph_to_nx(prog_graph, directed=True)
+        try:
+            graph = program_graph_to_nx(prog_graph, directed=True)
+        except:
+            return None
     
     elif format == "graphs":
         graph = torch.load(path)
@@ -197,7 +200,7 @@ def embed_main(args):
         raw_paths = sorted(glob.glob(osp.join(args.source_dir, '*.py')))
     else:
         raw_paths = sorted(glob.glob(osp.join(args.graphs_dir, '*.pt')))
-        
+
     num_gpus = torch.cuda.device_count()
     workers_list = []
     in_queues, out_queues = [], []

@@ -220,8 +220,8 @@ def program_graph_to_graphviz(graph):
     g = pygraphviz.AGraph(strict=False, directed=True)
 
     for _, node in graph.nodes.items():
-        assert node.ast_type
-        assert node.span
+        assert node.ast_type, f"Node {node.id} has no ast_type"
+        assert node.span, f"Node {node.id} has no span"
 
         node_attrs = {'ast_type': 'Other', 'relpos': node.relpos}
         node_attrs['ast_type'] = six.ensure_str(node.ast_type, 'utf-8')
