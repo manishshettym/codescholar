@@ -50,8 +50,7 @@ def run_func_in_process(
         The result of executing the function.
     """
     mode = "spawn" if _use_spawn else "fork"
-    c_func = concurrent.process(timeout=_timeout,
-                                context=mp.get_context(mode))(func)
+    c_func = concurrent.process(timeout=_timeout, context=mp.get_context(mode))(func)
     future = c_func(*args, **kwargs)
 
     try:
@@ -126,9 +125,7 @@ def run_tasks_in_parallel_iter(
 
         iterator = future.result()
         if use_progress_bar:
-            pbar = tqdm.tqdm(
-                desc=progress_bar_desc, total=len(tasks), dynamic_ncols=True
-            )
+            pbar = tqdm.tqdm(desc=progress_bar_desc, total=len(tasks), dynamic_ncols=True)
         else:
             pbar = None
 
@@ -142,8 +139,10 @@ def run_tasks_in_parallel_iter(
                 break
 
             except TimeoutError as error:
-                logger.warning(f"Process timed out after \
-                                {timeout_per_task} seconds")
+                logger.warning(
+                    f"Process timed out after \
+                                {timeout_per_task} seconds"
+                )
                 yield TaskResult(
                     status=TaskRunStatus.TIMEOUT,
                 )
@@ -151,9 +150,7 @@ def run_tasks_in_parallel_iter(
                 timeouts += 1
 
             except ProcessExpired as error:
-                logger.warning(
-                    f"Process exited with code {error.exitcode}: {str(error)}"
-                )
+                logger.warning(f"Process exited with code {error.exitcode}: {str(error)}")
                 yield TaskResult(
                     status=TaskRunStatus.PROCESS_EXPIRED,
                 )
@@ -179,10 +176,7 @@ def run_tasks_in_parallel_iter(
 
             if pbar is not None:
                 pbar.update(1)
-                pbar.set_postfix(
-                    succ=succ, timeouts=timeouts,
-                    exc=exceptions, p_exp=expirations
-                )
+                pbar.set_postfix(succ=succ, timeouts=timeouts, exc=exceptions, p_exp=expirations)
 
 
 def run_tasks_in_parallel(

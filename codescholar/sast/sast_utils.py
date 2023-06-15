@@ -24,8 +24,8 @@ class DropDecorators(ast.NodeTransformer):
 class CodeSpan(ast.NodeTransformer):
     def __init__(self, source):
         self.source = source
-        self.lines = source.split('\n')
-    
+        self.lines = source.split("\n")
+
     def _get_char_index(self, lineno, col_offset):
         line_index = lineno - 1
         line_start = sum(len(line) + 1 for line in self.lines[:line_index])
@@ -47,15 +47,15 @@ class CodeSpan(ast.NodeTransformer):
 
         except (AttributeError, AssertionError, TypeError) as e:
             node.range = (0, 0)
-        
+
         return node
-    
+
     def visit(self, node):
         """Visit a node."""
-        method = 'visit_' + node.__class__.__name__
+        method = "visit_" + node.__class__.__name__
         visitor = getattr(self, method, self.generic_visit)
         return visitor(node)
-    
+
     def generic_visit(self, node):
         """Called if no explicit visitor function exists for a node."""
         self._add_span(node)
@@ -70,17 +70,17 @@ class CodeSpan(ast.NodeTransformer):
             elif isinstance(value, ast.AST):
                 self._add_span(value)
                 self.visit(value)
-            
+
         return node
 
 
 def remove_node(sast: ProgramGraph, id):
-    '''remove a node from the program graph'''
+    """remove a node from the program graph"""
     edges_to_pop = []
     for edge in sast.edges:
         if edge.id1 == id or edge.id2 == id:
             edges_to_pop.append(edge)
-    
+
     # remove the edges
     for edge in edges_to_pop:
         sast.edges.remove(edge)
@@ -115,16 +115,16 @@ def filter_non_ast(sast: ProgramGraph):
     for node in sast.all_nodes():
         if node.ast_node is None:
             nodes_to_pop.append(node.id)
-    
+
     for i in nodes_to_pop:
         remove_node(sast, i)
-    
+
     return sast
 
 
 def collapse_nodes(sast: ProgramGraph):
-    '''collapse noisy nodes from the program graph to create
-    a simplified AST'''
+    """collapse noisy nodes from the program graph to create
+    a simplified AST"""
 
     sast = filter_non_ast(sast)
 
@@ -134,19 +134,18 @@ def collapse_nodes(sast: ProgramGraph):
         children = [c for c in sast.children(node)]
 
         # if range of the node is 0:0
-        if (not isinstance(node.ast_node, ast.Module)
-                and node.ast_node.range == (0, 0)):
+        if not isinstance(node.ast_node, ast.Module) and node.ast_node.range == (0, 0):
             for child in children:
                 sast.add_new_edge(parent, child, pb.EdgeType.FIELD)
-            
+
             nodes_to_pop.append(node.id)
-        
+
         # if empty function
         elif isinstance(node.ast_node, ast.Module):
             child = children[0]
             if child.ast_node.range == (0, 0):
                 return None
-        
+
         # if only 1 child w/ same range; e.g. Expr-->Call
         elif len(children) == 1:
             child = children[0]
@@ -154,22 +153,23 @@ def collapse_nodes(sast: ProgramGraph):
             if node.ast_node.range == child.ast_node.range:
                 sast.add_new_edge(parent, child, pb.EdgeType.FIELD)
                 nodes_to_pop.append(node.id)
-        
+
         # if JoinedStr-->FormattedValue, Constant
-        elif (isinstance(node.ast_node, ast.JoinedStr)):
+        elif isinstance(node.ast_node, ast.JoinedStr):
             parent = sast.parent(node)
-            
-            if (len(children) == 2
+
+            if (
+                len(children) == 2
                 and isinstance(children[0].ast_node, ast.FormattedValue)
-                and isinstance(children[1].ast_node, ast.Constant)):                
-                
+                and isinstance(children[1].ast_node, ast.Constant)
+            ):
                 # add edge from parent to FormattedValue
                 sast.add_new_edge(parent, children[0], pb.EdgeType.FIELD)
-                
+
                 # remove the Constant and JoinedStr nodes
                 nodes_to_pop.append(children[1].id)
                 nodes_to_pop.append(node.id)
-            
+
     for i in nodes_to_pop:
         remove_node(sast, i)
 
@@ -177,34 +177,33 @@ def collapse_nodes(sast: ProgramGraph):
 
 
 def label_nodes(sast: ProgramGraph, source: str):
-    '''label nodes for the simplified AST'''
+    """label nodes for the simplified AST"""
     for node in sast.all_nodes():
-
-        if not hasattr(node, 'relpos'):
-            setattr(node, 'relpos', 0)
+        if not hasattr(node, "relpos"):
+            setattr(node, "relpos", 0)
 
         if isinstance(node.ast_node, ast.Module):
-            setattr(node, 'span', '#')
+            setattr(node, "span", "#")
             continue
-            
+
         children = [c for c in sast.children(node)]
         children = sorted(children, key=lambda node: node.ast_node.range[0])
 
         l, r = node.ast_node.range
-        span = source[l: r]
+        span = source[l:r]
         offset = l
-        
+
         for c_id, c in enumerate(children):
-            setattr(c, 'relpos', c_id)
+            setattr(c, "relpos", c_id)
             c_l, c_r = c.ast_node.range
             c_len = c_r - c_l
             c_l -= offset
             c_r = c_l + c_len
 
-            span = span[:c_l] + '#' + span[c_r:]
+            span = span[:c_l] + "#" + span[c_r:]
             offset += (c_r - c_l) - 1
-        
-        setattr(node, 'span', span)
+
+        setattr(node, "span", span)
 
     return sast
 
@@ -221,17 +220,17 @@ def kth_substr_idx(s: str, sub: str, k):
 # NOTE @manishs: migth be incomplete and hacky.
 # clean up in the future and simplify transpilation.
 def replace_nonterminals(node, child_spans):
-    '''replace nonterminals in a node's span'''
+    """replace nonterminals in a node's span"""
 
     ins, dels = 0, 0
     module_flag = False
-    
+
     if isinstance(node.ast_node, ast.Module):
         module_flag = True
 
     child_spans = sorted(child_spans, key=lambda x: x[1])
     new_span = node.span if not module_flag else ""
-    
+
     # ######## LOOP OVER THE CHILDREN #########
 
     for span, span_idx in child_spans:
@@ -240,23 +239,23 @@ def replace_nonterminals(node, child_spans):
         if module_flag:
             new_span += span + "\n"
         else:
-            loc = kth_substr_idx(new_span, '#', k=span_idx + 1)
-            new_span = new_span[:loc] + new_span[loc:].replace('#', span, 1)
-            
+            loc = kth_substr_idx(new_span, "#", k=span_idx + 1)
+            new_span = new_span[:loc] + new_span[loc:].replace("#", span, 1)
+
             dels += 1
-            ins += len([m for m in re.finditer('#', span)])
+            ins += len([m for m in re.finditer("#", span)])
 
     node.span = new_span
     return node
 
 
 def sast_to_prog(sast: ProgramGraph):
-    '''perform an dfs traversal and regenerate prog'''
+    """perform an dfs traversal and regenerate prog"""
 
     def dfs_util(sast: ProgramGraph, node, visited):
         visited[node.id] = True
         span_pos = []
-        
+
         for child in sast.children(node):
             if not visited[child.id]:
                 span, pos = dfs_util(sast, child, visited)
@@ -274,12 +273,12 @@ def sast_to_prog(sast: ProgramGraph):
     for node in sast.all_nodes():
         if not visited[node.id]:
             dfs_util(sast, node, visited)
-    
+
     return sast.root.span
 
 
 def remove_comments_and_docstrings(source: str):
-    '''Remove comments and docstrings from a python file'''
+    """Remove comments and docstrings from a python file"""
     io_obj = io.StringIO(source)
     out = ""
     prev_toktype = tokenize.INDENT
@@ -291,11 +290,11 @@ def remove_comments_and_docstrings(source: str):
         token_string = tok[1]
         start_line, start_col = tok[2]
         end_line, end_col = tok[3]
-        
+
         if start_line > last_lineno:
             last_col = 0
         if start_col > last_col:
-            out += (" " * (start_col - last_col))
+            out += " " * (start_col - last_col)
 
         if token_type == tokenize.COMMENT:
             pass
@@ -311,6 +310,6 @@ def remove_comments_and_docstrings(source: str):
         last_col = end_col
         last_lineno = end_line
 
-    out = '\n'.join(line for line in out.splitlines() if line.strip())
+    out = "\n".join(line for line in out.splitlines() if line.strip())
 
     return out

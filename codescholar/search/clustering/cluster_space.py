@@ -15,26 +15,28 @@ from codescholar.utils.search_utils import sample_prog_embs
 def write_results(paths, sizes, labels):
     prog_labels = []
     count = 0
-    
+
     for i, size in enumerate(sizes):
         temp = labels[count : count + size]
         assert len(temp) == size
 
         prog_labels.append(temp)
         count += size
-    
+
     cluster_d = defaultdict(list)
     for path, labels in zip(paths, prog_labels):
         for i, l in enumerate(labels):
             cluster_d[l].append((path, i))
-    
+
     res = pd.DataFrame({"path": paths, "size": sizes, "label": prog_labels})
     res.to_excel("results/prog_labels.xlsx", index=False)
 
-    res = pd.DataFrame({
-        "clusterId": list(cluster_d.keys()),
-        "graphs": list(cluster_d.values()),
-    })
+    res = pd.DataFrame(
+        {
+            "clusterId": list(cluster_d.keys()),
+            "graphs": list(cluster_d.values()),
+        }
+    )
 
     res.reset_index(inplace=True, drop=True)
     res.to_excel("results/clusters.xlsx", index=False)
@@ -48,11 +50,9 @@ def main():
 
     # concatenate to get [#neighs x emb-dim]
     embs = torch.cat(embs, dim=0)
-    
-    dbscan = DBSCAN(
-        eps=0.1, min_samples=5,
-        metric='euclidean', n_jobs=n_workers).fit(embs)
-    
+
+    dbscan = DBSCAN(eps=0.1, min_samples=5, metric="euclidean", n_jobs=n_workers).fit(embs)
+
     labels = dbscan.labels_
 
     # write results to csv
@@ -62,10 +62,8 @@ def main():
     plot_embs_idx = [i for i, label in enumerate(labels) if label != -1]
     plot_embs_labels = [label for label in labels if label != -1]
     plot_embs = embs[plot_embs_idx, :]
-    
-    plt.scatter(
-        plot_embs[:, 0], plot_embs[:, 1],
-        c=plot_embs_labels)
+
+    plt.scatter(plot_embs[:, 0], plot_embs[:, 1], c=plot_embs_labels)
 
     plt.savefig("plots/neighborhood.png")
     plt.close()
@@ -82,8 +80,7 @@ def main():
     print("Total points: {}".format(len(embs)))
     print("Estimated number of clusters: {}".format(n_clusters_))
     print("Estimated noise points: {}".format(n_noise_))
-    print("Silhouette Coefficient: {:0.3f}".format(
-        silhouette_score(plot_embs, plot_embs_labels)))
+    print("Silhouette Coefficient: {:0.3f}".format(silhouette_score(plot_embs, plot_embs_labels)))
     print("Distribution:", label_counts)
 
 

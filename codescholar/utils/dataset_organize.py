@@ -11,11 +11,11 @@ import argparse
 import glob
 import torch.multiprocessing as mp
 
+
 def start_workers_rename(in_queue, out_queue, methods_to_fileid, args):
     workers = []
     for _ in tqdm(range(args.n_workers), desc="Workers"):
-        worker = mp.Process(target=mp_rename, 
-                    args=(args, methods_to_fileid, in_queue, out_queue))
+        worker = mp.Process(target=mp_rename, args=(args, methods_to_fileid, in_queue, out_queue))
         worker.start()
         workers.append(worker)
 
@@ -23,7 +23,7 @@ def start_workers_rename(in_queue, out_queue, methods_to_fileid, args):
 
 
 def mp_rename(args, methods_to_fileid, in_queue, out_queue):
-    done = False    
+    done = False
     while not done:
         msg, methpath, meth_idx = in_queue.get()
 
@@ -42,17 +42,17 @@ def mp_rename(args, methods_to_fileid, in_queue, out_queue):
         out_queue.put((method_filename, example_id))
 
 
-def standardize_dataset_files(method_paths, methods_to_fileid):    
+def standardize_dataset_files(method_paths, methods_to_fileid):
     in_queue, out_queue = mp.Queue(), mp.Queue()
     workers = start_workers_rename(in_queue, out_queue, methods_to_fileid, args)
-    
+
     for idx, methpath in enumerate(method_paths):
         in_queue.put(("method", methpath, idx))
-    
+
     for _ in tqdm(range(len(method_paths)), desc="Rename"):
         method_filename, example_id = out_queue.get()
         methods_to_fileid[example_id] = methods_to_fileid.pop(method_filename)
-    
+
     for _ in range(args.n_workers):
         in_queue.put(("done", None, None))
 
@@ -85,5 +85,5 @@ if __name__ == "__main__":
     # read in methods_to_fileid
     with open(f"../data/{args.dataset}/mappings/meth_to_fileid.json", "r") as f:
         methods_to_fileid = json.load(f)
-    
+
     standardize_dataset_files(method_paths, methods_to_fileid)

@@ -6,26 +6,27 @@ from tqdm import tqdm
 
 import torch.multiprocessing as mp
 
- 
+
 def select_code(method_content):
     for keyword in keywords:
         if keyword in method_content:
             return True
-    
+
     return False
+
 
 def start_workers(in_queue, out_queue):
     workers = []
     for _ in tqdm(range(NUM_WORKERS), desc="Workers"):
-        worker = mp.Process(target=mp_filter, 
-                    args=(in_queue, out_queue))
+        worker = mp.Process(target=mp_filter, args=(in_queue, out_queue))
         worker.start()
         workers.append(worker)
 
     return workers
 
+
 def mp_filter(in_queue, out_queue):
-    done = False    
+    done = False
     while not done:
         msg, methpath = in_queue.get()
 
@@ -38,13 +39,13 @@ def mp_filter(in_queue, out_queue):
             if select_code(method_content):
                 out_queue.put(methpath)
             else:
-                out_queue.put('filtered')
+                out_queue.put("filtered")
 
 
-def filter_dataset(method_paths):    
+def filter_dataset(method_paths):
     in_queue, out_queue = mp.Queue(), mp.Queue()
     workers = start_workers(in_queue, out_queue)
-    
+
     for methpath in method_paths:
         in_queue.put(("method", methpath))
 
@@ -52,10 +53,10 @@ def filter_dataset(method_paths):
     with open("../data/pnosmt/methods_selected.txt", "w") as f:
         for _ in tqdm(range(len(method_paths)), desc="Filter"):
             methpath = out_queue.get()
-            if methpath != 'filtered':
+            if methpath != "filtered":
                 f.write(methpath + "\n")
                 count += 1
-    
+
     print(f"Total number of methods after filtering: {count}")
 
     for _ in range(NUM_WORKERS):
@@ -68,7 +69,7 @@ def filter_dataset(method_paths):
 if __name__ == "__main__":
     NUM_WORKERS = 32
     keywords = []
-    
+
     # choose keywords for a domain-specific dataset
     # NOTE: here we use 65 APIs from top-6 libraries:
     # {pandas, numpy, os, sklearn, matplotlib, torch}
@@ -78,9 +79,8 @@ if __name__ == "__main__":
     for lib in benchmarks:
         for api in benchmarks[lib]:
             keywords.append(api)
-            
+
     SRC_DIR = "../data/pnosmt/methods"
     method_paths = glob.glob(osp.join(SRC_DIR, "*.py"))
 
     filter_dataset(method_paths)
-    

@@ -11,7 +11,7 @@ from codescholar.search import search_config
 
 
 def main(args):
-    with open('benchmarks.json') as f:
+    with open("benchmarks.json") as f:
         benchmarks = json.load(f)
 
     for lib in benchmarks:
@@ -19,7 +19,7 @@ def main(args):
             print(f"EVALUATING [{lib}] [{api}]")
             print("=====================================")
 
-            args.mode = 'g'
+            args.mode = "g"
             args.seed = api
             args.result_dir = f"./results/{date.today()}/{lib}_res/{args.seed}/"
             args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
@@ -51,5 +51,5 @@ if __name__ == "__main__":
     args.test = True
     args.model_path = f"../representation/ckpt/model.pt"
 
-    torch.multiprocessing.set_start_method('spawn')
+    torch.multiprocessing.set_start_method("spawn")
     main(args)

@@ -38,23 +38,15 @@ def create_train_test_dataset(args, files):
     test_count = 0
     for file in tqdm(files):
         if idx < train_len:
-            c, _ = breakdown_code_methods(
-                outdir=TRAIN_DIR, path=file, file_id="example{}".format(idx)
-            )
+            c, _ = breakdown_code_methods(outdir=TRAIN_DIR, path=file, file_id="example{}".format(idx))
             train_count += c
         else:
-            c, _ = breakdown_code_methods(
-                outdir=TEST_DIR, path=file, file_id="example{}".format(idx)
-            )
+            c, _ = breakdown_code_methods(outdir=TEST_DIR, path=file, file_id="example{}".format(idx))
             test_count += c
 
         idx += 1
 
-    print(
-        "Train: {} Test: {} Total methods: {}".format(
-            train_count, test_count, train_count + test_count
-        )
-    )
+    print("Train: {} Test: {} Total methods: {}".format(train_count, test_count, train_count + test_count))
 
 
 #############################################
@@ -81,10 +73,7 @@ def mp_breakdown(args, in_queue, out_queue):
             done = True
             break
 
-        meth_count, methods = breakdown_code_methods(
-            outdir=args.dest_dir, path=file, 
-            file_id="example{}".format(file_idx)
-        )
+        meth_count, methods = breakdown_code_methods(outdir=args.dest_dir, path=file, file_id="example{}".format(file_idx))
 
         out_queue.put((file, meth_count, methods))
 
@@ -120,7 +109,7 @@ def create_search_dataset(args, files):
 
     for worker in workers:
         worker.join()
-    
+
     print("Total number of methods generated: {}".format(count))
 
     return methods_to_fileid
@@ -135,16 +124,14 @@ if __name__ == "__main__":
         choices=["train", "search"],
         help="Task for which we are sampling data",
     )
-    parser.add_argument(
-        "--samples", type=int, default=-1, help="Number of samples to use"
-    )
+    parser.add_argument("--samples", type=int, default=-1, help="Number of samples to use")
     parser.add_argument("--dataset", type=str, help="Dataset to use")
     parser.add_argument("--n_workers", type=int, default=4, help="Number of workers")
     args = parser.parse_args()
 
     SRC_DIR = f"../data/{args.dataset}/raw"
     files = [f for f in sorted(glob.glob(osp.join(SRC_DIR, "*.py")))]
-    
+
     if args.samples != -1:
         sampled_files = np.random.choice(files, min(len(files), args.samples))
         train_len = int(0.8 * len(sampled_files))
@@ -163,6 +150,6 @@ if __name__ == "__main__":
     elif args.task == "search":
         DEST_DIR = f"../data/{args.dataset}/methods/"
         methods_to_fileid = create_search_dataset(args, sampled_files)
-        
+
         with open(f"../data/{args.dataset}/mappings/meth_to_fileid.json", "w") as f:
             json.dump(methods_to_fileid, f)

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 DATE = "2023-05-23"
 
-with open('benchmarks.json') as f:
+with open("benchmarks.json") as f:
     benchmarks = json.load(f)
 
 with pd.ExcelWriter(f"results/{DATE}/{DATE}.results.xlsx") as writer:
@@ -32,20 +32,12 @@ with pd.ExcelWriter(f"results/{DATE}/{DATE}.results.xlsx") as writer:
                     with open(f"results/{DATE}/{lib}_res/{api}/idioms/progs/" + file, "r") as f:
                         program = f.read()
                         programs.append(program)
-                    
+
                     plens.append(len(program))
             except FileNotFoundError:
                 pass
 
-
-            df = pd.DataFrame({
-                "size": sizes,
-                "freq": freqs,
-                "score": scores,
-                "hole": holes,
-                "plen": plens,
-                "program": programs
-            })
+            df = pd.DataFrame({"size": sizes, "freq": freqs, "score": scores, "hole": holes, "plen": plens, "program": programs})
 
             # sort by metrics
             df = df.sort_values(by=["size", "freq", "score", "hole", "plen"], ascending=[True, False, False, True, True])

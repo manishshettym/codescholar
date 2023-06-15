@@ -9,8 +9,9 @@ import numpy as np
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+
 def extract_libraries_and_aliases(source):
-    # identify statements of the type 
+    # identify statements of the type
     # `import x as y` or `from x import y as z`
     # and map x -> y or x.y -> z respectively
     libraries = {}
@@ -28,9 +29,9 @@ def extract_libraries_and_aliases(source):
         elif isinstance(node, ast.ImportFrom):
             if node.module is None:
                 continue
-            
+
             for name in node.names:
-                key = f'{node.module}.{name.name}'
+                key = f"{node.module}.{name.name}"
                 if name.name == "*":
                     continue
                 else:
@@ -58,10 +59,10 @@ def extract_function_calls(node):
 
         # chained attribute. e.g., np.random.randint
         elif isinstance(node.value, ast.Attribute):
-            chained_api = recurse_attr_extract(node.value) 
+            chained_api = recurse_attr_extract(node.value)
             if chained_api:
                 yield chained_api + f".{node.attr}"
-            
+
     for child in ast.iter_child_nodes(node):
         yield from extract_function_calls(child)
 
@@ -75,18 +76,19 @@ def extract_library_calls(source, library_name, library_aliases):
         elif call.split(".")[0] in library_aliases:
             yield call
 
+
 # ==================== MAIN ====================
 
 LIBS = ["pandas", "numpy", "os", "sklearn", "matplotlib", "torch"]
 SRC_DIR = "../data/pandas/raw"
-files = [f for f in sorted(glob.glob(osp.join(SRC_DIR, '*.py')))]
+files = [f for f in sorted(glob.glob(osp.join(SRC_DIR, "*.py")))]
 lib_apis = defaultdict(list)
 docs = []
 
 for file in tqdm(files):
-    with open(file ,'r', encoding='utf-8', errors='ignore') as fp:
+    with open(file, "r", encoding="utf-8", errors="ignore") as fp:
         source = fp.read()
-    
+
     libs_and_alias = extract_libraries_and_aliases(source)
     doc = []
 
@@ -94,10 +96,10 @@ for file in tqdm(files):
         if lib in libs_and_alias:
             apis = list(extract_library_calls(source, lib, libs_and_alias[lib]))
             apis = [".".join(api.split(".")[1:]) for api in apis]
-            
+
             doc += [f"{lib}.{api}" for api in apis]
             lib_apis[lib] += apis
-    
+
     docs.append(" ".join(doc))
 
 # remove empty strings
