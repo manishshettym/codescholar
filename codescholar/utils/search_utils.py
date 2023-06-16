@@ -61,7 +61,7 @@ def vec_hash(v):
 def wl_hash(g, dim=64):
     """weisfeiler lehman graph hash"""
     g = nx.convert_node_labels_to_integers(g)
-    vecs = np.zeros((len(g), dim), dtype=np.int)
+    vecs = np.zeros((len(g), dim), dtype=int)
 
     for v in g.nodes:
         if g.nodes[v]["anchor"] == 1:
@@ -69,7 +69,7 @@ def wl_hash(g, dim=64):
             break
 
     for i in range(len(g)):
-        newvecs = np.zeros((len(g), dim), dtype=np.int)
+        newvecs = np.zeros((len(g), dim), dtype=int)
         for n in g.nodes:
             newvecs[n] = vec_hash(np.sum(vecs[list(g.neighbors(n)) + [n]], axis=0))
         vecs = newvecs
