@@ -15,6 +15,7 @@ from networkx.algorithms.isomorphism import DiGraphMatcher
 from deepsnap.batch import Batch
 import scipy.stats as stats
 import torch.multiprocessing as mp
+from transformers import RobertaTokenizer, RobertaModel
 
 from codescholar.sast.simplified_ast import get_simplified_ast
 from codescholar.sast.visualizer import render_sast
@@ -217,17 +218,18 @@ def init_search_g(args, prog_indices, seed):
 ######### GROW ############
 
 
-def start_workers_grow(model, prog_indices, in_queue, out_queue, args):
+def start_workers_grow(prog_indices, in_queue, out_queue, args, gpu):
+    torch.cuda.set_device(gpu)
     workers = []
     for _ in tqdm(range(args.n_workers), desc="[workers]"):
-        worker = mp.Process(target=grow, args=(args, model, prog_indices, in_queue, out_queue))
+        worker = mp.Process(target=grow, args=(args, prog_indices, in_queue, out_queue, gpu))
         worker.start()
         workers.append(worker)
 
     return workers
 
 
-def score_candidate_freq(args, model, embs, cand_emb):
+def score_candidate_freq(args, model, embs, cand_emb, device_id=None):
     """score candidate program embedding against target program embeddings
     in a batched manner.
 
@@ -246,23 +248,32 @@ def score_candidate_freq(args, model, embs, cand_emb):
     for emb_batch in embs:
         with torch.no_grad():
             # predict v1 (learned mlp based)
-            is_subgraph_rel = model.predict((emb_batch.to(get_device()), cand_emb))
+            is_subgraph_rel = model.predict((emb_batch.to(get_device(device_id)), cand_emb))
             is_subgraph = model.classifier(is_subgraph_rel.unsqueeze(1))
             score += torch.sum(torch.argmax(is_subgraph, axis=1)).item()
 
             # predict v2 (dim-ratio based)
             # predictions, _ = model.predictv2((
-            #             emb_batch.to(get_device()),
+            #             emb_batch.to(get_device(device_id)),
             #             cand_emb))
             # score += torch.sum(predictions).item()
 
     return score
 
 
-def grow(args, model, prog_indices, in_queue, out_queue):
-    done = False
+def grow(args, prog_indices, in_queue, out_queue, device_id=None):
     embs = read_embeddings_batched(args, prog_indices)
 
+    codebert_name = "microsoft/codebert-base"
+    feat_tokenizer = RobertaTokenizer.from_pretrained(codebert_name)
+    feat_model = RobertaModel.from_pretrained(codebert_name).to(get_device(device_id))
+    feat_model.eval()
+    
+    # print("Moving model to device:", get_device(device_id))
+    model = build_model(models.SubgraphEmbedder, args, device_id=device_id)
+    model.eval()
+
+    done = False
     while not done:
         msg, beam_set = in_queue.get()
 
@@ -286,16 +297,16 @@ def grow(args, model, prog_indices, in_queue, out_queue):
             # EMBED CANDIDATES
             for i, cand_node in enumerate(frontier):
                 cand_neigh = graph.subgraph(neigh + [cand_node])
-                cand_neigh = featurize_graph(cand_neigh, neigh[0])
+                cand_neigh = featurize_graph(cand_neigh, feat_tokenizer, feat_model, anchor=neigh[0], device_id=device_id)
                 cand_neighs.append(cand_neigh)
 
-            cand_batch = Batch.from_data_list(cand_neighs).to(get_device())
+            cand_batch = Batch.from_data_list(cand_neighs).to(get_device(device_id))
             with torch.no_grad():
                 cand_embs = model.encoder(cand_batch)
 
             # SCORE CANDIDATES (freq)
             for cand_node, cand_emb in zip(frontier, cand_embs):
-                score = score_candidate_freq(args, model, embs, cand_emb)
+                score = score_candidate_freq(args, model, embs, cand_emb, device_id=device_id)
                 new_neigh = neigh + [cand_node]
 
                 # new frontier = {prev frontier} U {outgoing and incoming neighbors of cand_node} - {visited}
@@ -336,7 +347,7 @@ def grow(args, model, prog_indices, in_queue, out_queue):
 
 
 @perftimer
-def search(args, model, prog_indices, beam_sets):
+def search(args, prog_indices, beam_sets):
     mine_summary = defaultdict(lambda: defaultdict(int))
     size = 1
 
@@ -344,38 +355,55 @@ def search(args, model, prog_indices, beam_sets):
         print("Oops, BEAM SETS ARE EMPTY!")
         return mine_summary
 
-    in_queue, out_queue = mp.Queue(), mp.Queue()
-    workers = start_workers_grow(model, prog_indices, in_queue, out_queue, args)
+    num_gpus = torch.cuda.device_count()
+    workers_list = []
+    in_queues, out_queues = [], []
+    
+    for gpu in range(num_gpus):
+        in_queue, out_queue = mp.Queue(), mp.Queue()
+        workers = start_workers_grow(prog_indices, in_queue, out_queue, args, gpu)
+        workers_list.append(workers)
+        in_queues.append(in_queue)
+        out_queues.append(out_queue)
 
     while len(beam_sets) != 0:
-        for beam_set in beam_sets:
-            in_queue.put(("beam_set", beam_set))
+        for i, beam_set in enumerate(beam_sets):
+            gpu = i % num_gpus
+            in_queues[gpu].put(("beam_set", beam_set))
 
         # idioms for generation i
         idiommine_gen = defaultdict(list)
         new_beam_sets = []
 
         # beam search over this generation
-        for _ in tqdm(range(len(beam_sets)), desc="[search]"):
-            msg, new_beams = out_queue.get()
+        results_count = 0
+        pbar = tqdm(total=len(beam_sets), desc=f"[search {size}]")
+        while results_count < len(beam_sets):
+            for gpu in range(num_gpus):
+                while not out_queues[gpu].empty():
+                    msg, new_beams = out_queues[gpu].get()
+                    results_count += 1
+                    
+                    # candidates from only top-scoring beams in the beam set
+                    for new_beam in new_beams[:1]:
+                        score, holes, neigh, _, _, graph_idx = new_beam
+                        graph = read_graph(args, graph_idx)
 
-            # candidates from only top-scoring beams in the beam set
-            for new_beam in new_beams[:1]:
-                score, holes, neigh, _, _, graph_idx = new_beam
-                graph = read_graph(args, graph_idx)
+                        neigh_g = graph.subgraph(neigh).copy()
+                        neigh_g.remove_edges_from(nx.selfloop_edges(neigh_g))
 
-                neigh_g = graph.subgraph(neigh).copy()
-                neigh_g.remove_edges_from(nx.selfloop_edges(neigh_g))
+                        for v in neigh_g.nodes:
+                            neigh_g.nodes[v]["anchor"] = 1 if v == neigh[0] else 0
 
-                for v in neigh_g.nodes:
-                    neigh_g.nodes[v]["anchor"] = 1 if v == neigh[0] else 0
+                        neigh_g_hash = wl_hash(neigh_g)
+                        idiommine_gen[neigh_g_hash].append((neigh_g, score, holes))
+                        mine_summary[len(neigh_g)][neigh_g_hash] += 1
 
-                neigh_g_hash = wl_hash(neigh_g)
-                idiommine_gen[neigh_g_hash].append((neigh_g, score, holes))
-                mine_summary[len(neigh_g)][neigh_g_hash] += 1
+                    if len(new_beams) > 0:
+                        new_beam_sets.append(new_beams)
 
-            if len(new_beams) > 0:
-                new_beam_sets.append(new_beams)
+                    pbar.update(1)
+        pbar.close()
 
         # save generation
         beam_sets = new_beam_sets
@@ -385,11 +413,13 @@ def search(args, model, prog_indices, beam_sets):
         if size >= args.min_idiom_size and size <= args.max_idiom_size:
             _save_idiom_generation(args, idiommine_gen)
 
-    for _ in range(args.n_workers):
-        in_queue.put(("done", None))
+    for in_queue in in_queues:
+        for _ in range(num_gpus):
+            in_queue.put(("done", None))
 
-    for worker in workers:
-        worker.join()
+    for workers in workers_list:
+        for worker in workers:
+            worker.join()
 
     return mine_summary
 
@@ -401,11 +431,6 @@ def main(args):
     # init search space = sample K programs
     _, prog_indices = sample_programs(args.emb_dir, k=args.prog_samples, seed=4)
 
-    # init model
-    model = build_model(models.SubgraphEmbedder, args)
-    model.eval()
-    model.share_memory()
-
     # init search space
     if args.mode == "g":
         beam_sets = init_search_g(args, prog_indices, seed=args.seed)
@@ -413,7 +438,7 @@ def main(args):
         beam_sets = init_search_m(args, prog_indices)
 
     # search for idioms; saves idioms gradually
-    mine_summary = search(args, model, prog_indices, beam_sets)
+    mine_summary = search(args, prog_indices, beam_sets)
     _write_mine_logs(mine_summary, f"{args.result_dir}/mine_summary.log")
 
 
@@ -427,7 +452,7 @@ if __name__ == "__main__":
     # data config
     args.prog_dir = f"../data/{args.dataset}/source/"
     args.source_dir = f"../data/{args.dataset}/graphs/"
-    args.emb_dir = f"./tmp/{args.dataset}/emb/"  # TODO: move to data dir
+    args.emb_dir = f"../data/{args.dataset}/emb/"
     args.result_dir = f"./results/{args.seed}/" if args.mode == "g" else "./results/"
     args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
     args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
