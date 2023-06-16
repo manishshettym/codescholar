@@ -111,7 +111,7 @@ def process_program(path, format="source"):
 
 
 def generate_embeddings(args, in_queue, out_queue, device_id=None):
-    print("Moving model to device:", get_device(device_id))
+    # print("Moving model to device:", get_device(device_id))
     model = build_model(models.SubgraphEmbedder, args, device_id=device_id)
     model.eval()
 
@@ -139,9 +139,9 @@ def generate_embeddings(args, in_queue, out_queue, device_id=None):
 
 def generate_neighborhoods(args, in_queue, out_queue, device_id=None):
     codebert_name = "microsoft/codebert-base"
-    CodeBertTokenizer = RobertaTokenizer.from_pretrained(codebert_name)
-    CodeBertModel = RobertaModel.from_pretrained(codebert_name).to(get_device(device_id))
-    CodeBertModel.eval()
+    feat_tokenizer = RobertaTokenizer.from_pretrained(codebert_name)
+    feat_model = RobertaModel.from_pretrained(codebert_name).to(get_device(device_id))
+    feat_model.eval()
 
     done = False
     while not done:
@@ -166,7 +166,7 @@ def generate_neighborhoods(args, in_queue, out_queue, device_id=None):
         if args.format == "source":
             torch.save(graph, osp.join(args.graphs_dir, f"data_{idx}.pt"))
 
-        neighs = get_neighborhoods(args, graph, CodeBertTokenizer, CodeBertModel, device_id=device_id)
+        neighs = get_neighborhoods(args, graph, feat_tokenizer, feat_model, device_id=device_id)
         torch.save(neighs, osp.join(args.processed_dir, f"data_{idx}.pt"))
 
         del graph
