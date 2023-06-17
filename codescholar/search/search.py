@@ -234,29 +234,18 @@ def score_candidate_freq(args, model, embs, cand_emb, device_id=None):
     in a batched manner.
 
     Algorithm:
-    v1: softmax based classifier on top of emb-diff
+    softmax based classifier on top of emb-diff
         score = #nhoods !containing cand.
         = count(cand_emb - embs > 0)
             --> classifier: 0/1
-    v2: dim-ratio based classifier on top of emb-diff
-        score = #nhoods containing cand.
-        = count(cand_emb - embs > 0)
-            --> #dims where cand_emb > embs < dim_ratio: 0/1
     """
     score = 0
 
     for emb_batch in embs:
         with torch.no_grad():
-            # predict v1 (learned mlp based)
             is_subgraph_rel = model.predict((emb_batch.to(get_device(device_id)), cand_emb))
             is_subgraph = model.classifier(is_subgraph_rel.unsqueeze(1))
             score += torch.sum(torch.argmax(is_subgraph, axis=1)).item()
-
-            # predict v2 (dim-ratio based)
-            # predictions, _ = model.predictv2((
-            #             emb_batch.to(get_device(device_id)),
-            #             cand_emb))
-            # score += torch.sum(predictions).item()
 
     return score
 
