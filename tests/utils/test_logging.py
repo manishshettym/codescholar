@@ -20,9 +20,4 @@ class LoggingTests(unittest.TestCase):
             with open(_path, "r") as f:
                 return f.read()
 
-        self.assertTrue(
-            any(
-                msg in _read_path(path)
-                for path in glob.glob(os.path.join(log_dir_path, "*.log"))
-            )
-        )
+        self.assertTrue(any(msg in _read_path(path) for path in glob.glob(os.path.join(log_dir_path, "*.log"))))

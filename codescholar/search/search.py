@@ -22,7 +22,17 @@ from codescholar.sast.visualizer import render_sast
 from codescholar.sast.sast_utils import sast_to_prog, remove_node
 from codescholar.representation import models, config
 from codescholar.search import search_config
-from codescholar.utils.search_utils import sample_programs, wl_hash, save_idiom, _print_mine_logs, _write_mine_logs
+from codescholar.utils.search_utils import (
+    sample_programs,
+    wl_hash,
+    save_idiom,
+    _print_mine_logs,
+    _write_mine_logs,
+    read_graph,
+    read_prog,
+    read_embedding,
+    read_embeddings_batched,
+)
 from codescholar.utils.train_utils import build_model, get_device, featurize_graph
 from codescholar.utils.graph_utils import nx_to_program_graph, program_graph_to_nx
 from codescholar.utils.perf import perftimer
@@ -53,13 +63,13 @@ def _frontier(graph, node, type="neigh"):
         return set(graph.successors(node)) | set(graph.predecessors(node))
 
 
-######## DISK UTILS ##########
-
-
-def _save_idiom_generation(args, idiommine_gen):
+def _save_idiom_generation(args, idiommine_gen) -> bool:
+    """save the current generation of idioms to disk.
+    and return if the search should continue.
+    """
     hashed_idioms = idiommine_gen.items()
     hashed_idioms = list(sorted(hashed_idioms, key=lambda x: len(x[1]), reverse=True))
-    count = 0
+    count, total_nhoods = 0, 0
 
     for _, idioms in hashed_idioms:  # [:args.rank]:
         # # choose any one because they all map to the same hash
@@ -70,6 +80,12 @@ def _save_idiom_generation(args, idiommine_gen):
 
         freq = len(idioms)
         file = "idiom_{}_{}_{}_{}_{}".format(len(idiom), count, freq, int(score), holes)
+        count += 1
+        total_nhoods += int(score)
+
+        # @manishs: skip saving incomplete idiom; uncomment to save all idioms
+        if holes > 0:
+            continue
 
         path = f"{args.idiom_g_dir}{file}.png"
         sast = nx_to_program_graph(idiom)
@@ -84,57 +100,12 @@ def _save_idiom_generation(args, idiommine_gen):
         path = f"{args.idiom_p_dir}{file}.py"
         prog = sast_to_prog(sast).replace("#", "_")
         save_idiom(path, prog)
-        count += 1
 
-
-# @cached(cache=LRUCache(maxsize=1000), key=lambda args, idx: hashkey(idx))
-def read_graph(args, idx):
-    graph_path = f"data_{idx}.pt"
-    graph_path = osp.join(args.source_dir, graph_path)
-    return torch.load(graph_path, map_location=torch.device("cpu"))
-
-
-def read_prog(args, idx):
-    prog_path = f"example_{idx}.py"
-    prog_path = osp.join(args.prog_dir, prog_path)
-    with open(prog_path, "r") as f:
-        return f.read()
-
-
-def read_embedding(args, idx):
-    emb_path = f"emb_{idx}.pt"
-    emb_path = osp.join(args.emb_dir, emb_path)
-    return torch.load(emb_path, map_location=torch.device("cpu"))
-
-
-def read_embeddings(args, prog_indices):
-    embs = []
-    for idx in prog_indices:
-        embs.append(read_embedding(args, idx))
-
-    return embs
-
-
-def read_embeddings_batched(args, prog_indices):
-    embs, batch_embs = [], []
-    count = 0
-
-    for i, idx in enumerate(prog_indices):
-        batch_embs.append(read_embedding(args, idx))
-
-        if i > 0 and i % args.batch_size == 0:
-            embs.append(torch.cat(batch_embs, dim=0))
-            count += len(batch_embs)
-            batch_embs = []
-
-    # add remaining embs as a batch
-    if len(batch_embs) > 0:
-        embs.append(torch.cat(batch_embs, dim=0))
-        count += len(batch_embs)
-
-    assert count == len(prog_indices)
-
-    return embs
+    avg_freq = total_nhoods / count if count > 0 else 0
+    if count >= avg_freq:
+        return False
+    else:
+        return True
 
 
 ######### INIT ############
@@ -257,7 +228,7 @@ def grow(args, prog_indices, in_queue, out_queue, device_id=None):
     feat_tokenizer = RobertaTokenizer.from_pretrained(codebert_name)
     feat_model = RobertaModel.from_pretrained(codebert_name).to(get_device(device_id))
     feat_model.eval()
-    
+
     # print("Moving model to device:", get_device(device_id))
     model = build_model(models.SubgraphEmbedder, args, device_id=device_id)
     model.eval()
@@ -347,7 +318,7 @@ def search(args, prog_indices, beam_sets):
     num_gpus = torch.cuda.device_count()
     workers_list = []
     in_queues, out_queues = [], []
-    
+
     for gpu in range(num_gpus):
         in_queue, out_queue = mp.Queue(), mp.Queue()
         workers = start_workers_grow(prog_indices, in_queue, out_queue, args, gpu)
@@ -355,7 +326,8 @@ def search(args, prog_indices, beam_sets):
         in_queues.append(in_queue)
         out_queues.append(out_queue)
 
-    while len(beam_sets) != 0:
+    continue_search = True
+    while continue_search and len(beam_sets) != 0:
         for i, beam_set in enumerate(beam_sets):
             gpu = i % num_gpus
             in_queues[gpu].put(("beam_set", beam_set))
@@ -372,7 +344,7 @@ def search(args, prog_indices, beam_sets):
                 while not out_queues[gpu].empty():
                     msg, new_beams = out_queues[gpu].get()
                     results_count += 1
-                    
+
                     # candidates from only top-scoring beams in the beam set
                     for new_beam in new_beams[:1]:
                         score, holes, neigh, _, _, graph_idx = new_beam
@@ -400,7 +372,7 @@ def search(args, prog_indices, beam_sets):
         # _print_mine_logs(mine_summary)
 
         if size >= args.min_idiom_size and size <= args.max_idiom_size:
-            _save_idiom_generation(args, idiommine_gen)
+            continue_search = _save_idiom_generation(args, idiommine_gen)
 
     for in_queue in in_queues:
         for _ in range(num_gpus):

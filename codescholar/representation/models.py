@@ -81,7 +81,7 @@ class SubgraphEmbedder(nn.Module):
     def predict(self, pred):
         """Inference API: predict the amount of violation of the order constraint
         i.e., the extent to which the query is not a subgraph of the target!
-                
+
         Args:
             pred (List<emb_t, emb_q>): embeddings of pairs of graphs
         """

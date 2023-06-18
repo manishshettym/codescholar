@@ -45,7 +45,7 @@ if __name__ == "__main__":
     # data config
     args.prog_dir = f"../data/{args.dataset}/source/"
     args.source_dir = f"../data/{args.dataset}/graphs/"
-    args.emb_dir = f"../search/tmp/{args.dataset}/emb/"
+    args.emb_dir = f"../data/{args.dataset}/emb/"
 
     # model config
     args.test = True

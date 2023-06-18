@@ -17,23 +17,6 @@ def sample_programs(src_dir: str, k=10000, seed=24):
     return random_files, random_index
 
 
-def read_embeddings(files):
-    prog_embs, prog_sizes = [], []
-    for file in files:
-        embs = torch.load(file, map_location=torch.device("cpu"))
-        prog_embs.append(embs)
-        prog_sizes.append(len(embs))
-
-    return prog_embs, prog_sizes
-
-
-def sample_prog_embs(src_dir: str, k=10000, seed=24):
-    random_files, _ = sample_programs(src_dir, k, seed)
-    prog_embs, prog_sizes = read_embeddings(random_files)
-
-    return prog_embs, random_files, prog_sizes
-
-
 def graphs_from_embs(graph_dir, paths: List[str]) -> List:
     graphs = []
     for file in paths:
@@ -75,6 +58,59 @@ def wl_hash(g, dim=64):
         vecs = newvecs
 
     return tuple(np.sum(vecs, axis=0))
+
+
+########## SEARCH DISK UTILS ##########
+
+
+# @cached(cache=LRUCache(maxsize=1000), key=lambda args, idx: hashkey(idx))
+def read_graph(args, idx):
+    graph_path = f"data_{idx}.pt"
+    graph_path = osp.join(args.source_dir, graph_path)
+    return torch.load(graph_path, map_location=torch.device("cpu"))
+
+
+def read_prog(args, idx):
+    prog_path = f"example_{idx}.py"
+    prog_path = osp.join(args.prog_dir, prog_path)
+    with open(prog_path, "r") as f:
+        return f.read()
+
+
+def read_embedding(args, idx):
+    emb_path = f"emb_{idx}.pt"
+    emb_path = osp.join(args.emb_dir, emb_path)
+    return torch.load(emb_path, map_location=torch.device("cpu"))
+
+
+def read_embeddings(args, prog_indices):
+    embs = []
+    for idx in prog_indices:
+        embs.append(read_embedding(args, idx))
+
+    return embs
+
+
+def read_embeddings_batched(args, prog_indices):
+    embs, batch_embs = [], []
+    count = 0
+
+    for i, idx in enumerate(prog_indices):
+        batch_embs.append(read_embedding(args, idx))
+
+        if i > 0 and i % args.batch_size == 0:
+            embs.append(torch.cat(batch_embs, dim=0))
+            count += len(batch_embs)
+            batch_embs = []
+
+    # add remaining embs as a batch
+    if len(batch_embs) > 0:
+        embs.append(torch.cat(batch_embs, dim=0))
+        count += len(batch_embs)
+
+    assert count == len(prog_indices)
+
+    return embs
 
 
 ######## IDIOM MINE UTILS ##########
