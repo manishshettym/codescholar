@@ -102,7 +102,7 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
         save_idiom(path, prog)
 
     avg_freq = total_nhoods / count if count > 0 else 0
-    if count >= avg_freq:
+    if args.stop_at_equilibrium and count >= avg_freq:
         return False
     else:
         return True
@@ -143,6 +143,7 @@ def init_search_m(args, prog_indices):
 
 
 # init_search for --mode g (idiom seed-graph-search)
+# TODO: parallelize this!!!!
 def init_search_g(args, prog_indices, seed):
     beam_sets = []
     count = 0
