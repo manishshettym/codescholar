@@ -21,7 +21,9 @@ def init_search_configs(parser, arg_str=None):
     search_args.add_argument("--seed", type=str, help="graph to start idiomatic search in graph mode")
     search_args.add_argument("--max_holes", type=int, help="maximum number of holes that can be added to a candidate program")
     search_args.add_argument("--max_init_beams", type=int, help="maximum number of beams to filter into during initialization of search")
-    search.args.add_argument("--stop_at_equilibrium", action="store_true", help="stop search when we reach equilibrium: diversity = reusability")
+    search.args.add_argument(
+        "--stop_at_equilibrium", action="store_true", help="stop search when we reach equilibrium: diversity = reusability"
+    )
 
     search_args.set_defaults(
         # embed_space configs
