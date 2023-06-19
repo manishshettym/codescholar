@@ -6,6 +6,35 @@ from typing import List
 
 import torch
 import networkx as nx
+from elasticsearch import Elasticsearch
+
+
+########## ELASTIC SEARCH UTILS ##########
+
+def ping_elasticsearch():
+    """check if elasticsearch is running
+    """
+    es = Elasticsearch('http://localhost:9200/')
+    try:
+        info = es.info()
+    except:
+        return False
+    
+    return True
+
+
+def ping_elasticindex(index_name:str ="python_files"):
+    """check if elasticsearch index exists
+    """
+    es = Elasticsearch('http://localhost:9200/')
+    try:
+        info = es.indices.get(index=index_name)
+    except:
+        return False
+    
+    return True
+
+########## SEARCH DISK UTILS ##########
 
 
 def sample_programs(src_dir: str, k=10000, seed=24):
@@ -26,42 +55,6 @@ def graphs_from_embs(graph_dir, paths: List[str]) -> List:
         graphs.append(torch.load(graph_path, map_location=torch.device("cpu")))
 
     return graphs
-
-
-cached_masks = None
-
-
-def vec_hash(v):
-    global cached_masks
-    if cached_masks is None:
-        random.seed(2019)
-        cached_masks = [random.getrandbits(32) for i in range(len(v))]
-
-    v = [hash(v[i]) ^ mask for i, mask in enumerate(cached_masks)]
-    return v
-
-
-def wl_hash(g, dim=64):
-    """weisfeiler lehman graph hash"""
-    g = nx.convert_node_labels_to_integers(g)
-    vecs = np.zeros((len(g), dim), dtype=int)
-
-    for v in g.nodes:
-        if g.nodes[v]["anchor"] == 1:
-            vecs[v] = 1
-            break
-
-    for i in range(len(g)):
-        newvecs = np.zeros((len(g), dim), dtype=int)
-        for n in g.nodes:
-            newvecs[n] = vec_hash(np.sum(vecs[list(g.neighbors(n)) + [n]], axis=0))
-        vecs = newvecs
-
-    return tuple(np.sum(vecs, axis=0))
-
-
-########## SEARCH DISK UTILS ##########
-
 
 # @cached(cache=LRUCache(maxsize=1000), key=lambda args, idx: hashkey(idx))
 def read_graph(args, idx):
@@ -111,6 +104,39 @@ def read_embeddings_batched(args, prog_indices):
     assert count == len(prog_indices)
 
     return embs
+
+
+########## GRAPH HASH UTILS ##########
+
+cached_masks = None
+
+def vec_hash(v):
+    global cached_masks
+    if cached_masks is None:
+        random.seed(2019)
+        cached_masks = [random.getrandbits(32) for i in range(len(v))]
+
+    v = [hash(v[i]) ^ mask for i, mask in enumerate(cached_masks)]
+    return v
+
+
+def wl_hash(g, dim=64):
+    """weisfeiler lehman graph hash"""
+    g = nx.convert_node_labels_to_integers(g)
+    vecs = np.zeros((len(g), dim), dtype=int)
+
+    for v in g.nodes:
+        if g.nodes[v]["anchor"] == 1:
+            vecs[v] = 1
+            break
+
+    for i in range(len(g)):
+        newvecs = np.zeros((len(g), dim), dtype=int)
+        for n in g.nodes:
+            newvecs[n] = vec_hash(np.sum(vecs[list(g.neighbors(n)) + [n]], axis=0))
+        vecs = newvecs
+
+    return tuple(np.sum(vecs, axis=0))
 
 
 ######## IDIOM MINE UTILS ##########

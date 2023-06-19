@@ -24,6 +24,8 @@ from codescholar.representation import models, config
 from codescholar.search import search_config
 from codescholar.utils.search_utils import (
     sample_programs,
+    ping_elasticsearch,
+    ping_elasticindex,
     wl_hash,
     save_idiom,
     _print_mine_logs,
@@ -36,6 +38,9 @@ from codescholar.utils.search_utils import (
 from codescholar.utils.train_utils import build_model, get_device, featurize_graph
 from codescholar.utils.graph_utils import nx_to_program_graph, program_graph_to_nx
 from codescholar.utils.perf import perftimer
+
+
+from codescholar.search.elastic_search import grep_programs
 
 ######### MACROS ############
 
@@ -84,8 +89,8 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
         total_nhoods += int(score)
 
         # @manishs: skip saving incomplete idiom; uncomment to save all idioms
-        if holes > 0:
-            continue
+        # if holes > 0:
+        #     continue
 
         path = f"{args.idiom_g_dir}{file}.png"
         sast = nx_to_program_graph(idiom)
@@ -143,7 +148,7 @@ def init_search_m(args, prog_indices):
 
 
 # init_search for --mode g (idiom seed-graph-search)
-# TODO: parallelize this!!!!
+@perftimer
 def init_search_g(args, prog_indices, seed):
     beam_sets = []
     count = 0
@@ -389,17 +394,23 @@ def search(args, prog_indices, beam_sets):
 def main(args):
     if args.mode == "g" and args.seed is None:
         parser.error("graph mode requires --seed to begin search.")
+        
+    if not ping_elasticsearch():
+        raise ConnectionError('Elasticsearch not running on localhost:9200! Please start Elasticsearch and try again.')
+
+    if not ping_elasticindex():
+        raise ValueError('Elasticsearch index `python_files` not found! Please run `elastic_search.py` to create the index.')
 
     # init search space = sample K programs
-    _, prog_indices = sample_programs(args.emb_dir, k=args.prog_samples, seed=4)
+    prog_indices = grep_programs(args, args.seed)
 
-    # init search space
+    # STEP 1: initialize search space
     if args.mode == "g":
         beam_sets = init_search_g(args, prog_indices, seed=args.seed)
     else:
         beam_sets = init_search_m(args, prog_indices)
 
-    # search for idioms; saves idioms gradually
+    # STEP 2: search for idioms; saves idioms gradually
     mine_summary = search(args, prog_indices, beam_sets)
     _write_mine_logs(mine_summary, f"{args.result_dir}/mine_summary.log")
 
