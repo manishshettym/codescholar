@@ -4,6 +4,7 @@ import argparse
 import random
 import numpy as np
 from tqdm import tqdm
+from math import log
 from collections import defaultdict
 from itertools import chain
 from cachetools import cached, LRUCache
@@ -72,42 +73,42 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
     """save the current generation of idioms to disk.
     and return if the search should continue.
     """
-    hashed_idioms = idiommine_gen.items()
-    hashed_idioms = list(sorted(hashed_idioms, key=lambda x: len(x[1]), reverse=True))
-    count, total_nhoods = 0, 0
+    idiom_clusters = idiommine_gen.items()
+    idiom_clusters = list(sorted(idiom_clusters, key=lambda x: len(x[1]), reverse=True))
+    cluster_id, total_nhoods, total_idioms = 1, 0, 0
 
-    for _, idioms in hashed_idioms:  # [:args.rank]:
-        # # choose any one because they all map to the same hash
-        # idiom = random.choice(idioms)
-
+    for _, idioms in idiom_clusters:
         idioms = list(sorted(idioms, key=lambda x: x[1], reverse=True))
-        idiom, score, holes = idioms[0]
 
-        freq = len(idioms)
-        file = "idiom_{}_{}_{}_{}_{}".format(len(idiom), count, freq, int(score), holes)
-        count += 1
-        total_nhoods += int(score)
+        for idiom, nhoods, holes in idioms:
+            size_id, nhood_count = len(idiom), int(nhoods)
+            file = "idiom_{}_{}_{}_{}".format(size_id, cluster_id, nhood_count, holes)
 
-        # @manishs: skip saving incomplete idiom; uncomment to save all idioms
-        # if holes > 0:
-        #     continue
+            path = f"{args.idiom_g_dir}{file}.png"
+            sast = nx_to_program_graph(idiom)
 
-        path = f"{args.idiom_g_dir}{file}.png"
-        sast = nx_to_program_graph(idiom)
+            # NOTE @manishs: when growing graphs in all directions
+            # the root can get misplaced. Find root = node with no incoming edges!
+            root = [n for n in sast.all_nodes() if sast.incoming_neighbors(n) == []][0]
+            sast.root_id = root.id
+            render_sast(sast, path, spans=True, relpos=True)
 
-        # NOTE @manishs: when growing graphs in all directions
-        # the root can get misplaced. Find the root node
-        # by looking for the node with no incoming edges!
-        root = [n for n in sast.all_nodes() if sast.incoming_neighbors(n) == []][0]
-        sast.root_id = root.id
-        render_sast(sast, path, spans=True, relpos=True)
+            path = f"{args.idiom_p_dir}{file}.py"
+            prog = sast_to_prog(sast).replace("#", "_")
+            save_idiom(path, prog)
+            
+            # update counts
+            total_nhoods += nhood_count
+            total_idioms += 1
+        
+        cluster_id += 1
 
-        path = f"{args.idiom_p_dir}{file}.py"
-        prog = sast_to_prog(sast).replace("#", "_")
-        save_idiom(path, prog)
-
-    avg_freq = total_nhoods / count if count > 0 else 0
-    if args.stop_at_equilibrium and count >= avg_freq:
+    # metrics
+    reusability = total_nhoods / total_idioms if total_idioms > 0 else 0
+    reusability = log(reusability + 1 if reusability <= 0 else reusability)
+    diversity = log(len(idiom_clusters))
+    
+    if args.stop_at_equilibrium and diversity >= reusability:
         return False
     else:
         return True
