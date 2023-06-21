@@ -96,20 +96,20 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
             path = f"{args.idiom_p_dir}{file}.py"
             prog = sast_to_prog(sast).replace("#", "_")
             save_idiom(path, prog)
-            
+
             # update counts
             total_nhoods += nhood_count
             total_idioms += 1
-        
+
         cluster_id += 1
 
     # metrics
     reusability = total_nhoods / total_idioms if total_idioms > 0 else 0
     lreusability = log(reusability + 1 if reusability <= 0 else reusability)
-    
+
     diversity = len(idiom_clusters)
     ldiversity = log(diversity + 1 if diversity <= 0 else diversity)
-    
+
     if args.stop_at_equilibrium and ldiversity >= lreusability:
         return False
     else:
@@ -397,12 +397,12 @@ def search(args, prog_indices, beam_sets):
 def main(args):
     if args.mode == "g" and args.seed is None:
         parser.error("graph mode requires --seed to begin search.")
-        
+
     if not ping_elasticsearch():
-        raise ConnectionError('Elasticsearch not running on localhost:9200! Please start Elasticsearch and try again.')
+        raise ConnectionError("Elasticsearch not running on localhost:9200! Please start Elasticsearch and try again.")
 
     if not ping_elasticindex():
-        raise ValueError('Elasticsearch index `python_files` not found! Please run `elastic_search.py` to create the index.')
+        raise ValueError("Elasticsearch index `python_files` not found! Please run `elastic_search.py` to create the index.")
 
     # init search space = sample K programs
     prog_indices = grep_programs(args, args.seed)

@@ -18,7 +18,7 @@ def start_workers_bulk_index(in_queue, out_queue, args):
         worker = mp.Process(target=worker_bulk_index, args=(args, in_queue, out_queue))
         worker.start()
         workers.append(worker)
-    
+
     return workers
 
 
@@ -26,22 +26,16 @@ def worker_bulk_index(args, in_queue, out_queue):
     done = False
     while not done:
         msg, idx = in_queue.get()
-        
+
         if msg == "done":
             done = True
             break
-        
+
         path = osp.join(args.prog_dir, f"example_{idx}.py")
         with open(path) as file:
             contents = file.read()
-        
-        out_queue.put({
-                "_index": "python_files",
-                "_id": idx,
-                "_source": {
-                    "content": contents
-                }
-            })
+
+        out_queue.put({"_index": "python_files", "_id": idx, "_source": {"content": contents}})
 
 
 def bulk_index_generator(count, out_queue):
@@ -52,14 +46,14 @@ def bulk_index_generator(count, out_queue):
 
 def index_files(args):
     es = Elasticsearch("http://localhost:9200/")
-    
+
     in_queue, out_queue = mp.Queue(), mp.Queue()
     workers = start_workers_bulk_index(in_queue, out_queue, args)
     valid_indices = [f.split("_")[-1][:-3] for f in glob.glob(osp.join(args.emb_dir, "*.pt"))]
-    
+
     for i in valid_indices:
         in_queue.put(("idx", i))
-    
+
     bulk(es, bulk_index_generator(len(valid_indices), out_queue), chunk_size=1000)
 
     for _ in range(args.n_workers):
@@ -70,41 +64,31 @@ def index_files(args):
 
 
 def grep_programs(args, keyword: str):
-    """Search for programs containing the keyword.
-    """
+    """Search for programs containing the keyword."""
     es = Elasticsearch("http://localhost:9200/")
 
     # Perform the search
-    res = es.search(index="python_files", body={
-            "query": {
-                "match": {
-                    "content": keyword
-                }
-            }
-        },
-        size=10000,
-        scroll="1m")
+    res = es.search(index="python_files", body={"query": {"match": {"content": keyword}}}, size=10000, scroll="1m")
 
-    sid = res['_scroll_id']
-    scroll_size = len(res['hits']['hits'])
-    
+    sid = res["_scroll_id"]
+    scroll_size = len(res["hits"]["hits"])
+
     matching_index = []
-    
-    while scroll_size > 0:
-        matching_index += [hit['_id'] for hit in res['hits']['hits']]
 
-        res = es.scroll(scroll_id=sid, scroll='1m')
-        sid = res['_scroll_id']
-        scroll_size = len(res['hits']['hits'])
-    
+    while scroll_size > 0:
+        matching_index += [hit["_id"] for hit in res["hits"]["hits"]]
+
+        res = es.scroll(scroll_id=sid, scroll="1m")
+        sid = res["_scroll_id"]
+        scroll_size = len(res["hits"]["hits"])
+
     es.clear_scroll(scroll_id=sid)
 
     return matching_index
 
 
 if __name__ == "__main__":
-    """Usage: python --dataset <dataset> elastic_search.py
-    """
+    """Usage: python --dataset <dataset> elastic_search.py"""
     parser = argparse.ArgumentParser()
     config.init_optimizer_configs(parser)
     config.init_encoder_configs(parser)

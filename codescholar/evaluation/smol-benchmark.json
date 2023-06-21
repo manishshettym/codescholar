@@ -1,0 +1,10 @@
+{
+    "pandas": [
+        "pd.concat",
+        "df.groupby"
+    ],
+    "numpy": [
+        "np.mean",
+        "np.dot"
+    ]
+}

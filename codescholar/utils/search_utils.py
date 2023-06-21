@@ -11,28 +11,28 @@ from elasticsearch import Elasticsearch
 
 ########## ELASTIC SEARCH UTILS ##########
 
+
 def ping_elasticsearch():
-    """check if elasticsearch is running
-    """
-    es = Elasticsearch('http://localhost:9200/')
+    """check if elasticsearch is running"""
+    es = Elasticsearch("http://localhost:9200/")
     try:
         info = es.info()
     except:
         return False
-    
+
     return True
 
 
-def ping_elasticindex(index_name:str ="python_files"):
-    """check if elasticsearch index exists
-    """
-    es = Elasticsearch('http://localhost:9200/')
+def ping_elasticindex(index_name: str = "python_files"):
+    """check if elasticsearch index exists"""
+    es = Elasticsearch("http://localhost:9200/")
     try:
         info = es.indices.get(index=index_name)
     except:
         return False
-    
+
     return True
+
 
 ########## SEARCH DISK UTILS ##########
 
@@ -55,6 +55,7 @@ def graphs_from_embs(graph_dir, paths: List[str]) -> List:
         graphs.append(torch.load(graph_path, map_location=torch.device("cpu")))
 
     return graphs
+
 
 # @cached(cache=LRUCache(maxsize=1000), key=lambda args, idx: hashkey(idx))
 def read_graph(args, idx):
@@ -109,6 +110,7 @@ def read_embeddings_batched(args, prog_indices):
 ########## GRAPH HASH UTILS ##########
 
 cached_masks = None
+
 
 def vec_hash(v):
     global cached_masks

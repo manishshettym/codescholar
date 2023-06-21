@@ -13,11 +13,11 @@ def plot_rde(df, api):
 
     # add a line plot of the number of clusters per size
     y1 = df.groupby("size")["cluster"].nunique()
-    ax.plot(x, y1, label="Diversity", marker='o', markersize=3, color="blue")
+    ax.plot(x, y1, label="Diversity", marker="o", markersize=3, color="blue")
 
     # add a line plot of the average number of neighborhoods per size
     y2 = df.groupby("size")["freq"].mean()
-    ax.plot(x, y2, label="Reusability", marker='o', markersize=3, color="red")
+    ax.plot(x, y2, label="Reusability", marker="o", markersize=3, color="red")
 
     ax.set_yscale("log")
     ax.set_xlabel("Size (Expressivity)")
@@ -61,13 +61,15 @@ with pd.ExcelWriter(f"results/{DATE}/{DATE}.results.xlsx") as writer:
             except FileNotFoundError:
                 pass
 
-            df = pd.DataFrame({"size": sizes, "cluster": clusters, "freq": neighborhoods, "hole": holes, "plen": plens, "program": programs})
+            df = pd.DataFrame(
+                {"size": sizes, "cluster": clusters, "freq": neighborhoods, "hole": holes, "plen": plens, "program": programs}
+            )
 
             # sort by metrics
             df = df.sort_values(by=["size", "cluster", "freq", "hole", "plen"], ascending=[True, True, False, True, True])
 
             # save as excel
             df.to_excel(writer, sheet_name=f"{api}", index=False)
-            
+
             # plot rde
             plot_rde(df, api)
