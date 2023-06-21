@@ -41,87 +41,39 @@ import {lib}
 """
 
 
-def fill_template(
-    template,
-    lib,
-    api,
-    alias,
-):
+def fill_template(template, lib, api, alias):
     """Fill the template with the given library, API, and alias."""
     if alias is None:
-        return template.format(
-            lib=lib,
-            api=api,
-        )
+        return template.format(lib=lib, api=api)
     else:
-        return template.format(
-            lib=lib,
-            api=api,
-            alias=alias,
-        )
+        return template.format(lib=lib, api=api, alias=alias)
 
 
-def encode_question_nochat(
-    template,
-    lib,
-    api,
-    alias,
-):
+def encode_question_nochat(template, lib, api, alias):
     """Encode the prompt instructions into a conversation for no chat models."""
-    return fill_template(
-        template,
-        lib,
-        api,
-        alias,
-    )
+    return fill_template(template, lib, api, alias)
 
 
-def encode_question_chat(
-    template,
-    lib,
-    api,
-    alias,
-):
+def encode_question_chat(template, lib, api, alias):
     """Encode the prompt instructions into a conversation for chat models.
     Reference: https://github.com/ShishirPatil/gorilla/blob/main/eval/get_llm_responses.py
     """
-    prompt = fill_template(
-        template,
-        lib,
-        api,
-        alias,
-    )
+    prompt = fill_template(template, lib, api, alias)
 
     prompts = [
-        {
-            "role": "system",
-            "content": "You are a helpful API assistant who can write idiomatic API usage examples given the API name.",
-        },
-        {
-            "role": "user",
-            "content": prompt,
-        },
+        {"role": "system", "content": "You are a helpful API assistant who can write idiomatic API usage examples given the API name."},
+        {"role": "user", "content": prompt},
     ]
     return prompts
 
 
-def get_llm_response(
-    model,
-    lib,
-    api,
-    alias,
-):
+def get_llm_response(model, lib, api, alias):
     if model == "text-davinci-003":
         PROMPT_TEMPLATE = PROMPT_NO_CHAT_NO_ALIAS if alias is None else PROMPT_NO_CHAT
 
         response = openai.Completion.create(
             model=model,
-            prompt=encode_question_nochat(
-                PROMPT_TEMPLATE,
-                lib,
-                api,
-                alias,
-            ),
+            prompt=encode_question_nochat(PROMPT_TEMPLATE, lib, api, alias),
             temperature=0,
             max_tokens=250,
             top_p=1.0,
@@ -136,21 +88,13 @@ def get_llm_response(
 
         responses = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=encode_question_chat(
-                PROMPT_TEMPLATE,
-                lib,
-                api,
-                alias,
-            ),
+            messages=encode_question_chat(PROMPT_TEMPLATE, lib, api, alias),
             temperature=0,
             max_tokens=250,
             top_p=1.0,
             frequency_penalty=0.0,
             presence_penalty=0.0,
-            stop=[
-                '"""',
-                "```",
-            ],
+            stop=['"""', "```"],
         )
         return responses["choices"][0]["message"]["content"]
 
@@ -174,11 +118,6 @@ if __name__ == "__main__":
         for api in benchmarks[lib]:
             print(f"EVALUATING [{lib}] [{api}]")
             print("=====================================")
-            response = get_llm_response(
-                model=MODEL,
-                lib=lib,
-                api=api,
-                alias=alias_map[lib],
-            )
+            response = get_llm_response(model=MODEL, lib=lib, api=api, alias=alias_map[lib])
             print(response)
             print("=====================================")
