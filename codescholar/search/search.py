@@ -105,10 +105,12 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
 
     # metrics
     reusability = total_nhoods / total_idioms if total_idioms > 0 else 0
-    reusability = log(reusability + 1 if reusability <= 0 else reusability)
-    diversity = log(len(idiom_clusters))
+    lreusability = log(reusability + 1 if reusability <= 0 else reusability)
     
-    if args.stop_at_equilibrium and diversity >= reusability:
+    diversity = len(idiom_clusters)
+    ldiversity = log(diversity + 1 if diversity <= 0 else diversity)
+    
+    if args.stop_at_equilibrium and ldiversity >= lreusability:
         return False
     else:
         return True
