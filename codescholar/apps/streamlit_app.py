@@ -5,12 +5,11 @@ import json
 import pandas as pd
 import streamlit as st
 
-"""
-<img align="center" src="https://github.com/tart-proj/codescholar/blob/ms/evaluation/codescholar.png"/>
+st.image("https://github.com/tart-proj/codescholar/blob/ms/evaluation/codescholar.png")
 
-Find the best code idioms for your task using CodeScholar! CodeScholar not only 
-finds the best code idioms for your task, but also provides you with the **provenance** -- links to the
-real-world code snippets that use the idiom!
+"""
+Find the best code idioms for your task using **CodeScholar**! CodeScholar not only finds the best code idioms for your task, 
+but also provides you with the *provenance* -- links to the real-world code snippets that use the idiom!
 
 Go ahead and try it out! Select an API from the dropdown menu below and see what idioms CodeScholar finds for you!
 """
