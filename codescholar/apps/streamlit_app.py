@@ -16,7 +16,7 @@ Go ahead and try it out! Select an API from the dropdown menu below and see what
 """
 
 
-with open("benchmarks.json") as f:
+with open("../evaluation/benchmarks.json") as f:
     benchmarks = json.load(f)
 
 api_options = set()
