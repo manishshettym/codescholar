@@ -5,7 +5,7 @@ import json
 import pandas as pd
 import streamlit as st
 
-st.image("https://github.com/tart-proj/codescholar/blob/ms/evaluation/codescholar.png")
+st.image("/app/codescholar/codescholar.png")
 
 """
 Find the best code idioms for your task using **CodeScholar**! CodeScholar not only finds the best code idioms for your task, 
