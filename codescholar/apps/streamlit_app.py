@@ -8,10 +8,12 @@ import numpy as np
 import requests
 import streamlit as st
 
-# root = "/app/codescholar/"
-root = "../../"
-# endpoint = st.secrets["ENDPOINT"]
-endpoint = "34.27.76.159:3003"
+# deployment
+root = "/app/codescholar/"
+endpoint = st.secrets["ENDPOINT"]
+
+# local
+# root = "../../"
 
 st.image(f"{root}/codescholar.png")
 
