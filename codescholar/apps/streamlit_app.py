@@ -29,10 +29,10 @@ option = st.selectbox(
     'Which API do you want to search for?',
     api_options)
 
-# send the selected API to the backend @ 34.28.12.83/search as a post request
+# send the selected API to the backend as a post request
 # the backend will return a json of code idioms
 with st.spinner('Growing your idioms 🌱...'):
-    response = requests.post("http://34.28.12.83:3003/search", json={"api": option})
+    response = requests.post(f"http://{st.secrets["ENDPOINT"]}/search", json={"api": option})
 
 st.write("Here are the top 10 code idioms for " + option + "!")
 
