@@ -39,6 +39,9 @@ st.write("Here are the top 10 code idioms for " + option + "!")
 # parse the json response from the backend
 idioms = response.json()
 
+# sort the idioms by frequency
+idioms = {k: v for k, v in sorted(idioms.items(), key=lambda item: item[1]["freq"], reverse=True)}
+
 # print each idiom in a separate tab using st.tabs
 tabs = st.tabs(["Idiom {}".format(i + 1) for i in range(len(idioms))])
 
