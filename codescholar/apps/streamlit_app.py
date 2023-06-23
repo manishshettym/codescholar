@@ -36,4 +36,13 @@ with st.spinner('Growing your idioms 🌱...'):
 
 st.write("Here are the top 10 code idioms for " + option + "!")
 
-st.code(response.json(), language="json")
+# parse the json response from the backend
+idioms = response.json()
+
+# print each idiom in a separate tab using st.tabs
+tabs = st.tabs(["Idiom {}".format(i + 1) for i in range(len(idioms))])
+
+for i, tab in enumerate(tabs):
+    with tab:
+        st.write("🎓: Found this idiom in {} programs!".format(idioms[str(i)]["freq"]))
+        st.code(idioms[str(i)]["idiom"], language="python")
