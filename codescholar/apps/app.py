@@ -20,45 +20,77 @@ api_cache_dir = {
     "np.mean": "../evaluation/results/2023-06-21/numpy_res/",
 }
 
+
+def get_result_from_dir(api_cache, select_size):
+    results, count = {}, 0
+    for file in os.listdir(api_cache):
+        _, size, cluster, nhood_count, hole = file.split("_")
+        hole = hole.split(".")[0]
+
+        if int(hole) == 0 and int(size) == select_size and int(nhood_count) > 0:
+            with open(osp.join(api_cache, file), "r") as f:
+                results.update({count: {
+                                "idiom": f.read(), 
+                                "size": size, 
+                                "cluster": cluster, 
+                                "freq": nhood_count, 
+                                }
+                            })
+            count += 1
+        
+    return results
+
+
+def get_plot_metrics(api_cache):
+    sizes, clusters, freq = [], [], []
+    for file in os.listdir(api_cache):
+        _, size, cluster, nhood_count, _ = file.split("_")
+        sizes.append(int(size))
+        clusters.append(int(cluster))
+        freq.append(int(nhood_count))
+    
+    return sizes, clusters, freq
+        
+
 app = flask.Flask(__name__)
 
 @app.route('/')
 def index():
     return "CodeScholar is running!"
 
+
 @app.route('/search', methods=['POST'])
 def search():
     api = flask.request.json['api']
+    size = flask.request.json['size']
+    
     try:
         api_cache = osp.join(api_cache_dir[api], api, "idioms", "progs")
     except:
         return "Searching results for API: {}".format(api)
-
-    ideal_size = 10 # assume you can query this for each api
     
-    resp = {}
-
-    # check if results exist in cache
     if osp.exists(api_cache):
-        count = 0
-        
-        for file in os.listdir(api_cache):
-            _, size, cluster, nhood_count, hole = file.split("_")
-            hole = hole.split(".")[0]
-
-            if int(hole) == 0 and int(size) == ideal_size and int(nhood_count) > 0:
-                with open(osp.join(api_cache, file), "r") as f:
-                    resp.update({count: {
-                                    "idiom": f.read(), 
-                                    "size": size, 
-                                    "cluster": cluster, 
-                                    "freq": nhood_count, 
-                                    }
-                                })
-                count += 1
+        resp = get_result_from_dir(api_cache, size)
         return flask.jsonify(resp)
     else:
         return "Searching results for API: {}".format(api)
+
+
+@app.route('/plot', methods=['POST'])
+def plot():
+    api = flask.request.json['api']
+    try:
+        api_cache = osp.join(api_cache_dir[api], api, "idioms", "progs")
+    except:
+        return None
+    
+    if osp.exists(api_cache):
+        sizes, clusters, freq = get_plot_metrics(api_cache)
+        resp = {"sizes": sizes, "clusters": clusters, "freq": freq}
+        return flask.jsonify(resp)
+    else:
+        return None
+    
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
