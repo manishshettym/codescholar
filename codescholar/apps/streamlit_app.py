@@ -14,14 +14,14 @@ endpoint = st.secrets["ENDPOINT"]
 
 # local
 # root = "../../"
+# endpoint = "localhost:3003"
 
 st.image(f"{root}/codescholar.png")
 
 """
-Find the best code idioms for your task using **CodeScholar**! CodeScholar not only finds the best code idioms for your task, 
-but also provides you with the *provenance* -- links to the real-world code snippets that use the idiom!
-
-Go ahead and try it out! Select an API from the dropdown menu below and see what idioms CodeScholar finds for you!
+Find the best code idioms for your task using **CodeScholar**! CodeScholar not only finds the best code idioms for your APIs, 
+but also provides you with the many other features such as: (1) *provenance*, (2) *idiomaticity*, and (3) *diversity*.
+Further it also provides *LLM plugins* to automatically clean the idiom or generate some simple runnable code using it!
 """
 
 with open(f"{root}/codescholar/apps/app_bench.json") as f:
@@ -33,10 +33,9 @@ for lib in benchmarks:
         api_options.add(api)
 
 option = st.selectbox(
-    'Which API do you want to search for?',
+    'Go ahead, try it out! Select an API from the dropdown menu below:',
     api_options)
 
-# add a slider for the user to select the size of the idioms
 size = st.slider("Idiom Size", 4, 20, 4)
 
 with st.spinner('Growing your idioms 🌱...'):
@@ -55,6 +54,23 @@ else:
         with tab:
             st.write("🎓: Found this idiom in {} programs!".format(idiom["freq"]))
             st.code(idiom["idiom"], language="python")
+            
+            colbut1, colbut2 = st.columns([0.25, 0.8])
+            with colbut1:
+                but1 = st.button("Clean this idiom?", key=f"clean_{tabs.index(tab)}")
+            with colbut2:
+                but2 = st.button("Code with this idiom?", key=f"write_{tabs.index(tab)}")
+                
+            if but1:
+                with st.spinner('Cleaning your idioms 🧹...'):
+                    # response = requests.post(f"http://{endpoint}/clean", json={"api": option, "idiom": idiom["idiom"]})
+                    st.error("This feature is not available yet! 🫙")
+                # st.code(response.json()["idiom"], language="python")
+            if but2:
+                with st.spinner('Writing some code 👩🏻‍💻...'):
+                    # response = requests.post(f"http://{endpoint}/write", json={"api": option, "idiom": idiom["idiom"]})
+                    st.error("This feature is not available yet! 🫙")
+                # st.code(response.json()["idiom"], language="python")
 
     st.divider()
     

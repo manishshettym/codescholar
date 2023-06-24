@@ -12,6 +12,7 @@ import torch
 from codescholar.representation import config
 from codescholar.search import search_config
 from codescholar.search.search import main as search_main
+from codescholar.apps.utils import clean_idiom, write_idiom, get_result_from_dir, get_plot_metrics
 
 api_cache_dir = {
     "df.groupby": "../evaluation/results/2023-06-21/pandas_res/",
@@ -20,37 +21,7 @@ api_cache_dir = {
     "np.mean": "../evaluation/results/2023-06-21/numpy_res/",
 }
 
-
-def get_result_from_dir(api_cache, select_size):
-    results, count = {}, 0
-    for file in os.listdir(api_cache):
-        _, size, cluster, nhood_count, hole = file.split("_")
-        hole = hole.split(".")[0]
-
-        if int(hole) == 0 and int(size) == select_size and int(nhood_count) > 0:
-            with open(osp.join(api_cache, file), "r") as f:
-                results.update({count: {
-                                "idiom": f.read(), 
-                                "size": size, 
-                                "cluster": cluster, 
-                                "freq": nhood_count, 
-                                }
-                            })
-            count += 1
-        
-    return results
-
-
-def get_plot_metrics(api_cache):
-    sizes, clusters, freq = [], [], []
-    for file in os.listdir(api_cache):
-        _, size, cluster, nhood_count, _ = file.split("_")
-        sizes.append(int(size))
-        clusters.append(int(cluster))
-        freq.append(int(nhood_count))
-    
-    return sizes, clusters, freq
-        
+################ Flask App ################
 
 app = flask.Flask(__name__)
 
@@ -70,10 +41,25 @@ def search():
         return "Searching results for API: {}".format(api)
     
     if osp.exists(api_cache):
-        resp = get_result_from_dir(api_cache, size)
+        resp = get_result_from_dir(api, api_cache, size)
         return flask.jsonify(resp)
     else:
         return "Searching results for API: {}".format(api)
+
+
+@app.route('/clean', methods=['POST'])
+def clean():
+    api = flask.request.json['api']
+    idiom = flask.request.json['idiom']
+    resp = {"idiom": clean_idiom(api, idiom)}
+    return flask.jsonify(resp)
+
+@app.route('/write', methods=['POST'])
+def write():
+    api = flask.request.json['api']
+    idiom = flask.request.json['idiom']
+    resp = {"idiom": write_idiom(api, idiom)}
+    return flask.jsonify(resp)
 
 
 @app.route('/plot', methods=['POST'])
