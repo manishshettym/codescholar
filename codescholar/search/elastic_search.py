@@ -88,7 +88,7 @@ def grep_programs(args, keyword: str):
 
 
 if __name__ == "__main__":
-    """Usage: python --dataset <dataset> elastic_search.py"""
+    """Usage: python elastic_search.py --dataset <dataset>"""
     parser = argparse.ArgumentParser()
     config.init_optimizer_configs(parser)
     config.init_encoder_configs(parser)
