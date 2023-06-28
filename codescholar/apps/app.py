@@ -25,21 +25,22 @@ api_cache_dir = {
 
 app = flask.Flask(__name__)
 
-@app.route('/')
+
+@app.route("/")
 def index():
     return "CodeScholar is running!"
 
 
-@app.route('/search', methods=['POST'])
+@app.route("/search", methods=["POST"])
 def search():
-    api = flask.request.json['api']
-    size = flask.request.json['size']
-    
+    api = flask.request.json["api"]
+    size = flask.request.json["size"]
+
     try:
         api_cache = osp.join(api_cache_dir[api], api, "idioms", "progs")
     except:
         return "Searching results for API: {}".format(api)
-    
+
     if osp.exists(api_cache):
         resp = get_result_from_dir(api, api_cache, size)
         return flask.jsonify(resp)
@@ -47,38 +48,39 @@ def search():
         return "Searching results for API: {}".format(api)
 
 
-@app.route('/clean', methods=['POST'])
+@app.route("/clean", methods=["POST"])
 def clean():
-    api = flask.request.json['api']
-    idiom = flask.request.json['idiom']
+    api = flask.request.json["api"]
+    idiom = flask.request.json["idiom"]
     resp = {"idiom": clean_idiom(api, idiom)}
     return flask.jsonify(resp)
 
-@app.route('/write', methods=['POST'])
+
+@app.route("/write", methods=["POST"])
 def write():
-    api = flask.request.json['api']
-    idiom = flask.request.json['idiom']
+    api = flask.request.json["api"]
+    idiom = flask.request.json["idiom"]
     resp = {"idiom": write_idiom(api, idiom)}
     return flask.jsonify(resp)
 
 
-@app.route('/plot', methods=['POST'])
+@app.route("/plot", methods=["POST"])
 def plot():
-    api = flask.request.json['api']
+    api = flask.request.json["api"]
     try:
         api_cache = osp.join(api_cache_dir[api], api, "idioms", "progs")
     except:
         return None
-    
+
     if osp.exists(api_cache):
         sizes, clusters, freq = get_plot_metrics(api_cache)
         resp = {"sizes": sizes, "clusters": clusters, "freq": freq}
         return flask.jsonify(resp)
     else:
         return None
-    
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     config.init_optimizer_configs(parser)
     config.init_encoder_configs(parser)
@@ -96,4 +98,4 @@ if __name__ == '__main__':
     args.model_path = f"../representation/ckpt/model.pt"
 
     torch.multiprocessing.set_start_method("spawn")
-    app.run(host='0.0.0.0', debug=True, port=3003)
+    app.run(host="0.0.0.0", debug=True, port=3003)

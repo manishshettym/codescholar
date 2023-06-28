@@ -60,13 +60,16 @@ def get_result_from_dir(api, api_cache, select_size):
 
         if int(hole) == 0 and int(size) == select_size and int(nhood_count) > 0:
             with open(osp.join(api_cache, file), "r") as f:
-                results.update({count: {
-                                "idiom": f.read(), 
-                                "size": size, 
-                                "cluster": cluster, 
-                                "freq": nhood_count, 
-                                }
-                            })
+                results.update(
+                    {
+                        count: {
+                            "idiom": f.read(),
+                            "size": size,
+                            "cluster": cluster,
+                            "freq": nhood_count,
+                        }
+                    }
+                )
             count += 1
 
     return results
@@ -79,5 +82,5 @@ def get_plot_metrics(api_cache):
         sizes.append(int(size))
         clusters.append(int(cluster))
         freq.append(int(nhood_count))
-    
+
     return sizes, clusters, freq

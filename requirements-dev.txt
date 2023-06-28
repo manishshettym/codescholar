@@ -25,3 +25,4 @@ transformers
 openpyxl
 elasticsearch
 openai
+POT

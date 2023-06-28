@@ -9,20 +9,29 @@ from tqdm import tqdm
 
 import numpy as np
 import torch
-from scipy.spatial.distance import cdist
-from scipy.optimize import linear_sum_assignment
+
+# from scipy.spatial.distance import cdist
+# from scipy.optimize import linear_sum_assignment
+import ot
 from transformers import AutoTokenizer, AutoModel
 
 from codescholar.search.elastic_search import grep_programs
 from codescholar.utils.train_utils import get_device
 
-def compute_emd(code_embeddings, idiom_embeddings):
-    # Compute the distance matrix between the embeddings of the python code snippets and the idioms
-    distance_matrix = cdist(code_embeddings, idiom_embeddings, metric='euclidean')
 
-    # Compute the EMD between the two distributions using the distance matrix
-    row_ind, col_ind = linear_sum_assignment(distance_matrix)
-    emd = distance_matrix[row_ind, col_ind].sum() / len(row_ind)
+def compute_emd(code_embeddings, idiom_embeddings):
+    n_code_samples = code_embeddings.shape[0]
+    n_idiom_samples = idiom_embeddings.shape[0]
+
+    # Compute pairwise distance matrix
+    M = ot.dist(code_embeddings, idiom_embeddings)
+
+    # assume uniform distribution for the two sets of samples
+    a = np.ones(n_code_samples) / n_code_samples
+    b = np.ones(n_idiom_samples) / n_idiom_samples
+
+    # Compute EMD
+    emd = ot.emd2(a, b, M)
 
     return emd
 
@@ -35,23 +44,23 @@ model = AutoModel.from_pretrained(model_name)
 
 def generate_embeddings(code_snippets, batch_size=32):
     # Tokenize the code snippets
-    tokenized = [tokenizer.encode(snippet, return_tensors='pt', truncation=True) for snippet in code_snippets]
+    tokenized = [tokenizer.encode(snippet, return_tensors="pt", truncation=True) for snippet in code_snippets]
     tokenized = [t.reshape(-1) for t in tokenized]
     max_len = max([len(t) for t in tokenized])
-    
+
     # Pad the tokenized snippets
     padded = [torch.cat([t, torch.zeros(max_len - len(t), dtype=torch.int64)]) for t in tokenized]
     padded = torch.stack(padded)
-        
+
     # Generate embeddings in batches
     device = get_device()
     model.to(device)
     embeddings = []
     with torch.no_grad():
         for i in tqdm(range(0, len(padded), batch_size)):
-            batch = padded[i:i+batch_size].to(device)
+            batch = padded[i : i + batch_size].to(device)
             batch_embeddings = model(batch)[0].cpu().numpy()
-            
+
             # take the mean of the embeddings of the tokens in each snippet
             batch_embeddings = np.mean(batch_embeddings, axis=1)
             embeddings.append(batch_embeddings)
@@ -62,7 +71,7 @@ def generate_embeddings(code_snippets, batch_size=32):
 
 
 def trim_code(snippet, api):
-    lines = snippet.split('\n')
+    lines = snippet.split("\n")
     api_line = None
     for i, line in enumerate(lines):
         if api in line:
@@ -70,9 +79,13 @@ def trim_code(snippet, api):
             break
     if api_line is None:
         return snippet
+
+    # remove empty lines
+    lines = [line for line in lines if line.strip() != ""]
+
     start_line = max(0, api_line - 2)
     end_line = min(len(lines), api_line + 3)
-    return '\n'.join(lines[start_line:end_line])
+    return "\n".join(lines[start_line:end_line])
 
 
 def load_program(path):
@@ -91,7 +104,7 @@ def main(args):
     # Load all idioms for the API
     idioms = [load_program(osp.join(args.idioms_dir, file)) for file in os.listdir(args.idioms_dir)]
     idiom_embeddings = generate_embeddings(idioms, batch_size=256)
-    
+
     emd = compute_emd(prog_embeddings, idiom_embeddings)
     print(f"EMD: {emd}")
 
@@ -102,10 +115,10 @@ if __name__ == "__main__":
 
     lib = "pandas"
     api = "df.groupby"
-    
+
     args.dataset = "pnosmt"
     args.prog_dir = f"../../data/{args.dataset}/source/"
-    args.idioms_dir = f"../results/2023-06-21/{lib}_res/{api}/idioms/progs"
-    
+    # args.idioms_dir = f"../results/2023-06-21/{lib}_res/{api}/idioms/progs"
+    args.idioms_dir = f"../gpt/results/{lib}_res/{api}/"
+
     main(args)
-    
