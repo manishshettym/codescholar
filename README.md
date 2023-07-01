@@ -8,4 +8,4 @@
 <!-- docker run --rm -p 6379:6379 redis -->
 
 <!-- Celery Backend Tasks -->
-<!-- celery -A app.celery worker --loglevel=info -->
+<!-- celery -A app_decl.celery worker --pool=solo --loglevel=info -->
