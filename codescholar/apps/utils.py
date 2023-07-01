@@ -5,6 +5,18 @@ import openai
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
+gpt_prompt_find = """
+Return an appropriate python API for the following query.
+Only return the API name, with no explanations. For example:
+Query: How do I find the mean of a numpy array?
+"\"\"
+np.mean
+"\"\"
+
+Query: {query}
+\"\"\"
+"""
+
 gpt_prompt_clean = """
 The following is an example of a idiomatic usage example for {api}
 \"\"\"
@@ -22,6 +34,20 @@ The following is an example of a idiomatic usage example for {api}
 Write a 2-4 line snippet of code using exactly the above given example. Return only the code with no explanations.
 \"\"\"
 """
+
+
+def find_api(query):
+    response = openai.Completion.create(
+        model="text-davinci-003",
+        prompt=gpt_prompt_find.format(query=query),
+        temperature=0,
+        max_tokens=250,
+        top_p=1.0,
+        frequency_penalty=0.0,
+        presence_penalty=0.0,
+        stop=['"""', "```"],
+    )
+    return response.choices[0].text
 
 
 def write_idiom(api, idiom):

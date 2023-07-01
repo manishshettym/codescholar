@@ -26,3 +26,5 @@ openpyxl
 elasticsearch
 openai
 POT
+celery
+Redis
