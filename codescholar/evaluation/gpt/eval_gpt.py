@@ -134,7 +134,8 @@ if __name__ == "__main__":
             continue
 
         for api in benchmarks[lib]:
-            if lib == "matplotlib": lib = "matplotlib.pyplot"
+            if lib == "matplotlib":
+                lib = "matplotlib.pyplot"
             result_dir = f"./results/{date.today()}/{lib}_res/{api}/"
 
             if not osp.exists(result_dir):
@@ -149,7 +150,7 @@ if __name__ == "__main__":
                 alias = None
 
             response = get_llm_response(model=MODEL, lib=lib, api=api, alias=alias)
-            print(response) 
+            print(response)
             idioms = parse_response(response)
 
             if idioms == []:

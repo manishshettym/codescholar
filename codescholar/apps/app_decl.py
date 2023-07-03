@@ -21,6 +21,7 @@ api_cache_dir = "./cache/"
 scholarapp = flask.Flask(__name__)
 celery = get_celery_app_instance(scholarapp)
 
+
 @celery.task(name="search_task")
 def search_task(args_dict):
     try:
@@ -68,9 +69,8 @@ def search():
         # model config
         args.test = True
         args.model_path = f"../representation/ckpt/model.pt"
-        
+
         # search config
-        # --min_idiom_size 2 --max_idiom_size 20 --max_init_beams 150 --rank 30
         args.mode = "g"
         args.seed = api
         args.min_idiom_size = 2
@@ -79,13 +79,13 @@ def search():
         args.result_dir = f"{api_cache_dir}/{args.seed}/"
         args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
         args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
-        
+
         if not osp.exists(args.idiom_g_dir):
             os.makedirs(args.idiom_g_dir)
-        
+
         if not osp.exists(args.idiom_p_dir):
             os.makedirs(args.idiom_p_dir)
-        
+
         # start a celery task to search for idioms in the background
         args_dict = vars(args)
         search_task.delay(args_dict)
@@ -121,5 +121,3 @@ def plot():
         return flask.jsonify(resp)
     else:
         return flask.jsonify({})
-
-

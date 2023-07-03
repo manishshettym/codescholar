@@ -84,7 +84,7 @@ size = st.slider("Choose the size of your idiom:", 4, 20, 4)
 with st.spinner("Growing your idioms 🌱..."):
     response = requests.post(f"http://{endpoint}/search", json={"api": API, "size": size})
     idioms = response.json()
-    
+
     if "status" in idioms:
         st.info("{} API is new to CodeScholar! {}".format(API, idioms["status"]))
     elif len(idioms) == 0:
@@ -129,7 +129,7 @@ with st.spinner("Growing your idioms 🌱..."):
         x = metrics_df["size"].unique()
         y1 = np.log(metrics_df.groupby("size")["cluster"].nunique())
         y2 = np.log(metrics_df.groupby("size")["freq"].mean())
-        
+
         try:
             ideal_size = np.where(y1 > y2)[0][0] + 3
         except IndexError:
