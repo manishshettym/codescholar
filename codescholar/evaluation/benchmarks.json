@@ -3,7 +3,6 @@
         "pd.read_csv",
         "pd.concat",
         "pd.merge",
-        "pd.split",
         "pd.map",
         "pd.append",
         "pd.factorize",
@@ -38,7 +37,6 @@
     "sklearn": [
         "f1_score",
         "mean_squared_error",
-        "model_selection",
         "train_test_split",
         "OneHotEncoder",
         "StandardScaler",
@@ -48,16 +46,13 @@
         "StratifiedKFold"
     ],
     "matplotlib": [
-        "matplotlib.pyplot",
         "plt.plot",
-        "plt.style",
-        "plt.colors",
         "plt.figure",
         "plt.title",
         "plt.ylabel",
         "plt.ylim",
         "plt.xticks",
-        "plt.subplot"
+        "plt.subplots"
     ],
     "torch": [
         "torch.sigmoid",
@@ -66,7 +61,7 @@
         "torch.stack",
         "torch.einsum",
         "torch.load",
-        "torch.optim",
+        "optim.Adam",
         "nn.Linear",
         "nn.Conv2d",
         "nn.Sequential",

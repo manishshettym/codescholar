@@ -31,7 +31,8 @@ Write an idiomatic (frequent) usage example for the {api} API.
 PROMPT_CHAT = """
 The {lib} library in Python exposes the following API: {api}
 Complete the following code snippet to write a few real-world idiomatic (frequent) usage examples for the {api} API.
-Write only code and don't print the outputs. Mark the start of each example with a comment # <<Example>> and end with a comment # <</Example>>.
+Write only code and don't print the outputs. Mark the start of each and every example with a comment # <<Example>> and end with a comment # <</Example>>.
+Note: The tags have two angle brackets on each side.
 ```
 import {lib} as {alias}
 """
@@ -40,7 +41,8 @@ import {lib} as {alias}
 PROMPT_CHAT_NO_ALIAS = """
 The {lib} library in Python exposes the following API: {api}
 Complete the following code snippet to write a few real-world idiomatic (frequent) usage examples for the {api} API.
-Write only code and don't print the outputs. Mark the start of each example with a comment # <<Example> and end with a comment # <</Example>>.
+Write only code and don't print the outputs. Mark the start of each and every example with a comment # <<Example>> and end with a comment # <</Example>>.
+Note: The tags have two angle brackets on each side.
 ```
 import {lib}
 """
@@ -99,7 +101,7 @@ def get_llm_response(model, lib, api, alias):
             top_p=1.0,
             frequency_penalty=0.0,
             presence_penalty=0.0,
-            stop=['"""', "```"],
+            # stop=['"""', "```"],
         )
         return responses["choices"][0]["message"]["content"]
 
@@ -109,7 +111,7 @@ def get_llm_response(model, lib, api, alias):
 
 def parse_response(response):
     """Parse the response to get the code snippets."""
-    regex = r"# <<Example>>\n(.*?)# <</Example>>"
+    regex = r"# (?:<Example>|<<Example>>)\n(.*?)# (?:</Example>|<</Example>>)"
     idioms = re.findall(regex, response, re.DOTALL)
     return idioms
 
@@ -121,13 +123,18 @@ if __name__ == "__main__":
     alias_map = {
         "pandas": "pd",
         "numpy": "np",
+        "matplotlib.pyplot": "plt",
     }
 
-    with open("../smol-benchmark.json") as f:
+    with open("../benchmarks.json") as f:
         benchmarks = json.load(f)
 
     for lib in benchmarks:
+        if not lib == "torch":
+            continue
+
         for api in benchmarks[lib]:
+            if lib == "matplotlib": lib = "matplotlib.pyplot"
             result_dir = f"./results/{date.today()}/{lib}_res/{api}/"
 
             if not osp.exists(result_dir):
@@ -135,11 +142,18 @@ if __name__ == "__main__":
 
             print(f"EVALUATING [{lib}] [{api}]")
             print("=====================================")
-            response = get_llm_response(model=MODEL, lib=lib, api=api, alias=alias_map[lib])
+
+            try:
+                alias = alias_map[lib]
+            except KeyError:
+                alias = None
+
+            response = get_llm_response(model=MODEL, lib=lib, api=api, alias=alias)
+            print(response) 
             idioms = parse_response(response)
 
             if idioms == []:
-                print(f"Warning: No idioms found for [{lib}] [{api}]")
+                print(f"Warning: No idioms parsed for [{lib}] [{api}]; but the response is:\n{response}")
 
             for i, idiom in enumerate(idioms):
                 with open(f"{result_dir}/idiom_{i}.py", "w") as f:
