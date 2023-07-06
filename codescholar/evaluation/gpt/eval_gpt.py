@@ -130,9 +130,6 @@ if __name__ == "__main__":
         benchmarks = json.load(f)
 
     for lib in benchmarks:
-        if not lib == "torch":
-            continue
-
         for api in benchmarks[lib]:
             if lib == "matplotlib":
                 lib = "matplotlib.pyplot"
@@ -150,7 +147,6 @@ if __name__ == "__main__":
                 alias = None
 
             response = get_llm_response(model=MODEL, lib=lib, api=api, alias=alias)
-            print(response)
             idioms = parse_response(response)
 
             if idioms == []:
