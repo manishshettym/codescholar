@@ -6,6 +6,7 @@ import regex as re
 from tqdm import tqdm
 import ast
 import numpy as np
+import torch.multiprocessing as mp
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 
@@ -77,15 +78,7 @@ def extract_library_calls(source, library_name, library_aliases):
             yield call
 
 
-# ==================== MAIN ====================
-
-LIBS = ["pandas", "numpy", "os", "sklearn", "matplotlib", "torch"]
-SRC_DIR = "../data/pandas/raw"
-files = [f for f in sorted(glob.glob(osp.join(SRC_DIR, "*.py")))]
-lib_apis = defaultdict(list)
-docs = []
-
-for file in tqdm(files):
+def process_file(file, lib_apis, docs, LIBS):
     with open(file, "r", encoding="utf-8", errors="ignore") as fp:
         source = fp.read()
 
@@ -101,6 +94,24 @@ for file in tqdm(files):
             lib_apis[lib] += apis
 
     docs.append(" ".join(doc))
+
+
+# ==================== MAIN ====================
+
+LIBS = ["pandas", "numpy", "os", "sklearn", "matplotlib", "torch"]
+SRC_DIR = "../data/pnosmt/raw"
+files = [f for f in sorted(glob.glob(osp.join(SRC_DIR, "*.py")))]
+lib_apis = defaultdict(list)
+docs = []
+
+num_processes = mp.cpu_count()
+pool = mp.Pool(num_processes)
+
+for file in tqdm(files):
+    pool.apply_async(process_file, args=(file, lib_apis, docs, LIBS))
+
+pool.close()
+pool.join()
 
 # remove empty strings
 docs = [doc for doc in docs if doc]

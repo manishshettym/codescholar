@@ -28,9 +28,10 @@ def plot_rde(df, api):
 
     # save the figure to png
     fig.savefig(f"results/{DATE}/{lib}_res/{api}/{api}.rde.png")
+    plt.close(fig)
 
 
-with open("smol-benchmark.json") as f:
+with open("benchmarks.json") as f:
     benchmarks = json.load(f)
 
 with pd.ExcelWriter(f"results/{DATE}/{DATE}.results.xlsx") as writer:
