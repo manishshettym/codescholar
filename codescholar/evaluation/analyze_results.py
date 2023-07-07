@@ -1,10 +1,9 @@
 import os
 import json
 import pandas as pd
+import argparse
 import matplotlib.pyplot as plt
 from datetime import date
-
-DATE = date.today()
 
 
 def plot_rde(df, api):
@@ -29,48 +28,54 @@ def plot_rde(df, api):
     # save the figure to png
     fig.savefig(f"results/{DATE}/{lib}_res/{api}/{api}.rde.png")
     plt.close(fig)
+    
+    
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--date", type=str, default=date.today())
+    args = parser.parse_args()
+    DATE = args.date
 
+    with open("benchmarks.json") as f:
+        benchmarks = json.load(f)
 
-with open("benchmarks.json") as f:
-    benchmarks = json.load(f)
+    with pd.ExcelWriter(f"results/{DATE}/{DATE}.results.xlsx") as writer:
+        for lib in benchmarks:
+            for api in benchmarks[lib]:
+                programs = []
+                sizes = []
+                clusters = []
+                neighborhoods = []
+                holes = []
+                plens = []
 
-with pd.ExcelWriter(f"results/{DATE}/{DATE}.results.xlsx") as writer:
-    for lib in benchmarks:
-        for api in benchmarks[lib]:
-            programs = []
-            sizes = []
-            clusters = []
-            neighborhoods = []
-            holes = []
-            plens = []
+                try:
+                    for file in os.listdir(f"results/{DATE}/{lib}_res/{api}/idioms/progs"):
+                        _, size, cluster, nhood_count, hole = file.split("_")
+                        hole = hole.split(".")[0]
 
-            try:
-                for file in os.listdir(f"results/{DATE}/{lib}_res/{api}/idioms/progs"):
-                    _, size, cluster, nhood_count, hole = file.split("_")
-                    hole = hole.split(".")[0]
+                        sizes.append(int(size))
+                        clusters.append(int(cluster))
+                        neighborhoods.append(int(nhood_count))
+                        holes.append(int(hole))
 
-                    sizes.append(int(size))
-                    clusters.append(int(cluster))
-                    neighborhoods.append(int(nhood_count))
-                    holes.append(int(hole))
+                        with open(f"results/{DATE}/{lib}_res/{api}/idioms/progs/" + file, "r") as f:
+                            program = f.read()
+                            programs.append(program)
 
-                    with open(f"results/{DATE}/{lib}_res/{api}/idioms/progs/" + file, "r") as f:
-                        program = f.read()
-                        programs.append(program)
+                        plens.append(len(program))
+                except FileNotFoundError:
+                    pass
 
-                    plens.append(len(program))
-            except FileNotFoundError:
-                pass
+                df = pd.DataFrame(
+                    {"size": sizes, "cluster": clusters, "freq": neighborhoods, "hole": holes, "plen": plens, "program": programs}
+                )
 
-            df = pd.DataFrame(
-                {"size": sizes, "cluster": clusters, "freq": neighborhoods, "hole": holes, "plen": plens, "program": programs}
-            )
+                # sort by metrics
+                df = df.sort_values(by=["size", "cluster", "freq", "hole", "plen"], ascending=[True, True, False, True, True])
 
-            # sort by metrics
-            df = df.sort_values(by=["size", "cluster", "freq", "hole", "plen"], ascending=[True, True, False, True, True])
+                # save as excel
+                df.to_excel(writer, sheet_name=f"{api}", index=False)
 
-            # save as excel
-            df.to_excel(writer, sheet_name=f"{api}", index=False)
-
-            # plot rde
-            plot_rde(df, api)
+                # plot rde
+                plot_rde(df, api)
