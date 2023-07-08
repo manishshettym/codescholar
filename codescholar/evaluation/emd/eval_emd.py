@@ -6,14 +6,16 @@ import os
 import os.path as osp
 import argparse
 from tqdm import tqdm
-
+from datetime import date
+import json
 import numpy as np
 import torch
 
-# from scipy.spatial.distance import cdist
-# from scipy.optimize import linear_sum_assignment
 import ot
 from transformers import AutoTokenizer, AutoModel
+import torch.nn as nn
+import torch.distributed as dist
+import torch.multiprocessing as mp
 
 from codescholar.search.elastic_search import grep_programs
 from codescholar.utils.train_utils import get_device
@@ -36,38 +38,38 @@ def compute_emd(code_embeddings, idiom_embeddings):
     return emd
 
 
-# Load the CodeBERT model and tokenizer
-model_name = "microsoft/codebert-base"
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModel.from_pretrained(model_name)
+def start_workers_genemb(in_queue, out_queue, args, gpu):
+    torch.cuda.set_device(gpu)
+    workers = []
+    for _ in tqdm(range(args.n_workers), desc="[workers]"):
+        worker = mp.Process(target=generate_embeddings, args=(args, in_queue, out_queue, gpu))
+        worker.start()
+        workers.append(worker)
+
+    return workers
 
 
-def generate_embeddings(code_snippets, batch_size=32):
-    # Tokenize the code snippets
-    tokenized = [tokenizer.encode(snippet, return_tensors="pt", truncation=True) for snippet in code_snippets]
-    tokenized = [t.reshape(-1) for t in tokenized]
-    max_len = max([len(t) for t in tokenized])
+def generate_embeddings(args, in_queue, out_queue, device_id=None):
+    model_name = "microsoft/codebert-base"
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    model = AutoModel.from_pretrained(model_name).to(get_device(device_id))
+    model.eval()
 
-    # Pad the tokenized snippets
-    padded = [torch.cat([t, torch.zeros(max_len - len(t), dtype=torch.int64)]) for t in tokenized]
-    padded = torch.stack(padded)
+    done = False
+    while not done:
+        msg, snippet = in_queue.get()
 
-    # Generate embeddings in batches
-    device = get_device()
-    model.to(device)
-    embeddings = []
-    with torch.no_grad():
-        for i in tqdm(range(0, len(padded), batch_size)):
-            batch = padded[i : i + batch_size].to(device)
-            batch_embeddings = model(batch)[0].cpu().numpy()
+        if msg == "done":
+            done = True
+            break
 
-            # take the mean of the embeddings of the tokens in each snippet
-            batch_embeddings = np.mean(batch_embeddings, axis=1)
-            embeddings.append(batch_embeddings)
+        tokenized = tokenizer.encode(snippet, return_tensors="pt", truncation=True)
+        tokenized = tokenized.to(get_device(device_id))
 
-    embeddings = np.concatenate(embeddings, axis=0)
-
-    return embeddings
+        with torch.no_grad():
+            embeddings = model(tokenized)[0].cpu().numpy()
+            embedding = embeddings.mean(axis=1)
+            out_queue.put(("complete", embedding))
 
 
 def trim_code(snippet, api):
@@ -94,31 +96,81 @@ def load_program(path):
     return program
 
 
+def embed_programs(args, progs):
+    num_gpus = torch.cuda.device_count()
+    workers_list = []
+    in_queues, out_queues = [], []
+
+    for gpu in range(num_gpus):
+        in_queue, out_queue = mp.Queue(), mp.Queue()
+        workers = start_workers_genemb(in_queue, out_queue, args, gpu)
+        workers_list.append(workers)
+        in_queues.append(in_queue)
+        out_queues.append(out_queue)
+
+    for i, prog in enumerate(progs):
+        in_queues[i % num_gpus].put(("prog", prog))
+
+    results_count = 0
+    embeddings = []
+    pbar = tqdm(total=len(progs), desc=f"[embed]")
+    while results_count < len(progs):
+        for gpu in range(num_gpus):
+            while not out_queues[gpu].empty():
+                msg, prog_embedding = out_queues[gpu].get()
+                results_count += 1
+                pbar.update(1)
+                embeddings.append(prog_embedding)
+    pbar.close()
+
+    for in_queue in in_queues:
+        for _ in range(num_gpus):
+            in_queue.put(("done", None))
+
+    for workers in workers_list:
+        for worker in workers:
+            worker.join()
+
+    return np.array(embeddings)
+
+
 def main(args):
     # Load all python code snippets that contain the API
     prog_indices = grep_programs(args, api)
     progs = [load_program(f"{args.prog_dir}/example_{i}.py") for i in prog_indices]
     progs = [trim_code(prog, api) for prog in progs]
-    prog_embeddings = generate_embeddings(progs, batch_size=256)
+    prog_embeddings = embed_programs(args, progs)
+    prog_embeddings = np.concatenate(prog_embeddings, axis=0)
 
     # Load all idioms for the API
     idioms = [load_program(osp.join(args.idioms_dir, file)) for file in os.listdir(args.idioms_dir)]
-    idiom_embeddings = generate_embeddings(idioms, batch_size=256)
+    idiom_embeddings = embed_programs(args, idioms)
+    idiom_embeddings = np.concatenate(idiom_embeddings, axis=0)
 
-    emd = compute_emd(prog_embeddings, idiom_embeddings)
-    print(f"EMD: {emd}")
+    return compute_emd(prog_embeddings, idiom_embeddings)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--date", type=str, default=date.today())
+    parser.add_argument("--dataset", type=str, default="pnosmt")
     args = parser.parse_args()
 
-    lib = "pandas"
-    api = "df.groupby"
-
     args.dataset = "pnosmt"
+    args.batch_size = 256
+    args.n_workers = 4
     args.prog_dir = f"../../data/{args.dataset}/source/"
-    # args.idioms_dir = f"../results/2023-06-21/{lib}_res/{api}/idioms/progs"
-    args.idioms_dir = f"../gpt/results/{lib}_res/{api}/"
+    torch.multiprocessing.set_start_method("spawn")
 
-    main(args)
+    with open("../benchmarks.json") as f:
+        benchmarks = json.load(f)
+
+    for lib in benchmarks:
+        for api in benchmarks[lib]:
+            # args.idioms_dir = f"../results/{args.date}/{lib}_res/{api}/idioms/progs"
+            args.idioms_dir = f"../gpt/results/{args.date}/{lib}_res/{api}/"
+            emd = main(args)
+
+            print(f"========== [{lib}: {api}] ==========")
+            print(f"EMD: {emd}")
+            print("=====================================\n\n")

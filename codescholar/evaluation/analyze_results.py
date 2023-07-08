@@ -28,8 +28,8 @@ def plot_rde(df, api):
     # save the figure to png
     fig.savefig(f"results/{DATE}/{lib}_res/{api}/{api}.rde.png")
     plt.close(fig)
-    
-    
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--date", type=str, default=date.today())
