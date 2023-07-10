@@ -106,14 +106,14 @@ with st.spinner("Growing your idioms 🌱..."):
 
                 if but1:
                     with st.spinner("Cleaning your idioms 🧹..."):
-                        # response = requests.post(f"http://{endpoint}/clean", json={"api": API, "idiom": idiom["idiom"]})
-                        st.error("This feature is not available yet! 🫙")
-                    # st.code(response.json()["idiom"], language="python")
+                        response = requests.post(f"http://{endpoint}/clean", json={"api": API, "idiom": idiom["idiom"]})
+                        # st.error("This feature is not available yet! 🫙")
+                    st.code(response.json()["idiom"], language="python")
                 if but2:
                     with st.spinner("Writing some code 👩🏻‍💻..."):
-                        # response = requests.post(f"http://{endpoint}/write", json={"api": API, "idiom": idiom["idiom"]})
-                        st.error("This feature is not available yet! 🫙")
-                    # st.code(response.json()["idiom"], language="python")
+                        response = requests.post(f"http://{endpoint}/write", json={"api": API, "idiom": idiom["idiom"]})
+                        # st.error("This feature is not available yet! 🫙")
+                    st.code(response.json()["idiom"], language="python")
 
         st.divider()
 
