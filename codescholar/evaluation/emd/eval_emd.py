@@ -5,20 +5,16 @@
 import os
 import os.path as osp
 import argparse
-from tqdm import tqdm
 from datetime import date
 import json
 import numpy as np
 import torch
-
 import ot
-from transformers import AutoTokenizer, AutoModel
-import torch.nn as nn
-import torch.distributed as dist
-import torch.multiprocessing as mp
 
 from codescholar.search.elastic_search import grep_programs
-from codescholar.utils.train_utils import get_device
+from codescholar.evaluation.emd.utils_codebert import embed_programs_codebert
+from codescholar.evaluation.emd.utils_gpt import embed_programs_gpt
+from codescholar.evaluation.emd.utils_emd import load_program, load_prog_dir, trim_code
 
 
 def compute_emd(code_embeddings, idiom_embeddings):
@@ -38,122 +34,59 @@ def compute_emd(code_embeddings, idiom_embeddings):
     return emd
 
 
-def start_workers_genemb(in_queue, out_queue, args, gpu):
-    torch.cuda.set_device(gpu)
-    workers = []
-    for _ in tqdm(range(args.n_workers), desc="[workers]"):
-        worker = mp.Process(target=generate_embeddings, args=(args, in_queue, out_queue, gpu))
-        worker.start()
-        workers.append(worker)
-
-    return workers
-
-
-def generate_embeddings(args, in_queue, out_queue, device_id=None):
-    model_name = "microsoft/codebert-base"
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModel.from_pretrained(model_name).to(get_device(device_id))
-    model.eval()
-
-    done = False
-    while not done:
-        msg, snippet = in_queue.get()
-
-        if msg == "done":
-            done = True
-            break
-
-        tokenized = tokenizer.encode(snippet, return_tensors="pt", truncation=True)
-        tokenized = tokenized.to(get_device(device_id))
-
-        with torch.no_grad():
-            embeddings = model(tokenized)[0].cpu().numpy()
-            embedding = embeddings.mean(axis=1)
-            out_queue.put(("complete", embedding))
-
-
-def trim_code(snippet, api):
-    lines = snippet.split("\n")
-    api_line = None
-    for i, line in enumerate(lines):
-        if api in line:
-            api_line = i
-            break
-    if api_line is None:
-        return snippet
-
-    # remove empty lines
-    lines = [line for line in lines if line.strip() != ""]
-
-    start_line = max(0, api_line - 2)
-    end_line = min(len(lines), api_line + 3)
-    return "\n".join(lines[start_line:end_line])
-
-
-def load_program(path):
-    with open(path, "r") as f:
-        program = f.read()
-    return program
-
-
-def embed_programs(args, progs):
-    num_gpus = torch.cuda.device_count()
-    workers_list = []
-    in_queues, out_queues = [], []
-
-    for gpu in range(num_gpus):
-        in_queue, out_queue = mp.Queue(), mp.Queue()
-        workers = start_workers_genemb(in_queue, out_queue, args, gpu)
-        workers_list.append(workers)
-        in_queues.append(in_queue)
-        out_queues.append(out_queue)
-
-    for i, prog in enumerate(progs):
-        in_queues[i % num_gpus].put(("prog", prog))
-
-    results_count = 0
-    embeddings = []
-    pbar = tqdm(total=len(progs), desc=f"[embed]")
-    while results_count < len(progs):
-        for gpu in range(num_gpus):
-            while not out_queues[gpu].empty():
-                msg, prog_embedding = out_queues[gpu].get()
-                results_count += 1
-                pbar.update(1)
-                embeddings.append(prog_embedding)
-    pbar.close()
-
-    for in_queue in in_queues:
-        for _ in range(num_gpus):
-            in_queue.put(("done", None))
-
-    for workers in workers_list:
-        for worker in workers:
-            worker.join()
-
-    return np.array(embeddings)
-
-
 def main(args):
-    # Load all python code snippets that contain the API
-    prog_indices = grep_programs(args, api)
-    progs = [load_program(f"{args.prog_dir}/example_{i}.py") for i in prog_indices]
-    progs = [trim_code(prog, api) for prog in progs]
-    prog_embeddings = embed_programs(args, progs)
-    prog_embeddings = np.concatenate(prog_embeddings, axis=0)
+    if osp.exists(args.emb_cache_file):
+        embs = np.load(args.emb_cache_file)
+        prog_embeddings = embs["prog_embeddings"]
+        cs_idiom_embeddings = embs["cs_idiom_embeddings"]
+        gpt_idiom_embeddings = embs["gpt_idiom_embeddings"]
 
-    # Load all idioms for the API
-    idioms = [load_program(osp.join(args.idioms_dir, file)) for file in os.listdir(args.idioms_dir)]
-    idiom_embeddings = embed_programs(args, idioms)
-    idiom_embeddings = np.concatenate(idiom_embeddings, axis=0)
+    else:
+        os.makedirs(osp.dirname(args.emb_cache_file), exist_ok=True)
 
-    return compute_emd(prog_embeddings, idiom_embeddings)
+        # Load all python code snippets with API
+        prog_indices = grep_programs(args, api)[:500]
+        progs = [load_program(f"{args.prog_dir}/example_{i}.py") for i in prog_indices]
+        progs = [trim_code(prog, api) for prog in progs]
+
+        # Load all CodeScholar idioms for API
+        cs_idioms = load_prog_dir(args.cs_idioms_dir)[:500]
+
+        # Load all GPT idioms for API
+        gpt_idioms = load_prog_dir(args.gpt_idioms_dir)[:500]
+
+        if args.model == "codebert":
+            prog_embeddings = embed_programs_codebert(args, progs)
+            cs_idiom_embeddings = embed_programs_codebert(args, cs_idioms)
+            gpt_idiom_embeddings = embed_programs_codebert(args, gpt_idioms)
+
+        elif args.model == "gpt":
+            prog_embeddings = embed_programs_gpt(args, progs)
+            cs_idiom_embeddings = embed_programs_gpt(args, cs_idioms)
+            gpt_idiom_embeddings = embed_programs_gpt(args, gpt_idioms)
+
+        prog_embeddings = np.concatenate(prog_embeddings, axis=0)
+        cs_idiom_embeddings = np.concatenate(cs_idiom_embeddings, axis=0)
+        gpt_idiom_embeddings = np.concatenate(gpt_idiom_embeddings, axis=0)
+        
+        print(prog_embeddings.shape)
+        print(cs_idiom_embeddings.shape)
+        print(gpt_idiom_embeddings.shape)
+
+        # cache the embeddings for reproducibility/reruns
+        np.savez_compressed(
+            args.emb_cache_file,
+            prog_embeddings=prog_embeddings,
+            cs_idiom_embeddings=cs_idiom_embeddings,
+            gpt_idiom_embeddings=gpt_idiom_embeddings,
+        )
+
+    return (compute_emd(prog_embeddings, cs_idiom_embeddings), compute_emd(prog_embeddings, gpt_idiom_embeddings))
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--date", type=str, default=date.today())
-    parser.add_argument("--dataset", type=str, default="pnosmt")
+    parser.add_argument("--model", type=str, default="codebert", choices=["codebert", "gpt"])
     args = parser.parse_args()
 
     args.dataset = "pnosmt"
@@ -167,10 +100,15 @@ if __name__ == "__main__":
 
     for lib in benchmarks:
         for api in benchmarks[lib]:
-            # args.idioms_dir = f"../results/{args.date}/{lib}_res/{api}/idioms/progs"
-            args.idioms_dir = f"../gpt/results/{args.date}/{lib}_res/{api}/"
-            emd = main(args)
+            args.cs_idioms_dir = f"../results/2023-07-04/{lib}_res/{api}/idioms/progs"
+            args.gpt_idioms_dir = f"../gpt/results/2023-07-03/{lib}_res/{api}/"
+            args.emb_cache_file = f"./cache/{args.model}/{lib}/{api}.npz"
+
+            cs_emd, gpt_emd = main(args)
 
             print(f"========== [{lib}: {api}] ==========")
-            print(f"EMD: {emd}")
+            print(f"CS EMD: {cs_emd}")
+            print(f"GPT EMD: {gpt_emd}")
             print("=====================================\n\n")
+            
+            exit()
