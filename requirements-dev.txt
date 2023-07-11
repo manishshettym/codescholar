@@ -29,3 +29,5 @@ POT
 celery
 Redis
 plotly
+langchain
+tiktoken

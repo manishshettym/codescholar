@@ -6,6 +6,7 @@ import os
 import os.path as osp
 import argparse
 from datetime import date
+import random
 import json
 import numpy as np
 import torch
@@ -14,7 +15,7 @@ import ot
 from codescholar.search.elastic_search import grep_programs
 from codescholar.evaluation.emd.utils_codebert import embed_programs_codebert
 from codescholar.evaluation.emd.utils_gpt import embed_programs_gpt
-from codescholar.evaluation.emd.utils_emd import load_program, load_prog_dir, trim_code
+from codescholar.evaluation.emd.utils_emd import load_program, load_gpt_idioms, load_cs_idioms, trim_code
 
 
 def compute_emd(code_embeddings, idiom_embeddings):
@@ -35,25 +36,36 @@ def compute_emd(code_embeddings, idiom_embeddings):
 
 
 def main(args):
+    random.seed(42)
+
     if osp.exists(args.emb_cache_file):
         embs = np.load(args.emb_cache_file)
         prog_embeddings = embs["prog_embeddings"]
         cs_idiom_embeddings = embs["cs_idiom_embeddings"]
         gpt_idiom_embeddings = embs["gpt_idiom_embeddings"]
 
+        print(f"Programs: {len(prog_embeddings)}", flush=True)
+        print(f"CS idioms: {len(cs_idiom_embeddings)}", flush=True)
+        print(f"GPT idioms: {len(gpt_idiom_embeddings)}", flush=True)
+
     else:
         os.makedirs(osp.dirname(args.emb_cache_file), exist_ok=True)
 
-        # Load all python code snippets with API
-        prog_indices = grep_programs(args, api)[:500]
+        # Loa python code snippets with API (max 20k)
+        prog_indices = grep_programs(args, api)
+        prog_indices = random.sample(prog_indices, min(len(prog_indices), 20000))
         progs = [load_program(f"{args.prog_dir}/example_{i}.py") for i in prog_indices]
         progs = [trim_code(prog, api) for prog in progs]
 
         # Load all CodeScholar idioms for API
-        cs_idioms = load_prog_dir(args.cs_idioms_dir)[:500]
+        cs_idioms = load_cs_idioms(args.cs_idioms_dir)
 
         # Load all GPT idioms for API
-        gpt_idioms = load_prog_dir(args.gpt_idioms_dir)[:500]
+        gpt_idioms = load_gpt_idioms(args.gpt_idioms_dir)
+
+        print(f"Programs: {len(progs)}", flush=True)
+        print(f"CS idioms: {len(cs_idioms)}", flush=True)
+        print(f"GPT idioms: {len(gpt_idioms)}", flush=True)
 
         if args.model == "codebert":
             prog_embeddings = embed_programs_codebert(args, progs)
@@ -68,10 +80,6 @@ def main(args):
         prog_embeddings = np.concatenate(prog_embeddings, axis=0)
         cs_idiom_embeddings = np.concatenate(cs_idiom_embeddings, axis=0)
         gpt_idiom_embeddings = np.concatenate(gpt_idiom_embeddings, axis=0)
-        
-        print(prog_embeddings.shape)
-        print(cs_idiom_embeddings.shape)
-        print(gpt_idiom_embeddings.shape)
 
         # cache the embeddings for reproducibility/reruns
         np.savez_compressed(
@@ -104,11 +112,8 @@ if __name__ == "__main__":
             args.gpt_idioms_dir = f"../gpt/results/2023-07-03/{lib}_res/{api}/"
             args.emb_cache_file = f"./cache/{args.model}/{lib}/{api}.npz"
 
+            print(f"========== [{lib}: {api}] ==========", flush=True)
             cs_emd, gpt_emd = main(args)
-
-            print(f"========== [{lib}: {api}] ==========")
-            print(f"CS EMD: {cs_emd}")
-            print(f"GPT EMD: {gpt_emd}")
-            print("=====================================\n\n")
-            
-            exit()
+            print(f"CS EMD: {cs_emd}", flush=True)
+            print(f"GPT EMD: {gpt_emd}", flush=True)
+            print("=====================================\n\n", flush=True)

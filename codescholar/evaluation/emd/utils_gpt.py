@@ -1,13 +1,20 @@
 from tqdm import tqdm
-import openai
 import numpy as np
 
-def embed_programs_gpt(args, progs):
-    embeddings = []
-    for prog in tqdm(progs, desc="[embed]"):
-        response = openai.Embedding.create(input = [prog], model="text-embedding-ada-002")
-        prog_embedding = np.array(response['data'][0]['embedding'])
-        prog_embedding = prog_embedding.reshape(1, -1)
-        embeddings.append(prog_embedding)
+import openai
+from langchain.embeddings import OpenAIEmbeddings
 
-    return embeddings
+
+def embed_programs_gpt(args, progs):
+    """Embed programs using OpenAI's GPT endpoint"""
+    progs = [prog.strip() for prog in progs if prog.strip() != ""]
+    embeddings_model = OpenAIEmbeddings(disallowed_special=())
+
+    try:
+        prog_embeddings = embeddings_model.embed_documents(progs)
+    except openai.error.APIError as e:
+        raise RuntimeError(f"OpenAI API error: {e}")
+
+    prog_embeddings = np.array(prog_embeddings).reshape(-1, 1, 1536)
+
+    return prog_embeddings

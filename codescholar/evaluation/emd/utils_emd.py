@@ -26,8 +26,20 @@ def load_program(path):
     return program
 
 
-def load_prog_dir(dir_path):
+def load_gpt_idioms(dir_path):
     programs = []
     for file in os.listdir(dir_path):
         programs.append(load_program(osp.join(dir_path, file)))
+    return programs
+
+
+def load_cs_idioms(dir_path):
+    programs = []
+    for file in os.listdir(dir_path):
+        _, size, cluster, nhood_count, hole = file.split("_")
+        hole = hole.split(".")[0]
+
+        if int(hole) == 0 and int(nhood_count) > 0:
+            programs.append(load_program(osp.join(dir_path, file)))
+
     return programs

@@ -1,2 +1,9 @@
-# python evaluate.py --dataset pnosmt --prog_samples 250000 --min_idiom_size 2 --max_idiom_size 35  --max_init_beams 150 --rank 30
+# Author: Manish Shetty
+# Description: Run evaluation pipeline for CodeScholar Idiom Search
+# [dataset] pnosmt  (dataset containing pandas, numpy, os, matplotlib, and torch code)
+# [min_idiom_size] 2  (minimum size of idiom mined)
+# [max_idiom_size] 20  (maximum size of idiom mined)
+# [max_init_beams] 150  (maximum number of beams to initialize the search with)
+
+# This runs idiom search on a set of benchmark APIs as described in benchmarks.json
 python evaluate.py --dataset pnosmt --min_idiom_size 2 --max_idiom_size 20 --max_init_beams 150 --rank 30
