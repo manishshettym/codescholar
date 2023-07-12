@@ -67,7 +67,6 @@
         "nn.Sequential",
         "nn.ReLU",
         "nn.Softmax",
-        "nn.Sigmoid",
         "nn.Embedding",
         "nn.LSTM"
     ]
