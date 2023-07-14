@@ -23,6 +23,7 @@ from codescholar.sast.visualizer import render_sast
 from codescholar.sast.sast_utils import sast_to_prog, remove_node
 from codescholar.representation import models, config
 from codescholar.search import search_config
+from codescholar.search.elastic_search import grep_programs
 from codescholar.utils.search_utils import (
     sample_programs,
     ping_elasticsearch,
@@ -39,9 +40,6 @@ from codescholar.utils.search_utils import (
 from codescholar.utils.train_utils import build_model, get_device, featurize_graph
 from codescholar.utils.graph_utils import nx_to_program_graph, program_graph_to_nx
 from codescholar.utils.perf import perftimer
-
-
-from codescholar.search.elastic_search import grep_programs
 
 ######### MACROS ############
 
@@ -91,7 +89,9 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
             # the root can get misplaced. Find root = node with no incoming edges!
             root = [n for n in sast.all_nodes() if sast.incoming_neighbors(n) == []][0]
             sast.root_id = root.id
-            render_sast(sast, path, spans=True, relpos=True)
+            
+            if args.render:
+                render_sast(sast, path, spans=True, relpos=True)
 
             path = f"{args.idiom_p_dir}{file}.py"
             prog = sast_to_prog(sast).replace("#", "_")
@@ -275,7 +275,14 @@ def grow(args, prog_indices, in_queue, out_queue, device_id=None):
 
             # SCORE CANDIDATES (freq)
             for cand_node, cand_emb in zip(frontier, cand_embs):
-                score = score_candidate_freq(args, model, embs, cand_emb, device_id=device_id)
+                # first, add new holes introduced
+                # then, remove hole filled in/by cand_node (incoming/outgoing edge resp)
+                new_holes = holes + graph.nodes[cand_node]["span"].count("#") - 1
+
+                # filter out candidates that exceed max_holes
+                if new_holes < 0 or new_holes > args.max_holes:
+                    continue
+
                 new_neigh = neigh + [cand_node]
 
                 # new frontier = {prev frontier} U {outgoing and incoming neighbors of cand_node} - {visited}
@@ -284,15 +291,7 @@ def grow(args, prog_indices, in_queue, out_queue, device_id=None):
 
                 new_visited = visited | set([cand_node])
 
-                # first, add new holes introduced
-                # then, remove hole filled in/by cand_node (incoming/outgoing edge resp)
-                new_holes = holes + graph.nodes[cand_node]["span"].count("#") - 1
-
-                # overcome bugs in graph construction
-                # TODO: remove once sast is fixed
-                if new_holes < 0 or new_holes > args.max_holes:
-                    continue
-
+                score = score_candidate_freq(args, model, embs, cand_emb, device_id=device_id)
                 new_beams.append((score, new_holes, new_neigh, new_frontier, new_visited, graph_idx))
 
         # STEP 2: Sort new beams by freq_score/#holes
@@ -436,8 +435,9 @@ if __name__ == "__main__":
     # model config
     args.test = True
     args.model_path = f"../representation/ckpt/model.pt"
+    args.batch_size = 512
 
-    if not osp.exists(args.idiom_g_dir):
+    if args.render and not osp.exists(args.idiom_g_dir):
         os.makedirs(args.idiom_g_dir)
 
     if not osp.exists(args.idiom_p_dir):
