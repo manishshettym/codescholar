@@ -6,4 +6,4 @@
 # [max_init_beams] 150  (maximum number of beams to initialize the search with)
 
 # This runs idiom search on a set of benchmark APIs as described in benchmarks.json
-python evaluate.py --dataset pnosmt --min_idiom_size 2 --max_idiom_size 20 --max_init_beams 150 --rank 30
+python evaluate.py --dataset pnosmt --min_idiom_size 2 --max_idiom_size 20 --max_init_beams 150
