@@ -1,0 +1,531 @@
+========== [pandas: pd.read_csv] ==========
+Programs: 20000
+CS idioms: 149
+GPT idioms: 8
+CS EMD: 0.40105256416916146
+GPT EMD: 0.4697192690205559
+=====================================
+
+
+========== [pandas: pd.concat] ==========
+Programs: 13599
+CS idioms: 111
+GPT idioms: 4
+CS EMD: 0.4078296945336884
+GPT EMD: 0.47564539366034764
+=====================================
+
+
+========== [pandas: pd.merge] ==========
+Programs: 2732
+CS idioms: 133
+GPT idioms: 4
+CS EMD: 0.4065905157642624
+GPT EMD: 0.4818814171297159
+=====================================
+
+
+========== [pandas: pd.factorize] ==========
+Programs: 101
+CS idioms: 20
+GPT idioms: 3
+CS EMD: 0.3845214000071656
+GPT EMD: 0.4199537884818725
+=====================================
+
+
+========== [pandas: pd.pivot_table] ==========
+Programs: 174
+CS idioms: 28
+GPT idioms: 3
+CS EMD: 0.42000685979231833
+GPT EMD: 0.4487101489555819
+=====================================
+
+
+========== [pandas: pd.unique] ==========
+Programs: 318
+CS idioms: 79
+GPT idioms: 3
+CS EMD: 0.3967582590546172
+GPT EMD: 0.49101634868696087
+=====================================
+
+
+========== [pandas: pd.cut] ==========
+Programs: 394
+CS idioms: 89
+GPT idioms: 3
+CS EMD: 0.3756103761158184
+GPT EMD: 0.4380209744824027
+=====================================
+
+
+========== [pandas: df.apply] ==========
+Programs: 369
+CS idioms: 66
+GPT idioms: 5
+CS EMD: 0.42132879297632164
+GPT EMD: 0.4981565829080809
+=====================================
+
+
+========== [pandas: df.append] ==========
+Programs: 330
+CS idioms: 51
+GPT idioms: 4
+CS EMD: 0.3539230316521691
+GPT EMD: 0.42269624214592655
+=====================================
+
+
+========== [pandas: df.groupby] ==========
+Programs: 3081
+CS idioms: 339
+GPT idioms: 5
+CS EMD: 0.39046233373642564
+GPT EMD: 0.48093532424425306
+=====================================
+
+
+========== [numpy: np.mean] ==========
+Programs: 20000
+CS idioms: 131
+GPT idioms: 4
+CS EMD: 0.46395586653641274
+GPT EMD: 0.5248961659971157
+=====================================
+
+
+========== [numpy: np.matmul] ==========
+Programs: 4305
+CS idioms: 166
+GPT idioms: 4
+CS EMD: 0.4672398068921926
+GPT EMD: 0.5525992940569027
+=====================================
+
+
+========== [numpy: np.dot] ==========
+Programs: 20000
+CS idioms: 160
+GPT idioms: 4
+CS EMD: 0.4649973047598526
+GPT EMD: 0.5636376602321607
+=====================================
+
+
+========== [numpy: np.stack] ==========
+Programs: 14314
+CS idioms: 60
+GPT idioms: 4
+CS EMD: 0.4950430978695851
+GPT EMD: 0.5319034887599463
+=====================================
+
+
+========== [numpy: np.reshape] ==========
+Programs: 14208
+CS idioms: 94
+GPT idioms: 4
+CS EMD: 0.44954490110236367
+GPT EMD: 0.5254187755307264
+=====================================
+
+
+========== [numpy: np.einsum] ==========
+Programs: 3016
+CS idioms: 113
+GPT idioms: 5
+CS EMD: 0.44716297306001657
+GPT EMD: 0.5347967520326685
+=====================================
+
+
+========== [numpy: np.cov] ==========
+Programs: 1323
+CS idioms: 106
+GPT idioms: 4
+CS EMD: 0.3860459846058343
+GPT EMD: 0.4709017569266372
+=====================================
+
+
+========== [numpy: np.corrcoef] ==========
+Programs: 679
+CS idioms: 103
+GPT idioms: 3
+CS EMD: 0.3897346242320146
+GPT EMD: 0.47178630873882393
+=====================================
+
+
+========== [numpy: np.transpose] ==========
+Programs: 12102
+CS idioms: 99
+GPT idioms: 4
+CS EMD: 0.486522431459444
+GPT EMD: 0.5260364093130911
+=====================================
+
+
+========== [numpy: np.linalg.inv] ==========
+Programs: 4851
+CS idioms: 107
+GPT idioms: 3
+CS EMD: 0.4046599096135385
+GPT EMD: 0.48677149318038376
+=====================================
+
+
+========== [os: os.path.join] ==========
+Programs: 20000
+CS idioms: 216
+GPT idioms: 5
+CS EMD: 0.4707307096666171
+GPT EMD: 0.5700387519259132
+=====================================
+
+
+========== [os: os.path.dirname] ==========
+Programs: 19978
+CS idioms: 72
+GPT idioms: 3
+CS EMD: 0.4516444183465398
+GPT EMD: 0.5227509548465679
+=====================================
+
+
+========== [os: os.path.basename] ==========
+Programs: 19977
+CS idioms: 142
+GPT idioms: 3
+CS EMD: 0.4479507801340667
+GPT EMD: 0.541515141923685
+=====================================
+
+
+========== [os: os.path.abspath] ==========
+Programs: 19960
+CS idioms: 86
+GPT idioms: 3
+CS EMD: 0.4183606003237471
+GPT EMD: 0.5144295005139784
+=====================================
+
+
+========== [os: os.path.split] ==========
+Programs: 19993
+CS idioms: 153
+GPT idioms: 3
+CS EMD: 0.43150503739813856
+GPT EMD: 0.4928283012665688
+=====================================
+
+
+========== [os: os.listdir] ==========
+Programs: 19927
+CS idioms: 98
+GPT idioms: 5
+CS EMD: 0.4134138506041547
+GPT EMD: 0.47672035653277084
+=====================================
+
+
+========== [os: os.mkdir] ==========
+Programs: 19991
+CS idioms: 52
+GPT idioms: 3
+CS EMD: 0.3737820325027792
+GPT EMD: 0.46557992111597746
+=====================================
+
+
+========== [os: os.chdir] ==========
+Programs: 19316
+CS idioms: 87
+GPT idioms: 3
+CS EMD: 0.363538658813686
+GPT EMD: 0.47439695539682275
+=====================================
+
+
+========== [os: os.walk] ==========
+Programs: 19989
+CS idioms: 22
+GPT idioms: 3
+CS EMD: 0.43153517055361335
+GPT EMD: 0.41752510625271855
+=====================================
+
+
+========== [sklearn: f1_score] ==========
+Programs: 3076
+CS idioms: 113
+GPT idioms: 5
+CS EMD: 0.34810337947118675
+GPT EMD: 0.4375914652589252
+=====================================
+
+
+========== [sklearn: mean_squared_error] ==========
+Programs: 1506
+CS idioms: 150
+GPT idioms: 3
+CS EMD: 0.3799503086548778
+GPT EMD: 0.45491719946189885
+=====================================
+
+
+========== [sklearn: train_test_split] ==========
+Programs: 3414
+CS idioms: 73
+GPT idioms: 5
+CS EMD: 0.3450376670283655
+GPT EMD: 0.40315033481742174
+=====================================
+
+
+========== [sklearn: OneHotEncoder] ==========
+Programs: 538
+CS idioms: 112
+GPT idioms: 4
+CS EMD: 0.3477826441198885
+GPT EMD: 0.49094071655391386
+=====================================
+
+
+========== [sklearn: StandardScaler] ==========
+Programs: 1628
+CS idioms: 111
+GPT idioms: 4
+CS EMD: 0.3499574086672532
+GPT EMD: 0.4789904113019475
+=====================================
+
+
+========== [sklearn: TfidfVectorizer] ==========
+Programs: 555
+CS idioms: 111
+GPT idioms: 5
+CS EMD: 0.30679915264617263
+GPT EMD: 0.43820249844778647
+=====================================
+
+
+========== [sklearn: LinearRegression] ==========
+Programs: 831
+CS idioms: 125
+GPT idioms: 3
+CS EMD: 0.34956507053550623
+GPT EMD: 0.47175165298154687
+=====================================
+
+
+========== [sklearn: DecisionTreeClassifier] ==========
+Programs: 521
+CS idioms: 112
+GPT idioms: 3
+CS EMD: 0.350137807327983
+GPT EMD: 0.4764291303113182
+=====================================
+
+
+========== [sklearn: StratifiedKFold] ==========
+Programs: 705
+CS idioms: 109
+GPT idioms: 3
+CS EMD: 0.33589942494541675
+GPT EMD: 0.38682543510010814
+=====================================
+
+
+========== [matplotlib: plt.plot] ==========
+Programs: 14491
+CS idioms: 93
+GPT idioms: 4
+CS EMD: 0.41912554945484065
+GPT EMD: 0.4794188226165501
+=====================================
+
+
+========== [matplotlib: plt.figure] ==========
+Programs: 19995
+CS idioms: 55
+GPT idioms: 6
+CS EMD: 0.370743139016889
+GPT EMD: 0.45865776873199454
+=====================================
+
+
+========== [matplotlib: plt.title] ==========
+Programs: 11372
+CS idioms: 84
+GPT idioms: 3
+CS EMD: 0.40469626326648245
+GPT EMD: 0.48707989714018146
+=====================================
+
+
+========== [matplotlib: plt.ylabel] ==========
+Programs: 12444
+CS idioms: 97
+GPT idioms: 4
+CS EMD: 0.3865189124457858
+GPT EMD: 0.49096634590466437
+=====================================
+
+
+========== [matplotlib: plt.ylim] ==========
+Programs: 3967
+CS idioms: 72
+GPT idioms: 6
+CS EMD: 0.3735961192932815
+GPT EMD: 0.44717057417371336
+=====================================
+
+
+========== [matplotlib: plt.xticks] ==========
+Programs: 3049
+CS idioms: 57
+GPT idioms: 4
+CS EMD: 0.3304414938304301
+GPT EMD: 0.3840657288886592
+=====================================
+
+
+========== [matplotlib: plt.subplots] ==========
+Programs: 15383
+CS idioms: 83
+GPT idioms: 4
+CS EMD: 0.3598973034381839
+GPT EMD: 0.39966405340289457
+=====================================
+
+
+========== [torch: torch.sigmoid] ==========
+Programs: 12065
+CS idioms: 89
+GPT idioms: 5
+CS EMD: 0.39291823480967647
+GPT EMD: 0.47432353837978036
+=====================================
+
+
+========== [torch: torch.softmax] ==========
+Programs: 2450
+CS idioms: 123
+GPT idioms: 3
+CS EMD: 0.36836437450421805
+GPT EMD: 0.4952608652442858
+=====================================
+
+
+========== [torch: torch.argmax] ==========
+Programs: 4310
+CS idioms: 195
+GPT idioms: 3
+CS EMD: 0.40492618928018453
+GPT EMD: 0.590805902002828
+=====================================
+
+
+========== [torch: torch.stack] ==========
+Programs: 19958
+CS idioms: 112
+GPT idioms: 3
+CS EMD: 0.43180614876009993
+GPT EMD: 0.56029288327593
+=====================================
+
+
+========== [torch: torch.einsum] ==========
+Programs: 4496
+CS idioms: 54
+GPT idioms: 5
+CS EMD: 0.41373132595606266
+GPT EMD: 0.5377326313927969
+=====================================
+
+
+========== [torch: torch.load] ==========
+Programs: 19991
+CS idioms: 76
+GPT idioms: 3
+CS EMD: 0.3886148894634591
+GPT EMD: 0.4413802859586796
+=====================================
+
+
+========== [torch: optim.Adam] ==========
+Programs: 1982
+CS idioms: 31
+GPT idioms: 3
+CS EMD: 0.30483219647277043
+GPT EMD: 0.39375390257902665
+=====================================
+
+
+========== [torch: nn.Linear] ==========
+Programs: 19976
+CS idioms: 132
+GPT idioms: 5
+CS EMD: 0.3467581895099017
+GPT EMD: 0.4263074563943964
+=====================================
+
+
+========== [torch: nn.Conv2d] ==========
+Programs: 19993
+CS idioms: 169
+GPT idioms: 5
+CS EMD: 0.3272233315030699
+GPT EMD: 0.3898550189753108
+=====================================
+
+
+========== [torch: nn.Sequential] ==========
+Programs: 19943
+CS idioms: 54
+GPT idioms: 7
+CS EMD: 0.3378423664505442
+GPT EMD: 0.4307968732351154
+=====================================
+
+
+========== [torch: nn.ReLU] ==========
+Programs: 19995
+CS idioms: 8
+GPT idioms: 3
+CS EMD: 0.3340698052695255
+GPT EMD: 0.48862458183341334
+=====================================
+
+
+========== [torch: nn.Softmax] ==========
+Programs: 5105
+CS idioms: 60
+GPT idioms: 3
+CS EMD: 0.3062382203287039
+GPT EMD: 0.4453051612982263
+=====================================
+
+
+========== [torch: nn.Embedding] ==========
+Programs: 17087
+CS idioms: 56
+GPT idioms: 3
+CS EMD: 0.342277717644472
+GPT EMD: 0.5349716753795816
+=====================================
+
+
+========== [torch: nn.LSTM] ==========
+Programs: 3827
+CS idioms: 61
+GPT idioms: 3
+CS EMD: 0.2715624567721011
+GPT EMD: 0.4378495201544408
+=====================================
+
+
