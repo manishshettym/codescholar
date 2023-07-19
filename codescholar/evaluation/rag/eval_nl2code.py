@@ -15,7 +15,7 @@ from tenacity import (
 )
 
 from codescholar.evaluation.rag.templates import GPT_FIND_API
-from codescholar.evaluation.rag.utils import load_data, select_fewshot_examples
+from codescholar.evaluation.rag.utils import select_fewshot_examples
 from codescholar.evaluation.rag.verify import get_valid_solutions, wrap_check
 from codescholar.evaluation.rag.prompt import create_fewshot_prompt_nl2code
 
@@ -118,7 +118,7 @@ if __name__ == "__main__":
 
     # data settings
     parser.add_argument("--input_path", type=str, default="./data/odex.jsonl")
-    parser.add_argument("--output_path", type=str)
+    parser.add_argument("--output_path", type=str, optional=True)
 
     # gpt settings
     parser.add_argument("--model", type=str, default="gpt-3.5-turbo", choices=["gpt-3.5-turbo"])

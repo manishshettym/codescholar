@@ -39,33 +39,7 @@ def gpt_find_api(query):
     return response["choices"][0]["message"]["content"]
 
 
-def main(args):
-    if args.get_apis:
-        dataset = []
-        # get the API for each task
-        with open("./data/cs_rag.jsonl", "r") as f:
-            for l in f:
-                d = json.loads(l.strip())
-                d["api"] = gpt_find_api(d["intent"])
-                print(f"{d['api']}")
-                dataset.append(d)
-
-        # write the dataset back to file
-        with open("./data/cs_rag.jsonl", "w") as f:
-            for d in dataset:
-                f.write(json.dumps(d) + "\n")
-
-    queries = {}
-    with open("./data/cs_rag.jsonl", "r") as f:
-        for l in f:
-            d = json.loads(l.strip())
-            lib, api = d["library"], d["api"]
-            queries[lib] = queries.get(lib, []) + [api]
-
-    # keep only unique apis for each library
-    queries = {lib: list(set(apis)) for lib, apis in queries.items()}
-
-    # run search for each api
+def codescholar_mine_examples(queries):
     for lib in queries:
         for api in queries[lib]:
             print(f"EVALUATING [{lib}] [{api}]")
@@ -89,6 +63,40 @@ def main(args):
 
             search_main(args)
             print("=====================================\n\n")
+
+
+def main(args):
+    # Phase 1: get the API for each task
+    if args.get_apis:
+        dataset = []
+        with open("./data/cs_rag.jsonl", "r") as f:
+            for l in f:
+                d = json.loads(l.strip())
+                d["api"] = gpt_find_api(d["intent"])
+                print(f"{d['api']}")
+                dataset.append(d)
+
+        # write the dataset back to file
+        with open("./data/cs_rag.jsonl", "w") as f:
+            for d in dataset:
+                f.write(json.dumps(d) + "\n")
+
+    queries = {}
+    with open("./data/cs_rag.jsonl", "r") as f:
+        for l in f:
+            d = json.loads(l.strip())
+            lib, api = d["library"], d["api"]
+            queries[lib] = queries.get(lib, []) + [api]
+
+    # keep only unique apis for each library
+    queries = {lib: list(set(apis)) for lib, apis in queries.items()}
+
+    # Phase 2: get the API for each task
+    codescholar_mine_examples(queries)
+    
+    # Phase 3: build a queriable map of api -> idioms
+    # TODO: this is not implemented yet
+
 
 
 if __name__ == "__main__":
