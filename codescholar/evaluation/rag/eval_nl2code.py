@@ -117,7 +117,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # data settings
-    parser.add_argument("--input_path", type=str, default="./data/odex.jsonl")
+    parser.add_argument("--input_path", type=str, default="./data/cs_rag.jsonl")
     parser.add_argument("--output_path", type=str, required=False)
 
     # gpt settings
@@ -148,7 +148,7 @@ if __name__ == "__main__":
     if not args.output_path:
         args.output_path = f"res-{args.model}-n{args.n}-t{args.temperature}-p{args.top_p}-m{args.max_tokens}-k{args.k_shot}.json"
 
-    with open("./data/en_test_api.jsonl", "r") as fr:
+    with open(args.input_path, "r") as fr:
         dataset = [json.loads(l.strip()) for l in fr]
 
     eval_gpt(dataset)
