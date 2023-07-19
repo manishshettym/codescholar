@@ -45,6 +45,16 @@ An API that might be useful is: {api}
 {prompt}
 """
 
+GPT_NL2CODE_APISCHOLAR = """
+Complete the following code snippet to solve the task described in the comment.
+Only complete the code in the opened code block and don't print outputs or explanations.
+
+Here are some examples usages of the API {api} that will help you write the solution:
+{idioms}
+
+{prompt}
+"""
+
 
 GPT_NL2CODE_TASK = """
 Query: {query}

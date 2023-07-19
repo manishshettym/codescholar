@@ -55,7 +55,7 @@ def get_prompt(exp, sample, examples, num_tests, function_name):
         return create_apidisc_prompt(sample, examples, num_tests, function_name)
 
     elif exp == "apischolar":
-        raise NotImplementedError
+        return create_apischolar_prompt(sample, examples, num_tests, function_name)
 
 
 def eval_gpt(dataset):

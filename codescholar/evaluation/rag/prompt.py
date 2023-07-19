@@ -3,10 +3,11 @@
  - More test case generation
 """
 
+import json
 import random, string
 from typing import Dict, List, Union
 
-from codescholar.evaluation.rag.templates import GPT_NL2CODE, GPT_NL2CODE_FEWSHOT, GPT_NL2CODE_TASK, GPT_NL2CODE_API
+from codescholar.evaluation.rag.templates import GPT_NL2CODE, GPT_NL2CODE_FEWSHOT, GPT_NL2CODE_TASK, GPT_NL2CODE_API, GPT_NL2CODE_APISCHOLAR
 
 
 def remove_indent(test: str) -> str:
@@ -203,4 +204,14 @@ def create_apischolar_prompt(
     num_tests: int = 0,
     function_name: str = "id",
 ) -> str:
-    pass
+    assert sample["intent"] is not None, f"NL intent is None for sample {sample['task_id']}"
+    prompt = create_prompt_nl2code(template=GPT_NL2CODE_TASK, sample=sample, num_tests=num_tests, function_name=function_name)
+    api = sample["api"]
+
+    with open("./data/api2idioms.json", "r") as f:
+        api2idioms = json.load(f)
+
+    idioms = api2idioms.get(api, [])
+    idioms = random.sample(idioms, min(len(idioms), 5))
+    idioms = [f'"""\n{idiom}\n"""' for idiom in idioms]
+    return GPT_NL2CODE_APISCHOLAR.format(api=api, idioms="\n\n".join(idioms), prompt=prompt)
