@@ -47,7 +47,7 @@ def codescholar_mine_examples(queries):
 
             args.mode = "g"
             args.seed = api
-            args.result_dir = f"./data/{date.today()}/{lib}_res/{args.seed}/"
+            args.result_dir = f"./data/idiomdb/{lib}_res/{args.seed}/"
             args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
             args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
 
@@ -63,6 +63,24 @@ def codescholar_mine_examples(queries):
 
             search_main(args)
             print("=====================================\n\n")
+
+
+def codescholar_build_index(queries):
+    results = {}
+    
+    for lib in queries:
+        for api in queries[lib]:
+            api_idioms_path = f"./data/idiomdb/{lib}_res/{api}/idioms/progs/"
+            
+            for file in os.listdir(api_idioms_path):
+                _, size, cluster, nhood_count, hole = file.split("_")
+                hole = hole.split(".")[0]
+
+                if int(hole) == 0 and int(nhood_count) > 0:
+                    with open(osp.join(api_idioms_path, file), "r") as f:
+                        results[api] = results.get(api, []) + [f.read()]
+
+    return results
 
 
 def main(args):
@@ -92,10 +110,14 @@ def main(args):
     queries = {lib: list(set(apis)) for lib, apis in queries.items()}
 
     # Phase 2: get the API for each task
-    codescholar_mine_examples(queries)
+    if args.mine_examples:
+        codescholar_mine_examples(queries)
 
     # Phase 3: build a queriable map of api -> idioms
-    # TODO: this is not implemented yet
+    if args.build_index:
+        with open("./data/api2idioms.json", "w") as f:
+            d = codescholar_build_index(queries)
+            json.dump(d, f, indent=4)
 
 
 if __name__ == "__main__":
@@ -104,6 +126,8 @@ if __name__ == "__main__":
     config.init_encoder_configs(parser)
     search_config.init_search_configs(parser)
     parser.add_argument("--get-apis", action="store_true", help="Get the API for each task using GPT-3.5")
+    parser.add_argument("--mine-examples", action="store_true", help="Mine idioms for each API")
+    parser.add_argument("--build-index", action="store_true", help="Build a queriable map of api -> idioms")
     args = parser.parse_args()
 
     # search config
