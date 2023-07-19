@@ -36,6 +36,18 @@ Here are a few examples:
 {prompt}
 """
 
+GPT_NL2CODE_API = """
+Complete the following code snippet to solve the task described in the comment.
+Only complete the code in the opened code block and don't print outputs or explanations.
+
+An API that might be useful is: {api}
+
+{prompt}
+"""
+
+
+
+
 GPT_NL2CODE_TASK = """
 Query: {query}
 Code:

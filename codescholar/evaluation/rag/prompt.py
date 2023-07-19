@@ -6,7 +6,7 @@
 import random, string
 from typing import Dict, List, Union
 
-from codescholar.evaluation.rag.templates import GPT_NL2CODE, GPT_NL2CODE_FEWSHOT, GPT_NL2CODE_TASK
+from codescholar.evaluation.rag.templates import GPT_NL2CODE, GPT_NL2CODE_FEWSHOT, GPT_NL2CODE_TASK, GPT_NL2CODE_API
 
 
 def remove_indent(test: str) -> str:
@@ -165,7 +165,8 @@ def create_prompt_example(template: str, example: Dict, num_tests: int = 0, func
     return f'{prompt}{example["canonical_solution"]}{example["suffix"]}\n"""'
 
 
-def create_fewshot_prompt_nl2code(
+# BASELINE
+def create_baseline_prompt(
     sample: Dict,
     examples: List[Dict],
     num_tests: int = 0,
@@ -181,3 +182,23 @@ def create_fewshot_prompt_nl2code(
             [create_prompt_example(template=GPT_NL2CODE_TASK, example=ex, num_tests=0, function_name=function_name) for ex in examples]
         )
         return GPT_NL2CODE_FEWSHOT.format(examples=examples, prompt=prompt)
+
+
+# APIDISC
+def create_apidisc_prompt(
+    sample: Dict,
+    examples: List[Dict],
+    num_tests: int = 0,
+    function_name: str = "id",
+) -> str:
+    assert sample["intent"] is not None, f"NL intent is None for sample {sample['task_id']}"
+    prompt = create_prompt_nl2code(template=GPT_NL2CODE_TASK, sample=sample, num_tests=num_tests, function_name=function_name)
+    
+    return GPT_NL2CODE_API.format(api=sample["api"], prompt=prompt)
+
+def create_apischolar_prompt(sample: Dict,
+    examples: List[Dict],
+    num_tests: int = 0,
+    function_name: str = "id",
+) -> str:
+    pass

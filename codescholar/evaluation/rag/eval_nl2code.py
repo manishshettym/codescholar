@@ -6,6 +6,7 @@ import json
 import argparse
 from typing import List, Dict
 from tqdm import tqdm
+import time
 
 import openai
 from tenacity import (
@@ -17,12 +18,12 @@ from tenacity import (
 from codescholar.evaluation.rag.templates import GPT_FIND_API
 from codescholar.evaluation.rag.utils import select_fewshot_examples
 from codescholar.evaluation.rag.verify import get_valid_solutions, wrap_check
-from codescholar.evaluation.rag.prompt import create_fewshot_prompt_nl2code
+from codescholar.evaluation.rag.prompt import create_baseline_prompt, create_apidisc_prompt, create_apischolar_prompt
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
-@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+@retry(wait=wait_random_exponential(min=1, max=60))
 def gpt_get_predictions(model, prompt, sample, index, verbose) -> List[str]:
     prompts = [
         {"role": "system", "content": "You are a helpful programming assistant who can complete python code given the intent."},
@@ -46,6 +47,17 @@ def gpt_get_predictions(model, prompt, sample, index, verbose) -> List[str]:
     return predictions
 
 
+def get_prompt(exp, sample, examples, num_tests, function_name):
+    if exp == "baseline":
+        return create_baseline_prompt(sample, examples, num_tests, function_name)
+
+    elif exp == "apidisc":
+        return create_apidisc_prompt(sample, examples, num_tests, function_name)
+        
+    elif exp == "apischolar":
+        raise NotImplementedError
+
+
 def eval_gpt(dataset):
     predset = []
     scores_dict = {f"pass@{idx}": [] for idx in range(1, args.n + 1)}
@@ -58,12 +70,7 @@ def eval_gpt(dataset):
             method=args.fewshot_method,
         )
 
-        prompt = create_fewshot_prompt_nl2code(
-            sample=sample,
-            examples=examples,
-            num_tests=args.num_tests,
-            function_name=args.function_name,
-        )
+        prompt = get_prompt(args.experiment, sample, examples, args.num_tests, args.function_name)
 
         predictions = gpt_get_predictions(
             model=args.model,
@@ -127,7 +134,7 @@ if __name__ == "__main__":
     parser.add_argument("--temperature", type=float, default=0.8)
     parser.add_argument("--top_p", type=float, default=1)
 
-    # evaluation settings
+    # code-eval settings
     parser.add_argument("--num_tests", type=int, default=0)
     parser.add_argument("--num_tests_eval", type=int, default=100)
 
@@ -142,11 +149,14 @@ if __name__ == "__main__":
         "--fewshot_method", type=str, default="random", choices=["random"], help="Method to select the prefix examples for prompt creation."
     )
 
+    # experiment settings
+    parser.add_argument("--experiment", type=str, default="baseline", choices=["baseline", "apidisc", "apischolar"])
     parser.add_argument("--verbose", action="store_true")
+
     args = parser.parse_args()
 
     if not args.output_path:
-        args.output_path = f"res-{args.model}-n{args.n}-t{args.temperature}-p{args.top_p}-m{args.max_tokens}-k{args.k_shot}.json"
+        args.output_path = f"res{args.model}-{args.experiment}-n{args.n}-t{args.temperature}-p{args.top_p}-m{args.max_tokens}-k{args.k_shot}.json"
 
     with open(args.input_path, "r") as fr:
         dataset = [json.loads(l.strip()) for l in fr]
