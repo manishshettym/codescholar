@@ -118,7 +118,7 @@ if __name__ == "__main__":
 
     # data settings
     parser.add_argument("--input_path", type=str, default="./data/odex.jsonl")
-    parser.add_argument("--output_path", type=str, optional=True)
+    parser.add_argument("--output_path", type=str, required=False)
 
     # gpt settings
     parser.add_argument("--model", type=str, default="gpt-3.5-turbo", choices=["gpt-3.5-turbo"])
