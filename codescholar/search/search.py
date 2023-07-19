@@ -89,7 +89,7 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
             # the root can get misplaced. Find root = node with no incoming edges!
             root = [n for n in sast.all_nodes() if sast.incoming_neighbors(n) == []][0]
             sast.root_id = root.id
-            
+
             if args.render:
                 render_sast(sast, path, spans=True, relpos=True)
 
@@ -404,7 +404,7 @@ def main(args):
         raise ValueError("Elasticsearch index `python_files` not found! Please run `elastic_search.py` to create the index.")
 
     # init search space = sample K programs
-    prog_indices = grep_programs(args, args.seed)
+    prog_indices = grep_programs(args, args.seed)[: args.prog_samples]
 
     # STEP 1: initialize search space
     if args.mode == "g":

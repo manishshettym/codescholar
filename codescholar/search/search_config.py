@@ -14,7 +14,7 @@ def init_search_configs(parser, arg_str=None):
     search_args.add_argument("--max_idiom_size", type=int)
     search_args.add_argument("--n_trials", type=int, help="number of search trials = #initial program nodes")
     search_args.add_argument("--n_beams", type=int, help="number of beams to filter into after each round")
-    search_args.add_argument("--prog_samples", type=int, help="number of programs in the search space")
+    search_args.add_argument("--prog_samples", type=int, help="number of programs in the search space; -1 for all")
     search_args.add_argument("--mode", type=str, choices=["g", "m"], help="mode in which to run the search agent; m: mine, g: graph (def)")
     search_args.add_argument("--keywords", type=str, nargs="+", help="keywords to start idiomatic search in keyword mode")
     search_args.add_argument("--seed", type=str, help="graph to start idiomatic search in graph mode")
@@ -32,11 +32,11 @@ def init_search_configs(parser, arg_str=None):
         radius=3,
         # search configs
         mode="g",
-        prog_samples=100000,
+        prog_samples=-1,
         n_trials=10,
         n_beams=1,
         max_holes=8,
         min_idiom_size=3,
         max_idiom_size=30,
-        max_init_beams=200
+        max_init_beams=200,
     )
