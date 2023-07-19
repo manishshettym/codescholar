@@ -3,10 +3,37 @@ import numpy as np
 import glob
 import random
 from typing import List
+from itertools import chain
 
 import torch
 import networkx as nx
 from elasticsearch import Elasticsearch
+
+
+########## SEARCH MACROS ##########
+
+
+def _reduce(lists):
+    """merge a nested list of lists into a single list"""
+    return chain.from_iterable(lists)
+
+
+def _frontier(graph, node, type="neigh"):
+    """return the frontier of a node.
+    The frontier of a node is the set of nodes that are one hop away from the node.
+
+    Args:
+        graph: the graph to find the frontier in
+        node: the node to find the frontier of
+        type: the type of frontier to find
+            'neigh': the neighbors of the node (default) = out in a directed graph
+            'radial': the union of the outgoing and incoming frontiers
+    """
+
+    if type == "neigh":
+        return set(graph.neighbors(node))
+    elif type == "radial":
+        return set(graph.successors(node)) | set(graph.predecessors(node))
 
 
 ########## ELASTIC SEARCH UTILS ##########

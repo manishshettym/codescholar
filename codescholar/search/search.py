@@ -1,29 +1,26 @@
 import os
 import os.path as osp
 import argparse
-import random
 import numpy as np
 from tqdm import tqdm
 from math import log
 from collections import defaultdict
-from itertools import chain
 from cachetools import cached, LRUCache
 from cachetools.keys import hashkey
 
 import torch
 import networkx as nx
-from networkx.algorithms.isomorphism import DiGraphMatcher
 from deepsnap.batch import Batch
 import scipy.stats as stats
 import torch.multiprocessing as mp
 from transformers import RobertaTokenizer, RobertaModel
 
-from codescholar.sast.simplified_ast import get_simplified_ast
 from codescholar.sast.visualizer import render_sast
-from codescholar.sast.sast_utils import sast_to_prog, remove_node
+from codescholar.sast.sast_utils import sast_to_prog
 from codescholar.representation import models, config
 from codescholar.search import search_config
 from codescholar.search.elastic_search import grep_programs
+from codescholar.search.init_search import init_search_q, init_search_m, init_search_mq
 from codescholar.utils.search_utils import (
     sample_programs,
     ping_elasticsearch,
@@ -32,6 +29,7 @@ from codescholar.utils.search_utils import (
     save_idiom,
     _print_mine_logs,
     _write_mine_logs,
+    _frontier,
     read_graph,
     read_prog,
     read_embedding,
@@ -41,30 +39,8 @@ from codescholar.utils.train_utils import build_model, get_device, featurize_gra
 from codescholar.utils.graph_utils import nx_to_program_graph, program_graph_to_nx
 from codescholar.utils.perf import perftimer
 
-######### MACROS ############
 
-
-def _reduce(lists):
-    """merge a nested list of lists into a single list"""
-    return chain.from_iterable(lists)
-
-
-def _frontier(graph, node, type="neigh"):
-    """return the frontier of a node.
-    The frontier of a node is the set of nodes that are one hop away from the node.
-
-    Args:
-        graph: the graph to find the frontier in
-        node: the node to find the frontier of
-        type: the type of frontier to find
-            'neigh': the neighbors of the node (default) = out in a directed graph
-            'radial': the union of the outgoing and incoming frontiers
-    """
-
-    if type == "neigh":
-        return set(graph.neighbors(node))
-    elif type == "radial":
-        return set(graph.successors(node)) | set(graph.predecessors(node))
+######### IDIOM STORE ############
 
 
 def _save_idiom_generation(args, idiommine_gen) -> bool:
@@ -116,86 +92,7 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
         return True
 
 
-######### INIT ############
-
-
-# init_search for --mode m (idiom mine)
-def init_search_m(args, prog_indices):
-    ps = []
-    for idx in tqdm(prog_indices, desc="[init_search]"):
-        g = read_graph(args, idx)
-        ps.append(len(g))
-        del g
-
-    ps = np.array(ps, dtype=float)
-    ps /= np.sum(ps)
-    graph_dist = stats.rv_discrete(values=(np.arange(len(ps)), ps))
-
-    beam_sets = []
-    for trial in range(args.n_trials):
-        graph_idx = np.arange(len(ps))[graph_dist.rvs()]
-        graph_idx = prog_indices[graph_idx]
-
-        graph = read_graph(args, graph_idx)  # TODO: convert to undirected?
-        start_node = random.choice(list(graph.nodes))
-        neigh = [start_node]
-
-        # TODO: convert to undirected search like --mode g
-        # find frontier = {neighbors} - {itself} = {supergraphs}
-        frontier = list(set(graph.neighbors(start_node)) - set(neigh))
-        visited = set([start_node])
-
-        beam_sets.append([(0, 0, neigh, frontier, visited, graph_idx)])
-
-    return beam_sets
-
-
-# init_search for --mode g (idiom seed-graph-search)
-@perftimer
-def init_search_g(args, prog_indices, seed):
-    beam_sets = []
-    count = 0
-
-    # generate seed graph for query
-    seed_sast = get_simplified_ast(seed)
-    if seed_sast is None:
-        raise ValueError("Seed program is invalid!")
-
-    module_nid = list(seed_sast.get_ast_nodes_of_type("Module"))[0].id
-    remove_node(seed_sast, module_nid)
-
-    seed_graph = program_graph_to_nx(seed_sast, directed=True)
-
-    for idx in tqdm(prog_indices, desc="[init_search]"):
-        if count >= args.max_init_beams:
-            continue
-
-        graph = read_graph(args, idx)
-
-        # find all matches of the seed graph in the program graph
-        # uses exact subgraph isomorphism - not that expensive because query is small (2-3 nodes)
-        node_match = lambda n1, n2: n1["span"] == n2["span"] and n1["ast_type"] == n2["ast_type"]
-        DiGM = DiGraphMatcher(graph, seed_graph, node_match=node_match)
-        seed_matches = list(DiGM.subgraph_isomorphisms_iter())
-
-        # no matches
-        if len(seed_matches) == 0:
-            continue
-
-        # randomly select one of the matches as the starting point
-        neigh = list(random.choice(seed_matches).keys())
-
-        # find frontier = {successors} U {predecessors} - {itself} = {supergraphs}
-        frontier = set(_reduce(list(_frontier(graph, n, type="radial") for n in neigh))) - set(neigh)
-        visited = set(neigh)
-
-        beam_sets.append([(0, 0, neigh, frontier, visited, idx)])
-        count += 1
-
-    return beam_sets
-
-
-######### GROW ############
+######### BEAM SEARCH ############
 
 
 def start_workers_grow(prog_indices, in_queue, out_queue, args, gpu):
@@ -394,8 +291,8 @@ def search(args, prog_indices, beam_sets):
 
 
 def main(args):
-    if args.mode == "g" and args.seed is None:
-        parser.error("graph mode requires --seed to begin search.")
+    if (args.mode == "q" or args.mode == "mq") and args.seed is None:
+        parser.error("query modes require --seed to begin search.")
 
     if not ping_elasticsearch():
         raise ConnectionError("Elasticsearch not running on localhost:9200! Please start Elasticsearch and try again.")
@@ -403,14 +300,18 @@ def main(args):
     if not ping_elasticindex():
         raise ValueError("Elasticsearch index `python_files` not found! Please run `elastic_search.py` to create the index.")
 
-    # init search space = sample K programs
+    # sample and constrain the search space
     prog_indices = grep_programs(args, args.seed)[: args.prog_samples]
 
     # STEP 1: initialize search space
-    if args.mode == "g":
-        beam_sets = init_search_g(args, prog_indices, seed=args.seed)
-    else:
+    if args.mode == "q":
+        beam_sets = init_search_q(args, prog_indices, seed=args.seed)
+    elif args.mode == "mq":
+        beam_sets = init_search_mq(args, prog_indices, seed=args.seed)
+    elif args.mode == "m":
         beam_sets = init_search_m(args, prog_indices)
+    else:
+        raise ValueError(f"Invalid search mode {args.mode}!")
 
     # STEP 2: search for idioms; saves idioms gradually
     mine_summary = search(args, prog_indices, beam_sets)
@@ -428,7 +329,7 @@ if __name__ == "__main__":
     args.prog_dir = f"../data/{args.dataset}/source/"
     args.source_dir = f"../data/{args.dataset}/graphs/"
     args.emb_dir = f"../data/{args.dataset}/emb/"
-    args.result_dir = f"./results/{args.seed}/" if args.mode == "g" else "./results/"
+    args.result_dir = f"./results/{args.seed}/" if (args.mode == "q" or args.mode == "mq") else "./results/"
     args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
     args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
 

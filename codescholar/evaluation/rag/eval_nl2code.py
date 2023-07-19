@@ -53,7 +53,7 @@ def get_prompt(exp, sample, examples, num_tests, function_name):
 
     elif exp == "apidisc":
         return create_apidisc_prompt(sample, examples, num_tests, function_name)
-        
+
     elif exp == "apischolar":
         raise NotImplementedError
 
@@ -156,7 +156,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if not args.output_path:
-        args.output_path = f"res{args.model}-{args.experiment}-n{args.n}-t{args.temperature}-p{args.top_p}-m{args.max_tokens}-k{args.k_shot}.json"
+        args.output_path = (
+            f"res{args.model}-{args.experiment}-n{args.n}-t{args.temperature}-p{args.top_p}-m{args.max_tokens}-k{args.k_shot}.json"
+        )
 
     with open(args.input_path, "r") as fr:
         dataset = [json.loads(l.strip()) for l in fr]

@@ -193,10 +193,12 @@ def create_apidisc_prompt(
 ) -> str:
     assert sample["intent"] is not None, f"NL intent is None for sample {sample['task_id']}"
     prompt = create_prompt_nl2code(template=GPT_NL2CODE_TASK, sample=sample, num_tests=num_tests, function_name=function_name)
-    
+
     return GPT_NL2CODE_API.format(api=sample["api"], prompt=prompt)
 
-def create_apischolar_prompt(sample: Dict,
+
+def create_apischolar_prompt(
+    sample: Dict,
     examples: List[Dict],
     num_tests: int = 0,
     function_name: str = "id",

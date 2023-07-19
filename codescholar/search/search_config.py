@@ -15,9 +15,12 @@ def init_search_configs(parser, arg_str=None):
     search_args.add_argument("--n_trials", type=int, help="number of search trials = #initial program nodes")
     search_args.add_argument("--n_beams", type=int, help="number of beams to filter into after each round")
     search_args.add_argument("--prog_samples", type=int, help="number of programs in the search space; -1 for all")
-    search_args.add_argument("--mode", type=str, choices=["g", "m"], help="mode in which to run the search agent; m: mine, g: graph (def)")
-    search_args.add_argument("--keywords", type=str, nargs="+", help="keywords to start idiomatic search in keyword mode")
-    search_args.add_argument("--seed", type=str, help="graph to start idiomatic search in graph mode")
+    search_args.add_argument(
+        "--mode", type=str, choices=["q", "m", "mq"], help="mode in which to run the search agent; m: mine, g: query (def), mq: multi-query"
+    )
+    search_args.add_argument(
+        "--seed", type=str, help="query to search in query/multi-query mode; for multi-query mode, use semi-colon separated seeds"
+    )
     search_args.add_argument("--max_holes", type=int, help="maximum number of holes that can be added to a candidate program")
     search_args.add_argument("--max_init_beams", type=int, help="maximum number of beams to filter into during initialization of search")
     search_args.add_argument(
@@ -31,7 +34,7 @@ def init_search_configs(parser, arg_str=None):
         neighborhood_size=10,
         radius=3,
         # search configs
-        mode="g",
+        mode="q",
         prog_samples=-1,
         n_trials=10,
         n_beams=1,

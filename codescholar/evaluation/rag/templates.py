@@ -46,8 +46,6 @@ An API that might be useful is: {api}
 """
 
 
-
-
 GPT_NL2CODE_TASK = """
 Query: {query}
 Code:

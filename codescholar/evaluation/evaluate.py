@@ -10,8 +10,12 @@ from codescholar.search.search import main as search_main
 from codescholar.search import search_config
 
 
-def main(args):
-    with open("benchmarks.json") as f:
+def multi_api_eval(args):
+    raise NotImplementedError
+
+
+def single_api_eval(args):
+    with open("singlebench.json") as f:
         benchmarks = json.load(f)
 
     for lib in benchmarks:
@@ -19,7 +23,7 @@ def main(args):
             print(f"EVALUATING [{lib}] [{api}]")
             print("=====================================")
 
-            args.mode = "g"
+            args.mode = "q"
             args.seed = api
             args.result_dir = f"./results/{date.today()}/{lib}_res/{args.seed}/"
             args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
@@ -40,6 +44,7 @@ if __name__ == "__main__":
     config.init_optimizer_configs(parser)
     config.init_encoder_configs(parser)
     search_config.init_search_configs(parser)
+    parser.add_argument("--benchtype", type=str, default="single", choices=["single", "multi"])
     args = parser.parse_args()
 
     # data config
@@ -52,4 +57,9 @@ if __name__ == "__main__":
     args.model_path = f"../representation/ckpt/model.pt"
 
     torch.multiprocessing.set_start_method("spawn")
-    main(args)
+
+    if args.benchtype == "single":
+        single_api_eval(args)
+
+    elif args.benchtype == "multi":
+        multi_api_eval(args)

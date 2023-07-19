@@ -93,10 +93,9 @@ def main(args):
 
     # Phase 2: get the API for each task
     codescholar_mine_examples(queries)
-    
+
     # Phase 3: build a queriable map of api -> idioms
     # TODO: this is not implemented yet
-
 
 
 if __name__ == "__main__":

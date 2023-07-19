@@ -71,7 +71,7 @@ def search():
         args.model_path = f"../representation/ckpt/model.pt"
 
         # search config
-        args.mode = "g"
+        args.mode = "q"
         args.seed = api
         args.min_idiom_size = 2
         args.max_idiom_size = 20

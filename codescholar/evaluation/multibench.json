@@ -1,0 +1,15 @@
+{
+    "pairs": [
+        [
+            "pd.read_csv",
+            "df.write_csv"
+        ]
+    ],
+    "triplets": [
+        [
+            "api1",
+            "api2",
+            "api3"
+        ]
+    ]
+}
