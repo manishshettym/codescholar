@@ -56,6 +56,11 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
 
         for idiom, nhoods, holes in idioms:
             size_id, nhood_count = len(idiom), int(nhoods)
+            
+            if args.mode == "mq":
+                if nx.number_connected_components(nx.to_undirected(idiom)) != 1:
+                    continue
+            
             file = "idiom_{}_{}_{}_{}".format(size_id, cluster_id, nhood_count, holes)
 
             path = f"{args.idiom_g_dir}{file}.png"
@@ -307,7 +312,7 @@ def main(args):
     if args.mode == "q":
         beam_sets = init_search_q(args, prog_indices, seed=args.seed)
     elif args.mode == "mq":
-        beam_sets = init_search_mq(args, prog_indices, seed=args.seed)
+        beam_sets = init_search_mq(args, prog_indices, seeds=args.seed)
     elif args.mode == "m":
         beam_sets = init_search_m(args, prog_indices)
     else:

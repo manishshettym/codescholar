@@ -102,7 +102,7 @@ def init_search_mq(args, prog_indices, seeds):
 
     # generate seed graph for query
     seed_sasts = [get_simplified_ast(s) for s in seeds]
-    if seed_sast is []:
+    if seed_sasts is []:
         raise ValueError("Seed programs are invalid!")
 
     for seed_sast in seed_sasts:
