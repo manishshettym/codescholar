@@ -1,6 +1,6 @@
 {
     "pairs": [
-        ["pd.DataFrame", "pd.read_csv"],
+        ["pd.concat", "pd.read_csv"],
         ["df.rename", "df.drop"],
         ["df.groupby", "df.apply"],
         ["np.abs", "np.max"],
