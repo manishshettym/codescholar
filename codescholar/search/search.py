@@ -303,17 +303,29 @@ def main(args):
         raise ConnectionError("Elasticsearch not running on localhost:9200! Please start Elasticsearch and try again.")
 
     if not ping_elasticindex():
-        raise ValueError("Elasticsearch index `python_files` not found! Please run `elastic_search.py` to create the index.")
+        raise ValueError("Elasticsearch index `python_files` not found! Please run `elastic_search.py` to create the index.")    
 
     # sample and constrain the search space
-    prog_indices = grep_programs(args, args.seed)[: args.prog_samples]
+    if args.mode == "mq":
+        prog_indices = set()
+
+        for i, seed in enumerate(args.seed.split(";")):
+            if i == 0:
+                prog_indices = set(grep_programs(args, seed))
+            else:
+                prog_indices = prog_indices & set(grep_programs(args, seed))
+
+        prog_indices = list(prog_indices)[: args.prog_samples]
+    else:
+        prog_indices = grep_programs(args, args.seed)[: args.prog_samples]
 
     # STEP 1: initialize search space
     if args.mode == "q":
         beam_sets = init_search_q(args, prog_indices, seed=args.seed)
     elif args.mode == "mq":
-        beam_sets = init_search_mq(args, prog_indices, seeds=args.seed)
+        beam_sets = init_search_mq(args, prog_indices, seeds=args.seed.split(";"))
     elif args.mode == "m":
+        prog_indices = grep_programs(args, args.seed)[: args.prog_samples]
         beam_sets = init_search_m(args, prog_indices)
     else:
         raise ValueError(f"Invalid search mode {args.mode}!")

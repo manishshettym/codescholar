@@ -97,7 +97,6 @@ def init_search_q(args, prog_indices, seed):
 def init_search_mq(args, prog_indices, seeds):
     beam_sets = []
     count = 0
-    seeds = seeds.split(";")
     seed_graphs = []
 
     # generate seed graph for query
