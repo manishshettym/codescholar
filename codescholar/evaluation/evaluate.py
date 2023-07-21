@@ -21,7 +21,7 @@ def multi_api_eval(args):
             
             args.mode = "mq"
             args.seed = apis
-            args.result_dir = f"./results/{date.today()}/{args.seed}/"
+            args.result_dir = f"./results/{date.today()}/{type}/{args.seed}/"
             args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
             args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
             

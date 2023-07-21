@@ -126,7 +126,7 @@ if __name__ == "__main__":
         "matplotlib.pyplot": "plt",
     }
 
-    with open("../benchmarks.json") as f:
+    with open("../singlebench.json") as f:
         benchmarks = json.load(f)
 
     for lib in benchmarks:
