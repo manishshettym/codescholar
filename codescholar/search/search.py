@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from math import log
 from collections import defaultdict
+from itertools import chain
 from cachetools import cached, LRUCache
 from cachetools.keys import hashkey
 
@@ -61,6 +62,9 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
                 if nx.number_connected_components(nx.to_undirected(idiom)) != 1:
                     continue
             
+                if nhood_count < args.min_nhoods:
+                    continue
+
             file = "idiom_{}_{}_{}_{}".format(size_id, cluster_id, nhood_count, holes)
 
             path = f"{args.idiom_g_dir}{file}.png"
@@ -76,6 +80,10 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
 
             path = f"{args.idiom_p_dir}{file}.py"
             prog = sast_to_prog(sast).replace("#", "_")
+
+            if args.mode == "mq":
+                prog = "\n".join([line for line in prog.split("\n") if line.strip() != "_"])
+
             save_idiom(path, prog)
 
             # update counts
@@ -123,11 +131,30 @@ def score_candidate_freq(args, model, embs, cand_emb, device_id=None):
     """
     score = 0
 
-    for emb_batch in embs:
-        with torch.no_grad():
-            is_subgraph_rel = model.predict((emb_batch.to(get_device(device_id)), cand_emb))
-            is_subgraph = model.classifier(is_subgraph_rel.unsqueeze(1))
-            score += torch.sum(torch.argmax(is_subgraph, axis=1)).item()
+    if cand_emb.shape[0] > 1:        
+        preds = []
+
+        for comp_emb in cand_emb:
+            comp_preds = np.array([])
+            for emb_batch in embs:
+                with torch.no_grad():
+                    is_subgraph_rel = model.predict((emb_batch.to(get_device(device_id)), comp_emb))
+                    is_subgraph = model.classifier(is_subgraph_rel.unsqueeze(1))
+                    comp_preds = np.concatenate((comp_preds, torch.argmax(is_subgraph, axis=1).cpu().numpy()))
+
+            preds.append(comp_preds)
+
+        assert len(set([len(pred) for pred in preds])) == 1, "component preds have different shapes!"
+
+        preds = np.array(preds)
+        merged_preds = np.all(preds, axis=0)        
+        score = np.sum(merged_preds)
+    else:
+        for emb_batch in embs:
+            with torch.no_grad():
+                is_subgraph_rel = model.predict((emb_batch.to(get_device(device_id)), cand_emb))            
+                is_subgraph = model.classifier(is_subgraph_rel.unsqueeze(1))            
+                score += torch.sum(torch.argmax(is_subgraph, axis=1)).item()
 
     return score
 
@@ -168,15 +195,34 @@ def grow(args, prog_indices, in_queue, out_queue, device_id=None):
             # EMBED CANDIDATES
             for i, cand_node in enumerate(frontier):
                 cand_neigh = graph.subgraph(neigh + [cand_node])
-                cand_neigh = featurize_graph(cand_neigh, feat_tokenizer, feat_model, anchor=neigh[0], device_id=device_id)
-                cand_neighs.append(cand_neigh)
+                connected_comps = list(nx.connected_components(cand_neigh.to_undirected()))
+                
+                if len(connected_comps) == 1:
+                    cand_neigh = featurize_graph(cand_neigh, feat_tokenizer, feat_model, anchor=neigh[0], device_id=device_id)
+                    cand_neighs.append(cand_neigh)
+                else:
+                    comp_neighs = []
+                    for comp in connected_comps:
+                        comp_neigh = cand_neigh.subgraph(comp)
+                        comp_root = [n for n in comp_neigh.nodes if comp_neigh.in_degree(n) == 0][0]
+                        comp_neigh = featurize_graph(comp_neigh, feat_tokenizer, feat_model, anchor=comp_root, device_id=device_id)
+                        comp_neighs.append(comp_neigh)
 
-            cand_batch = Batch.from_data_list(cand_neighs).to(get_device(device_id))
+                    cand_neighs.append(comp_neighs)
+
+            flat_cand_neighs = list(chain.from_iterable([x if isinstance(x, list) else [x] for x in cand_neighs]))
+            cand_batch = Batch.from_data_list(flat_cand_neighs).to(get_device(device_id))
+
             with torch.no_grad():
                 cand_embs = model.encoder(cand_batch)
 
             # SCORE CANDIDATES (freq)
-            for cand_node, cand_emb in zip(frontier, cand_embs):
+            for i, (cand_node, cand_neigh) in enumerate(zip(frontier, cand_neighs)):
+                if isinstance(cand_neigh, list):
+                    cand_emb = cand_embs[i: i + len(cand_neigh)]
+                else:
+                    cand_emb = cand_embs[i: i + 1]
+
                 # first, add new holes introduced
                 # then, remove hole filled in/by cand_node (incoming/outgoing edge resp)
                 new_holes = holes + graph.nodes[cand_node]["span"].count("#") - 1
