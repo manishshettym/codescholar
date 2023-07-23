@@ -20,6 +20,7 @@ def multi_api_eval(args):
             print(f"EVALUATING [{type}] [{query}]")
             
             args.mode = "mq"
+            args.min_nhoods = 1
             args.seed = apis
             args.result_dir = f"./results/{date.today()}/{type}/{args.seed}/"
             args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
