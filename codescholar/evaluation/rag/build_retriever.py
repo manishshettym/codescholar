@@ -67,11 +67,11 @@ def codescholar_mine_examples(queries):
 
 def codescholar_build_index(queries):
     results = {}
-    
+
     for lib in queries:
         for api in queries[lib]:
             api_idioms_path = f"./data/idiomdb/{lib}_res/{api}/idioms/progs/"
-            
+
             for file in os.listdir(api_idioms_path):
                 _, size, cluster, nhood_count, hole = file.split("_")
                 hole = hole.split(".")[0]

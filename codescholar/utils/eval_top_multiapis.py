@@ -17,11 +17,11 @@ def extract_api_calls(code):
 
     # Note: this regex is a quick hack to filter out some interesting APIs
     # However, codescholar's search is not limited to these APIs by any means!!
-    pattern = r'\b(pd|df|np|os|json|nn|plt|pandas|sklearn|torch)\.([a-zA-Z_][a-zA-Z0-9_.]+)\('
+    pattern = r"\b(pd|df|np|os|json|nn|plt|pandas|sklearn|torch)\.([a-zA-Z_][a-zA-Z0-9_.]+)\("
     matches = re.findall(pattern, code)
 
     for match in matches:
-        api = match[0] + '.' + match[1]
+        api = match[0] + "." + match[1]
         api_calls.append(api)
 
     return set(api_calls)
@@ -32,8 +32,9 @@ def process_file(file, api_pairs):
         code = f.read()
         apis = extract_api_calls(code)
 
-    pair_combos = list(combinations(apis, 2))    
+    pair_combos = list(combinations(apis, 2))
     api_pairs.append(pair_combos)
+
 
 # ==================== MAIN ====================
 
@@ -63,7 +64,7 @@ pair_docs = []
 for prog_pairs in api_pairs:
     doc = []
     for pair in prog_pairs:
-        doc.append('-'.join(pair))
+        doc.append("-".join(pair))
     pair_docs.append(" ".join(doc))
 
 pair_docs = [doc for doc in pair_docs if doc]
@@ -79,11 +80,11 @@ ranked_api_pairs = list(feature_names[rank])
 print("================== TOP API PAIRS ==================")
 for pair in Counter(api_pairs_flat).most_common(1000):
     try:
-        api_pair = '-'.join(pair[0])
+        api_pair = "-".join(pair[0])
         s = score[ranked_api_pairs.index(api_pair)]
     except:
-        api_pair = '-'.join(pair[0][::-1])
+        api_pair = "-".join(pair[0][::-1])
         s = score[ranked_api_pairs.index(api_pair)]
-        
+
     print(f"apis: {pair[0]} | freq: {pair[1]} | tf-idf: {round(s, ndigits=1)}")
 print("====================================================")

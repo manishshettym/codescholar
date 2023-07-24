@@ -8,30 +8,30 @@ import torch
 from codescholar.representation import config
 from codescholar.search.search import main as search_main
 from codescholar.search import search_config
-    
+
 
 def multi_api_eval(args):
     with open("multibench.json") as f:
         benchmarks = json.load(f)
-    
+
     for type in benchmarks:
         for query in benchmarks[type]:
             apis = ";".join(query)
             print(f"EVALUATING [{type}] [{query}]")
-            
+
             args.mode = "mq"
             args.min_nhoods = 1
             args.seed = apis
-            args.result_dir = f"./results/{date.today()}/{type}/{args.seed}/"
+            args.result_dir = f"./results/2023-07-23/{type}/{args.seed}/"
             args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
             args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
-            
+
             if not osp.exists(args.idiom_g_dir):
                 os.makedirs(args.idiom_g_dir)
-            
+
             if not osp.exists(args.idiom_p_dir):
                 os.makedirs(args.idiom_p_dir)
-            
+
             search_main(args)
             print("=====================================\n\n")
 

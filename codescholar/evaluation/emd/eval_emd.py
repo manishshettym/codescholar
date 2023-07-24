@@ -106,14 +106,15 @@ def eval_singlbench(args):
 def eval_multibench(args):
     with open("../multibench.json") as f:
         benchmarks = json.load(f)
-    
+
     for type in benchmarks:
         for apis in benchmarks[type]:
             query = ";".join(apis)
             args.cs_idioms_dir = f"../results/2023-07-21/{type}/{query}/idioms/progs"
+            args.gpt_idioms_dir = f"../gpt/results/2023-07-21/{type}/{query}/"
             args.emb_cache_file = f"./cache/{args.model}/{type}/{query}.npz"
             args.query = apis
-            
+
             print(f"========== [{type}: {query}] ==========", flush=True)
             cs_emd, gpt_emd = main(args)
             print(f"CS EMD: {cs_emd}", flush=True)

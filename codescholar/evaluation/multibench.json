@@ -1,8 +1,8 @@
 {
     "pairs": [
         ["pd.concat", "pd.read_csv"],
-        ["df.rename", "df.drop"],
-        ["df.groupby", "df.apply"],
+        ["pd.read_csv", "df.to_csv"],
+        ["df.append", "pd.DataFrame"],
         ["np.abs", "np.max"],
         ["np.mean", "np.sqrt"],
         ["np.concatenate", "np.arange"],
@@ -10,7 +10,7 @@
         ["os.path.join", "os.path.exists"],
         ["os.remove", "os.path.exists"],
         ["nn.Linear", "nn.Sequential"],
-        ["nn.BatchNorm2d", "nn.Conv2d"],
+        ["nn.MaxPool2d", "nn.Conv2d"],
         ["torch.load", "torch.save"],
         ["plt.ylabel", "plt.xlabel"],
         ["plt.scatter", "plt.show"],
@@ -18,17 +18,16 @@
     ],
     "mixpairs": [
         ["os.path.join", "json.load"],
-        ["nn.Conv2d", "torch.cat"],
-        ["os.path.dirname", "np.array"],
-        ["np.array", "plt.figure"],
-        ["torch.optim.SGD", "nn.CrossEntropyLoss"]
+        ["plt.xticks", "np.arange"],
+        ["pd.read_csv", "np.array"],
+        ["pd.DataFrame", "json.load"],
+        ["np.array", "torch.from_numpy"]
     ],
     "triplets": [
         ["pd.concat", "pd.DataFrame", "pd.read_csv"],
-        ["np.ones", "np.array", "np.zeros"],
         ["os.path.join", "os.path.exists", "os.makedirs"],
-        ["nn.Sequential", "nn.ReLU", "nn.Conv2d"],
         ["plt.title", "plt.ylabel", "plt.xlabel"],
-        ["json.dumps", "os.path.join", "json.loads"]
+        ["nn.Sequential", "nn.Conv2d", "nn.BatchNorm2d"],
+        ["np.dot", "np.sum", "np.square"]
     ]
 }

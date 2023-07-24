@@ -22,12 +22,14 @@ Write only code and don't print the outputs. Mark the start of each and every ex
 {importlines}
 """
 
+
 def fill_template(template, libs, apis):
     """Fill the template with the given libraroes and APIs"""
     liblines = "".join([PROMPT_CHAT_LIBLINE.format(lib=lib, api=api) for lib, api in zip(libs, apis)])
     importlines = "".join([PROMPT_CHAT_IMPORTLINE.format(lib=lib) for lib in set(libs)])
-    
+
     return template.format(liblines=liblines, importlines=importlines)
+
 
 def encode_question_chat(template, libs, apis):
     """Encode the prompt instructions into a conversation for chat models.
@@ -44,7 +46,7 @@ def encode_question_chat(template, libs, apis):
 
 def get_llm_response(libs, apis):
     PROMPT_TEMPLATE = PROMPT_CHAT
-    
+
     responses = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=encode_question_chat(PROMPT_TEMPLATE, libs, apis),
@@ -57,6 +59,7 @@ def get_llm_response(libs, apis):
     )
     return responses["choices"][0]["message"]["content"]
 
+
 def parse_response(response):
     """Parse the response to get the code snippets."""
     regex = r"# (?:<Example>|<<Example>>)\n(.*?)# (?:</Example>|<</Example>>)"
@@ -66,11 +69,11 @@ def parse_response(response):
 
 if __name__ == "__main__":
     alias_to_lib = {
-        'plt': 'matplotlib.pyplot',
-        'pd' : 'pandas',
-        'df' : 'pandas',
-        'np' : 'numpy',
-        'nn' : 'torch.nn',
+        "plt": "matplotlib.pyplot",
+        "pd": "pandas",
+        "df": "pandas",
+        "np": "numpy",
+        "nn": "torch.nn",
     }
 
     with open("../multibench.json") as f:
@@ -79,7 +82,7 @@ if __name__ == "__main__":
     for type in benchmarks:
         for apis in benchmarks[type]:
             query = ";".join(apis)
-            
+
             libs = []
             for api in apis:
                 alias = api.split(".")[0]
@@ -87,7 +90,7 @@ if __name__ == "__main__":
                     libs.append(alias_to_lib[alias])
                 else:
                     libs.append(alias)
-            
+
             result_dir = f"./results/{date.today()}/{type}/{query}/"
 
             if not osp.exists(result_dir):

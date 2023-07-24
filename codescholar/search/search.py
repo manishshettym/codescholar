@@ -57,11 +57,11 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
 
         for idiom, nhoods, holes in idioms:
             size_id, nhood_count = len(idiom), int(nhoods)
-            
+
             if args.mode == "mq":
                 if nx.number_connected_components(nx.to_undirected(idiom)) != 1:
                     continue
-            
+
                 if nhood_count < args.min_nhoods:
                     continue
 
@@ -131,7 +131,7 @@ def score_candidate_freq(args, model, embs, cand_emb, device_id=None):
     """
     score = 0
 
-    if cand_emb.shape[0] > 1:        
+    if cand_emb.shape[0] > 1:
         preds = []
 
         for comp_emb in cand_emb:
@@ -147,13 +147,13 @@ def score_candidate_freq(args, model, embs, cand_emb, device_id=None):
         assert len(set([len(pred) for pred in preds])) == 1, "component preds have different shapes!"
 
         preds = np.array(preds)
-        merged_preds = np.all(preds, axis=0)        
+        merged_preds = np.all(preds, axis=0)
         score = np.sum(merged_preds)
     else:
         for emb_batch in embs:
             with torch.no_grad():
-                is_subgraph_rel = model.predict((emb_batch.to(get_device(device_id)), cand_emb))            
-                is_subgraph = model.classifier(is_subgraph_rel.unsqueeze(1))            
+                is_subgraph_rel = model.predict((emb_batch.to(get_device(device_id)), cand_emb))
+                is_subgraph = model.classifier(is_subgraph_rel.unsqueeze(1))
                 score += torch.sum(torch.argmax(is_subgraph, axis=1)).item()
 
     return score
@@ -196,7 +196,7 @@ def grow(args, prog_indices, in_queue, out_queue, device_id=None):
             for i, cand_node in enumerate(frontier):
                 cand_neigh = graph.subgraph(neigh + [cand_node])
                 connected_comps = list(nx.connected_components(cand_neigh.to_undirected()))
-                
+
                 if len(connected_comps) == 1:
                     cand_neigh = featurize_graph(cand_neigh, feat_tokenizer, feat_model, anchor=neigh[0], device_id=device_id)
                     cand_neighs.append(cand_neigh)
@@ -219,9 +219,9 @@ def grow(args, prog_indices, in_queue, out_queue, device_id=None):
             # SCORE CANDIDATES (freq)
             for i, (cand_node, cand_neigh) in enumerate(zip(frontier, cand_neighs)):
                 if isinstance(cand_neigh, list):
-                    cand_emb = cand_embs[i: i + len(cand_neigh)]
+                    cand_emb = cand_embs[i : i + len(cand_neigh)]
                 else:
-                    cand_emb = cand_embs[i: i + 1]
+                    cand_emb = cand_embs[i : i + 1]
 
                 # first, add new holes introduced
                 # then, remove hole filled in/by cand_node (incoming/outgoing edge resp)
@@ -349,7 +349,7 @@ def main(args):
         raise ConnectionError("Elasticsearch not running on localhost:9200! Please start Elasticsearch and try again.")
 
     if not ping_elasticindex():
-        raise ValueError("Elasticsearch index `python_files` not found! Please run `elastic_search.py` to create the index.")    
+        raise ValueError("Elasticsearch index `python_files` not found! Please run `elastic_search.py` to create the index.")
 
     # sample and constrain the search space
     if args.mode == "mq":

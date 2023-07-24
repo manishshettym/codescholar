@@ -1,0 +1,49 @@
+========== [pairs: pd.concat;pd.read_csv] ==========
+Programs: 1831
+CS idioms: 587
+GPT idioms: 4
+CS EMD: 0.40485969099896013
+GPT EMD: 0.4952089983435347
+=====================================
+
+
+========== [pairs: df.rename;df.drop] ==========
+Programs: 124
+CS idioms: 102
+GPT idioms: 2
+CS EMD: 0.42251034901654955
+GPT EMD: 0.49086514355498856
+=====================================
+
+
+========== [pairs: df.groupby;df.apply] ==========
+Programs: 90
+CS idioms: 11
+GPT idioms: 2
+CS EMD: 0.5300961096774273
+GPT EMD: 0.54713980224221
+=====================================
+
+
+========== [pairs: np.abs;np.max] ==========
+Programs: 1237
+CS idioms: 712
+GPT idioms: 3
+CS EMD: 0.4564421226860923
+GPT EMD: 0.567212882613936
+=====================================
+
+
+========== [pairs: np.mean;np.sqrt] ==========
+Programs: 4361
+CS idioms: 469
+GPT idioms: 4
+CS EMD: 0.4455710437332977
+GPT EMD: 0.5257795075283642
+=====================================
+
+
+========== [pairs: np.concatenate;np.arange] ==========
+Programs: 1486
+CS idioms: 99
+GPT idioms: 3

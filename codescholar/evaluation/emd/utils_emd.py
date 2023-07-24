@@ -14,7 +14,7 @@ def multiapi_trim_code(snippet, apis):
             if api in line:
                 api_lines.append(i)
                 break
-    
+
     if api_lines == []:
         return snippet
 
@@ -49,7 +49,7 @@ def load_program(path):
 
 def load_api_progs(args):
     random.seed(42)
-    
+
     if args.benchtype == "single":
         prog_indices = grep_programs(args, args.query)
 
@@ -62,18 +62,18 @@ def load_api_progs(args):
                 prog_indices = set(grep_programs(args, seed))
             else:
                 prog_indices = prog_indices & set(grep_programs(args, seed))
-        
+
         prog_indices = list(prog_indices)
-        
+
     prog_indices = random.sample(prog_indices, min(len(prog_indices), 20000))
     progs = [load_program(f"{args.prog_dir}/example_{i}.py") for i in prog_indices]
-    
+
     if args.benchtype == "single":
         progs = [trim_code(prog, args.query) for prog in progs]
 
     elif args.benchtype == "multi":
         progs = [multiapi_trim_code(prog, args.query) for prog in progs]
-    
+
     return progs
 
 
