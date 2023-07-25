@@ -85,7 +85,7 @@ def main(args):
     return (compute_emd(prog_embeddings, cs_idiom_embeddings), compute_emd(prog_embeddings, gpt_idiom_embeddings))
 
 
-def eval_singlbench(args):
+def eval_singlebench(args):
     with open("../singlebench.json") as f:
         benchmarks = json.load(f)
 
@@ -110,7 +110,7 @@ def eval_multibench(args):
     for type in benchmarks:
         for apis in benchmarks[type]:
             query = ";".join(apis)
-            args.cs_idioms_dir = f"../results/2023-07-21/{type}/{query}/idioms/progs"
+            args.cs_idioms_dir = f"../results/2023-07-23/{type}/{query}/idioms/progs"
             args.gpt_idioms_dir = f"../gpt/results/2023-07-21/{type}/{query}/"
             args.emb_cache_file = f"./cache/{args.model}/{type}/{query}.npz"
             args.query = apis
@@ -125,7 +125,7 @@ def eval_multibench(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--benchtype", type=str, default="single", choices=["single", "multi"])
-    parser.add_argument("--model", type=str, default="codebert", choices=["codebert", "gpt"])
+    parser.add_argument("--model", type=str, default="gpt", choices=["codebert", "gpt"])
     args = parser.parse_args()
 
     args.dataset = "pnosmt"
@@ -135,6 +135,6 @@ if __name__ == "__main__":
     torch.multiprocessing.set_start_method("spawn")
 
     if args.benchtype == "single":
-        eval_singlbench(args)
+        eval_singlebench(args)
     elif args.benchtype == "multi":
         eval_multibench(args)
