@@ -36,7 +36,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     DATE = args.date
 
-    with open("benchmarks.json") as f:
+    with open("singlebench.json") as f:
         benchmarks = json.load(f)
 
     with pd.ExcelWriter(f"results/{DATE}/{DATE}.results.xlsx") as writer:
