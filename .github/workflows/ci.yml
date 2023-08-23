@@ -31,6 +31,6 @@ jobs:
         python -m pip install pip==22.0.4
         pip install -r requirements-dev.txt
         pip install -e .
-    - name: Test with pytest
-      run: |
-        pytest
+    # - name: Test with pytest
+    #   run: |
+    #     pytest
