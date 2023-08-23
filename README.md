@@ -24,6 +24,15 @@ python search.py --dataset <dataset_name> --seed json.load
 4. 🚀 Streamlit app for ***interactive*** search.
 
 
+## Table of Contents
+- [How to install CodeScholar](#how-to-install-codescholar)
+- [How to train CodeScholar](#how-to-train-codescholar)
+- [How to run pre-trained CodeScholar](#how-to-run-pre-trained-codescholar)
+- [How to run CodeScholar Streamlit App](#how-to-run-codescholar-streamlit-app)
+- [Reproducability of CodeScholar Evaluation](#reproducability-of-codescholar-evaluation)
+
+
+
 How to install CodeScholar:
 -----------------------
 ```bash
@@ -110,3 +119,7 @@ curl -X POST -H "Content-Type: application/json" -d '{"api": "pd.merge", "size":
 # start the streamlit app on port localhost:8501
 streamlit run app_streamlit.py
 ```
+
+Reproducability of CodeScholar Evaluation:
+---------------------------
+Refer to the [evaluation README](./codescholar/evaluation/README.md) for a detailed description of how to reproduce the evaluation results reported in the paper.

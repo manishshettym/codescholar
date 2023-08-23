@@ -198,6 +198,7 @@ def create_apidisc_prompt(
     return GPT_NL2CODE_API.format(api=sample["api"], prompt=prompt)
 
 
+# APISCHOLAR
 def create_apischolar_prompt(
     sample: Dict,
     examples: List[Dict],
