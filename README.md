@@ -1,9 +1,56 @@
 <img align="center" src="./codescholar.png"/>
 
-How to run CodeScholar:
+While APIs have become a pervasive component of software, a core
+challenge for developers is to identify and use existing APIs. This
+warrants either a deep understanding of the API landscape or access
+to high-quality documentation and usage examples. While the for-
+mer is infeasible, the latter is often limited in practice. 
+
+`CodeScholar` (📝 Paper: [Programming by (Idiomatic) Examples](-)) is a tool that generates idiomatic code examples for
+query APIs (single and multiple). It finds idiomatic examples for APIS by searching a large
+corpus of code and growing program graphs *idiomatically* guided by a neural model.
+
+```bash
+python search.py --dataset <dataset_name> --seed json.load
+```
+
+![overview](./doc/overview.png)
+
+
+## Key Aspects of CodeScholar
+1. 🔥 ***Fast*** neural-guided search over graphs.
+2. 🧠 Idiomatic code generation by graph growing for ***representative*** examples.
+3. 🪢 Single and ***Multi-API*** support, and easily extensible to new APIs.
+4. 🚀 Streamlit app for ***interactive*** search.
+
+
+How to install CodeScholar:
 -----------------------
+```bash
+# clone the repository
+git clone git@github.com:tart-proj/codescholar.git
+
+# cd into the codescholar directory
+cd codescholar
+
+# install basic requirements
+pip install -r requirements-dev.txt
+
+# install pytorch-geometric requirements. Use {pyg} for GPU and {torch} for CPU
+pip install -r requirements-{pyg,torch}.txt
+
+# install codescholar
+pip install -e .
+```
 
 
+How to train CodeScholar:
+-----------------------
+Refer to the [training README](./codescholar/train/README.md) for a detailed description of how to train CodeScholar.
+
+
+How to run pre-trained CodeScholar:
+-----------------------
     
 ```bash
 # start an elasticsearch server at port 9200
@@ -63,9 +110,3 @@ curl -X POST -H "Content-Type: application/json" -d '{"api": "pd.merge", "size":
 # start the streamlit app on port localhost:8501
 streamlit run app_streamlit.py
 ```
-
-<!-- Notes:
-1. pd.map is not an API. It should be s.map for a series
-2. pd.append is also not. It should be df.append
-
- -->
