@@ -11,21 +11,21 @@ from pygments.token import Token
 from codescholar.utils import multiprocess
 
 MAX_WORKERS = 12
-MAX_FILE_SIZE = 1024 ** 2  # 1 MB
+MAX_FILE_SIZE = 1024**2  # 1 MB
 MIN_FILE_TOKENS = 100
 
 
 def load_repository_paths(path: str):
-    with open(path, 'rb') as fp:
+    with open(path, "rb") as fp:
         repos = json.load(fp)["items"]
 
-    repos = sorted(list(set([repo['name'] for repo in repos])))
+    repos = sorted(list(set([repo["name"] for repo in repos])))
 
     return repos
 
 
 def repo_cloner(repo_path: str):
-    lexer = get_lexer_by_name('python')
+    lexer = get_lexer_by_name("python")
     repo_dir = f"Repos"
     code_dir = f"Code"
 
@@ -43,7 +43,7 @@ def repo_cloner(repo_path: str):
 
     # skip repos for which python files have been extracted already
     if os.path.exists(code_loc):
-        print(f'{repo_name} seen before!')
+        print(f"{repo_name} seen before!")
         return "skipped"
     else:
         os.makedirs(code_loc)
@@ -52,7 +52,7 @@ def repo_cloner(repo_path: str):
     try:
         git.Git(repo_dir).clone(f"https://github.com/{repo_path}", depth=1)
     except Exception as e:
-        print(f'{repo_name} clone error!')
+        print(f"{repo_name} clone error!")
         shutil.rmtree(repo_loc)
         return "uncloned"
 
@@ -69,16 +69,15 @@ def repo_cloner(repo_path: str):
                 if os.path.getsize(in_path) > MAX_FILE_SIZE:
                     continue
 
-                with open(in_path, errors='ignore') as f_in:
+                with open(in_path, errors="ignore") as f_in:
                     text = f_in.read()
 
                 if sum(1 for _ in pygments.lex(text, lexer)) < MIN_FILE_TOKENS:
                     continue
 
                 # create a simplified path for file
-                rel_path = root[len(repo_loc)+1:].replace('/', '__')
-                out_path = os.path.join(code_loc, rel_path
-                                        + ('__' if rel_path else '') + file)
+                rel_path = root[len(repo_loc) + 1 :].replace("/", "__")
+                out_path = os.path.join(code_loc, rel_path + ("__" if rel_path else "") + file)
 
                 if not os.path.exists(out_path):
                     try:
@@ -90,22 +89,19 @@ def repo_cloner(repo_path: str):
 
     # remove repo
     shutil.rmtree(repo_loc)
-    print(f'{repo_name} processed; {files_found} #files copied.')
+    print(f"{repo_name} processed; {files_found} #files copied.")
 
     return "mined"
 
 
 def clone_repositories(paths: List[str]):
     lib_clients_iter = multiprocess.run_tasks_in_parallel_iter(
-        repo_cloner,
-        tasks=paths,
-        use_progress_bar=False,
-        use_spawn=True,
-        num_workers=MAX_WORKERS)
+        repo_cloner, tasks=paths, use_progress_bar=False, use_spawn=True, num_workers=MAX_WORKERS
+    )
 
     count = 0
     for result in lib_clients_iter:
-        if (result.is_success() and isinstance(result.result, str)):
+        if result.is_success() and isinstance(result.result, str):
             if result.result == "mined":
                 count += 1
 

@@ -1,0 +1,275 @@
+========== [pairs: pd.concat;pd.read_csv] ==========
+Programs: 1831
+CS idioms: 91
+GPT idioms: 4
+Random idioms: 4
+CS EMD: 0.4339680073106957
+GPT EMD: 0.49602636478648787
+Random EMD: 0.44987100627920723
+=====================================
+
+
+========== [pairs: pd.read_csv;df.to_csv] ==========
+Programs: 731
+CS idioms: 63
+GPT idioms: 2
+Random idioms: 2
+CS EMD: 0.4223394759563314
+GPT EMD: 0.4826649444504395
+Random EMD: 0.4770953690924592
+=====================================
+
+
+========== [pairs: df.append;pd.DataFrame] ==========
+Programs: 229
+CS idioms: 25
+GPT idioms: 2
+Random idioms: 2
+CS EMD: 0.4892392668873289
+GPT EMD: 0.5449684461223917
+Random EMD: 0.5064936698270595
+=====================================
+
+
+========== [pairs: np.abs;np.max] ==========
+Programs: 1237
+CS idioms: 185
+GPT idioms: 3
+Random idioms: 3
+CS EMD: 0.4752088962735348
+GPT EMD: 0.567192997950949
+Random EMD: 0.5422582982994688
+=====================================
+
+
+========== [pairs: np.mean;np.sqrt] ==========
+Programs: 4361
+CS idioms: 209
+GPT idioms: 4
+Random idioms: 4
+CS EMD: 0.43892617414013513
+GPT EMD: 0.5270302591511294
+Random EMD: 0.5065386739979674
+=====================================
+
+
+========== [pairs: np.concatenate;np.arange] ==========
+Programs: 1486
+CS idioms: 33
+GPT idioms: 3
+Random idioms: 3
+CS EMD: 0.5529462159832451
+GPT EMD: 0.5944771517830973
+Random EMD: 0.5453958442702688
+=====================================
+
+
+========== [pairs: os.path.dirname;os.path.join] ==========
+Programs: 20000
+CS idioms: 478
+GPT idioms: 3
+Random idioms: 3
+CS EMD: 0.4365235783655846
+GPT EMD: 0.5928981921729529
+Random EMD: 0.5442477032328472
+=====================================
+
+
+========== [pairs: os.path.join;os.path.exists] ==========
+Programs: 20000
+CS idioms: 271
+GPT idioms: 2
+Random idioms: 2
+CS EMD: 0.47827233609015124
+GPT EMD: 0.5767010370367656
+Random EMD: 0.5801483500154754
+=====================================
+
+
+========== [pairs: os.remove;os.path.exists] ==========
+Programs: 9404
+CS idioms: 320
+GPT idioms: 2
+Random idioms: 2
+CS EMD: 0.44487955900588594
+GPT EMD: 0.5053787132594307
+Random EMD: 0.5036613400609025
+=====================================
+
+
+========== [pairs: nn.Linear;nn.Sequential] ==========
+Programs: 20000
+CS idioms: 483
+GPT idioms: 1
+Random idioms: 1
+CS EMD: 0.37735665724744955
+GPT EMD: 0.47528412428887196
+Random EMD: 0.360314327257721
+=====================================
+
+
+========== [pairs: nn.MaxPool2d;nn.Conv2d] ==========
+Programs: 9960
+CS idioms: 32
+GPT idioms: 2
+Random idioms: 2
+CS EMD: 0.39766312130386966
+GPT EMD: 0.42253235679637013
+Random EMD: 0.3967052773521547
+=====================================
+
+
+========== [pairs: torch.load;torch.save] ==========
+Programs: 6641
+CS idioms: 91
+GPT idioms: 2
+Random idioms: 2
+CS EMD: 0.42819383637505687
+GPT EMD: 0.5075368219916192
+Random EMD: 0.4925845875847167
+=====================================
+
+
+========== [pairs: plt.ylabel;plt.xlabel] ==========
+Programs: 11793
+CS idioms: 56
+GPT idioms: 10
+Random idioms: 10
+CS EMD: 0.46527053375722166
+GPT EMD: 0.48786641286378984
+Random EMD: 0.42782939220184785
+=====================================
+
+
+========== [pairs: plt.scatter;plt.show] ==========
+Programs: 720
+CS idioms: 39
+GPT idioms: 2
+Random idioms: 2
+CS EMD: 0.42612746768240717
+GPT EMD: 0.46971766671117615
+Random EMD: 0.4317811259144384
+=====================================
+
+
+========== [pairs: plt.plot;plt.figure] ==========
+Programs: 6299
+CS idioms: 26
+GPT idioms: 3
+Random idioms: 3
+CS EMD: 0.49661013432568624
+GPT EMD: 0.5243505444991079
+Random EMD: 0.523291393535713
+=====================================
+
+
+========== [mixpairs: os.path.join;json.load] ==========
+Programs: 16532
+CS idioms: 119
+GPT idioms: 2
+Random idioms: 2
+CS EMD: 0.44909741981947265
+GPT EMD: 0.563957829126199
+Random EMD: 0.5099877625382844
+=====================================
+
+
+========== [mixpairs: plt.xticks;np.arange] ==========
+Programs: 995
+CS idioms: 111
+GPT idioms: 3
+Random idioms: 3
+CS EMD: 0.438815720211484
+GPT EMD: 0.4506904530905113
+Random EMD: 0.3871749221211818
+=====================================
+
+
+========== [mixpairs: pd.read_csv;np.array] ==========
+Programs: 1299
+CS idioms: 35
+GPT idioms: 3
+Random idioms: 3
+CS EMD: 0.4789153724446635
+GPT EMD: 0.5336185333326255
+Random EMD: 0.5200674668910475
+=====================================
+
+
+========== [mixpairs: pd.DataFrame;json.load] ==========
+Programs: 290
+CS idioms: 12
+GPT idioms: 4
+Random idioms: 4
+CS EMD: 0.494438942997636
+GPT EMD: 0.5324536809463908
+Random EMD: 0.4397180584565434
+=====================================
+
+
+========== [mixpairs: np.array;torch.from_numpy] ==========
+Programs: 1350
+CS idioms: 151
+GPT idioms: 4
+Random idioms: 4
+CS EMD: 0.48386507866052114
+GPT EMD: 0.5775668240860711
+Random EMD: 0.5001016700799382
+=====================================
+
+
+========== [triplets: pd.concat;pd.DataFrame;pd.read_csv] ==========
+Programs: 737
+CS idioms: 9
+GPT idioms: 3
+Random idioms: 3
+CS EMD: 0.49276320129468165
+GPT EMD: 0.5419231858641588
+Random EMD: 0.539304485354641
+=====================================
+
+
+========== [triplets: os.path.join;os.path.exists;os.makedirs] ==========
+Programs: 10000
+CS idioms: 23
+GPT idioms: 2
+Random idioms: 2
+CS EMD: 0.47393603232220527
+GPT EMD: 0.5481283716076328
+Random EMD: 0.5593546887315497
+=====================================
+
+
+========== [triplets: plt.title;plt.ylabel;plt.xlabel] ==========
+Programs: 6360
+CS idioms: 23
+GPT idioms: 3
+Random idioms: 3
+CS EMD: 0.5256941388798716
+GPT EMD: 0.512921269969242
+Random EMD: 0.49700691478805664
+=====================================
+
+
+========== [triplets: nn.Sequential;nn.Conv2d;nn.BatchNorm2d] ==========
+Programs: 10000
+CS idioms: 80
+GPT idioms: 3
+Random idioms: 3
+CS EMD: 0.34312366136486
+GPT EMD: 0.45851793935357155
+Random EMD: 0.31648902787796923
+=====================================
+
+
+========== [triplets: np.dot;np.sum;np.square] ==========
+Programs: 187
+CS idioms: 12
+GPT idioms: 3
+Random idioms: 3
+CS EMD: 0.49011090182125955
+GPT EMD: 0.5616147902814472
+Random EMD: 0.5202424386498327
+=====================================
+
+

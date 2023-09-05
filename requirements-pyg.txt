@@ -1,0 +1,6 @@
+# for environment w/ torch 2.0.0+cu117 installed
+torch-scatter -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
+torch-sparse -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
+torch-cluster -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
+torch-spline-conv -f https://data.pyg.org/whl/torch-2.0.0+cu117.html
+torch_geometric

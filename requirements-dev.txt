@@ -23,3 +23,11 @@ orca
 torch
 transformers
 openpyxl
+elasticsearch
+openai
+POT
+celery
+Redis
+plotly
+langchain
+tiktoken
