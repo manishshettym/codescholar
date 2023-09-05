@@ -55,7 +55,7 @@ pip install -e .
 
 How to train CodeScholar:
 -----------------------
-Refer to the [training README](./codescholar/train/README.md) for a detailed description of how to train CodeScholar.
+Refer to the [training README](./codescholar/representation/README.md) for a detailed description of how to train CodeScholar.
 
 
 How to run pre-trained CodeScholar:
@@ -84,7 +84,7 @@ You can also use some arguments with the search query:
 --max_init_beams <int> # maximum beams to initialize search
 --stop_at_equilibrium  # stop search when diversity = reusability of idioms
 ```
-*note: see more configurations in /search/search_config.py*
+*note: see more configurations in [/search/search_config.py](./codescholar/search/search_config.py)*
 
 How to run CodeScholar Streamlit App:
 ---------------------------
