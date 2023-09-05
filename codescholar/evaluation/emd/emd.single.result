@@ -2,8 +2,10 @@
 Programs: 20000
 CS idioms: 149
 GPT idioms: 8
+Random idioms: 8
 CS EMD: 0.40105256416916146
 GPT EMD: 0.4697192690205559
+Random EMD: 0.4653881950164513
 =====================================
 
 
@@ -11,8 +13,10 @@ GPT EMD: 0.4697192690205559
 Programs: 13599
 CS idioms: 111
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.4078296945336884
 GPT EMD: 0.47564539366034764
+Random EMD: 0.4719688428343469
 =====================================
 
 
@@ -20,8 +24,10 @@ GPT EMD: 0.47564539366034764
 Programs: 2732
 CS idioms: 133
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.4065905157642624
 GPT EMD: 0.4818814171297159
+Random EMD: 0.4592377453304086
 =====================================
 
 
@@ -29,8 +35,10 @@ GPT EMD: 0.4818814171297159
 Programs: 101
 CS idioms: 20
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.3845214000071656
 GPT EMD: 0.4199537884818725
+Random EMD: 0.4182494487328482
 =====================================
 
 
@@ -38,8 +46,10 @@ GPT EMD: 0.4199537884818725
 Programs: 174
 CS idioms: 28
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.42000685979231833
 GPT EMD: 0.4487101489555819
+Random EMD: 0.3956074370696294
 =====================================
 
 
@@ -47,8 +57,10 @@ GPT EMD: 0.4487101489555819
 Programs: 318
 CS idioms: 79
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.3967582590546172
 GPT EMD: 0.49101634868696087
+Random EMD: 0.5401307333894403
 =====================================
 
 
@@ -56,8 +68,10 @@ GPT EMD: 0.49101634868696087
 Programs: 394
 CS idioms: 89
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.3756103761158184
 GPT EMD: 0.4380209744824027
+Random EMD: 0.46358472942421874
 =====================================
 
 
@@ -65,8 +79,10 @@ GPT EMD: 0.4380209744824027
 Programs: 369
 CS idioms: 66
 GPT idioms: 5
+Random idioms: 5
 CS EMD: 0.42132879297632164
 GPT EMD: 0.4981565829080809
+Random EMD: 0.44099457692646016
 =====================================
 
 
@@ -74,8 +90,10 @@ GPT EMD: 0.4981565829080809
 Programs: 330
 CS idioms: 51
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.3539230316521691
 GPT EMD: 0.42269624214592655
+Random EMD: 0.42501710786465835
 =====================================
 
 
@@ -83,8 +101,10 @@ GPT EMD: 0.42269624214592655
 Programs: 3081
 CS idioms: 339
 GPT idioms: 5
+Random idioms: 5
 CS EMD: 0.39046233373642564
 GPT EMD: 0.48093532424425306
+Random EMD: 0.42092274213750414
 =====================================
 
 
@@ -92,8 +112,10 @@ GPT EMD: 0.48093532424425306
 Programs: 20000
 CS idioms: 131
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.46395586653641274
 GPT EMD: 0.5248961659971157
+Random EMD: 0.5095682792138219
 =====================================
 
 
@@ -101,8 +123,10 @@ GPT EMD: 0.5248961659971157
 Programs: 4305
 CS idioms: 166
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.4672398068921926
 GPT EMD: 0.5525992940569027
+Random EMD: 0.5438401303268626
 =====================================
 
 
@@ -110,8 +134,10 @@ GPT EMD: 0.5525992940569027
 Programs: 20000
 CS idioms: 160
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.4649973047598526
 GPT EMD: 0.5636376602321607
+Random EMD: 0.5550011968912102
 =====================================
 
 
@@ -119,8 +145,10 @@ GPT EMD: 0.5636376602321607
 Programs: 14314
 CS idioms: 60
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.4950430978695851
 GPT EMD: 0.5319034887599463
+Random EMD: 0.5176163390752689
 =====================================
 
 
@@ -128,8 +156,10 @@ GPT EMD: 0.5319034887599463
 Programs: 14208
 CS idioms: 94
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.44954490110236367
 GPT EMD: 0.5254187755307264
+Random EMD: 0.5228762665401028
 =====================================
 
 
@@ -137,8 +167,10 @@ GPT EMD: 0.5254187755307264
 Programs: 3016
 CS idioms: 113
 GPT idioms: 5
+Random idioms: 5
 CS EMD: 0.44716297306001657
 GPT EMD: 0.5347967520326685
+Random EMD: 0.49270171092825377
 =====================================
 
 
@@ -146,8 +178,10 @@ GPT EMD: 0.5347967520326685
 Programs: 1323
 CS idioms: 106
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.3860459846058343
 GPT EMD: 0.4709017569266372
+Random EMD: 0.34852462119666183
 =====================================
 
 
@@ -155,8 +189,10 @@ GPT EMD: 0.4709017569266372
 Programs: 679
 CS idioms: 103
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.3897346242320146
 GPT EMD: 0.47178630873882393
+Random EMD: 0.48332220709224516
 =====================================
 
 
@@ -164,8 +200,10 @@ GPT EMD: 0.47178630873882393
 Programs: 12102
 CS idioms: 99
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.486522431459444
 GPT EMD: 0.5260364093130911
+Random EMD: 0.511305621003234
 =====================================
 
 
@@ -173,8 +211,10 @@ GPT EMD: 0.5260364093130911
 Programs: 4851
 CS idioms: 107
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.4046599096135385
 GPT EMD: 0.48677149318038376
+Random EMD: 0.4974984079224452
 =====================================
 
 
@@ -182,8 +222,10 @@ GPT EMD: 0.48677149318038376
 Programs: 20000
 CS idioms: 216
 GPT idioms: 5
+Random idioms: 5
 CS EMD: 0.4707307096666171
 GPT EMD: 0.5700387519259132
+Random EMD: 0.5227634482986623
 =====================================
 
 
@@ -191,8 +233,10 @@ GPT EMD: 0.5700387519259132
 Programs: 19978
 CS idioms: 72
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.4516444183465398
 GPT EMD: 0.5227509548465679
+Random EMD: 0.5273811725667102
 =====================================
 
 
@@ -200,8 +244,10 @@ GPT EMD: 0.5227509548465679
 Programs: 19977
 CS idioms: 142
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.4479507801340667
 GPT EMD: 0.541515141923685
+Random EMD: 0.5432193617713972
 =====================================
 
 
@@ -209,8 +255,10 @@ GPT EMD: 0.541515141923685
 Programs: 19960
 CS idioms: 86
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.4183606003237471
 GPT EMD: 0.5144295005139784
+Random EMD: 0.4995335185427236
 =====================================
 
 
@@ -218,8 +266,10 @@ GPT EMD: 0.5144295005139784
 Programs: 19993
 CS idioms: 153
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.43150503739813856
 GPT EMD: 0.4928283012665688
+Random EMD: 0.5123655917782416
 =====================================
 
 
@@ -227,8 +277,10 @@ GPT EMD: 0.4928283012665688
 Programs: 19927
 CS idioms: 98
 GPT idioms: 5
+Random idioms: 5
 CS EMD: 0.4134138506041547
 GPT EMD: 0.47672035653277084
+Random EMD: 0.4792783398770162
 =====================================
 
 
@@ -236,8 +288,10 @@ GPT EMD: 0.47672035653277084
 Programs: 19991
 CS idioms: 52
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.3737820325027792
 GPT EMD: 0.46557992111597746
+Random EMD: 0.4465943100597761
 =====================================
 
 
@@ -245,8 +299,10 @@ GPT EMD: 0.46557992111597746
 Programs: 19316
 CS idioms: 87
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.363538658813686
 GPT EMD: 0.47439695539682275
+Random EMD: 0.5352432224961632
 =====================================
 
 
@@ -254,8 +310,10 @@ GPT EMD: 0.47439695539682275
 Programs: 19989
 CS idioms: 22
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.43153517055361335
 GPT EMD: 0.41752510625271855
+Random EMD: 0.41477677049891865
 =====================================
 
 
@@ -263,8 +321,10 @@ GPT EMD: 0.41752510625271855
 Programs: 3076
 CS idioms: 113
 GPT idioms: 5
+Random idioms: 5
 CS EMD: 0.34810337947118675
 GPT EMD: 0.4375914652589252
+Random EMD: 0.4464794652806866
 =====================================
 
 
@@ -272,8 +332,10 @@ GPT EMD: 0.4375914652589252
 Programs: 1506
 CS idioms: 150
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.3799503086548778
 GPT EMD: 0.45491719946189885
+Random EMD: 0.48907009865746026
 =====================================
 
 
@@ -281,8 +343,10 @@ GPT EMD: 0.45491719946189885
 Programs: 3414
 CS idioms: 73
 GPT idioms: 5
+Random idioms: 5
 CS EMD: 0.3450376670283655
 GPT EMD: 0.40315033481742174
+Random EMD: 0.45585130152968495
 =====================================
 
 
@@ -290,8 +354,10 @@ GPT EMD: 0.40315033481742174
 Programs: 538
 CS idioms: 112
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.3477826441198885
 GPT EMD: 0.49094071655391386
+Random EMD: 0.4233215821969537
 =====================================
 
 
@@ -299,8 +365,10 @@ GPT EMD: 0.49094071655391386
 Programs: 1628
 CS idioms: 111
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.3499574086672532
 GPT EMD: 0.4789904113019475
+Random EMD: 0.46634674945655563
 =====================================
 
 
@@ -308,8 +376,10 @@ GPT EMD: 0.4789904113019475
 Programs: 555
 CS idioms: 111
 GPT idioms: 5
+Random idioms: 5
 CS EMD: 0.30679915264617263
 GPT EMD: 0.43820249844778647
+Random EMD: 0.40790738691082956
 =====================================
 
 
@@ -317,8 +387,10 @@ GPT EMD: 0.43820249844778647
 Programs: 831
 CS idioms: 125
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.34956507053550623
 GPT EMD: 0.47175165298154687
+Random EMD: 0.44953473314295866
 =====================================
 
 
@@ -326,8 +398,10 @@ GPT EMD: 0.47175165298154687
 Programs: 521
 CS idioms: 112
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.350137807327983
 GPT EMD: 0.4764291303113182
+Random EMD: 0.4903040437724114
 =====================================
 
 
@@ -335,8 +409,10 @@ GPT EMD: 0.4764291303113182
 Programs: 705
 CS idioms: 109
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.33589942494541675
 GPT EMD: 0.38682543510010814
+Random EMD: 0.4104755120626833
 =====================================
 
 
@@ -344,8 +420,10 @@ GPT EMD: 0.38682543510010814
 Programs: 14491
 CS idioms: 93
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.41912554945484065
 GPT EMD: 0.4794188226165501
+Random EMD: 0.4530296330731353
 =====================================
 
 
@@ -353,8 +431,10 @@ GPT EMD: 0.4794188226165501
 Programs: 19995
 CS idioms: 55
 GPT idioms: 6
+Random idioms: 6
 CS EMD: 0.370743139016889
 GPT EMD: 0.45865776873199454
+Random EMD: 0.45287914890814507
 =====================================
 
 
@@ -362,8 +442,10 @@ GPT EMD: 0.45865776873199454
 Programs: 11372
 CS idioms: 84
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.40469626326648245
 GPT EMD: 0.48707989714018146
+Random EMD: 0.4112817633551557
 =====================================
 
 
@@ -371,8 +453,10 @@ GPT EMD: 0.48707989714018146
 Programs: 12444
 CS idioms: 97
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.3865189124457858
 GPT EMD: 0.49096634590466437
+Random EMD: 0.4319591166138171
 =====================================
 
 
@@ -380,8 +464,10 @@ GPT EMD: 0.49096634590466437
 Programs: 3967
 CS idioms: 72
 GPT idioms: 6
+Random idioms: 6
 CS EMD: 0.3735961192932815
 GPT EMD: 0.44717057417371336
+Random EMD: 0.4103298263291424
 =====================================
 
 
@@ -389,8 +475,10 @@ GPT EMD: 0.44717057417371336
 Programs: 3049
 CS idioms: 57
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.3304414938304301
 GPT EMD: 0.3840657288886592
+Random EMD: 0.37056184692078176
 =====================================
 
 
@@ -398,8 +486,10 @@ GPT EMD: 0.3840657288886592
 Programs: 15383
 CS idioms: 83
 GPT idioms: 4
+Random idioms: 4
 CS EMD: 0.3598973034381839
 GPT EMD: 0.39966405340289457
+Random EMD: 0.40529275098744916
 =====================================
 
 
@@ -407,8 +497,10 @@ GPT EMD: 0.39966405340289457
 Programs: 12065
 CS idioms: 89
 GPT idioms: 5
+Random idioms: 5
 CS EMD: 0.39291823480967647
 GPT EMD: 0.47432353837978036
+Random EMD: 0.3884736587065796
 =====================================
 
 
@@ -416,8 +508,10 @@ GPT EMD: 0.47432353837978036
 Programs: 2450
 CS idioms: 123
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.36836437450421805
 GPT EMD: 0.4952608652442858
+Random EMD: 0.45241922541770446
 =====================================
 
 
@@ -425,8 +519,10 @@ GPT EMD: 0.4952608652442858
 Programs: 4310
 CS idioms: 195
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.40492618928018453
 GPT EMD: 0.590805902002828
+Random EMD: 0.5078200854119862
 =====================================
 
 
@@ -434,8 +530,10 @@ GPT EMD: 0.590805902002828
 Programs: 19958
 CS idioms: 112
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.43180614876009993
 GPT EMD: 0.56029288327593
+Random EMD: 0.5328321820562786
 =====================================
 
 
@@ -443,8 +541,10 @@ GPT EMD: 0.56029288327593
 Programs: 4496
 CS idioms: 54
 GPT idioms: 5
+Random idioms: 5
 CS EMD: 0.41373132595606266
 GPT EMD: 0.5377326313927969
+Random EMD: 0.4294263755541459
 =====================================
 
 
@@ -452,8 +552,10 @@ GPT EMD: 0.5377326313927969
 Programs: 19991
 CS idioms: 76
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.3886148894634591
 GPT EMD: 0.4413802859586796
+Random EMD: 0.41839270496903636
 =====================================
 
 
@@ -461,8 +563,10 @@ GPT EMD: 0.4413802859586796
 Programs: 1982
 CS idioms: 31
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.30483219647277043
 GPT EMD: 0.39375390257902665
+Random EMD: 0.32894876241137383
 =====================================
 
 
@@ -470,8 +574,10 @@ GPT EMD: 0.39375390257902665
 Programs: 19976
 CS idioms: 132
 GPT idioms: 5
+Random idioms: 5
 CS EMD: 0.3467581895099017
 GPT EMD: 0.4263074563943964
+Random EMD: 0.33344574538649463
 =====================================
 
 
@@ -479,8 +585,10 @@ GPT EMD: 0.4263074563943964
 Programs: 19993
 CS idioms: 169
 GPT idioms: 5
+Random idioms: 5
 CS EMD: 0.3272233315030699
 GPT EMD: 0.3898550189753108
+Random EMD: 0.3601452310877452
 =====================================
 
 
@@ -488,8 +596,10 @@ GPT EMD: 0.3898550189753108
 Programs: 19943
 CS idioms: 54
 GPT idioms: 7
+Random idioms: 7
 CS EMD: 0.3378423664505442
 GPT EMD: 0.4307968732351154
+Random EMD: 0.3147385559521589
 =====================================
 
 
@@ -497,8 +607,10 @@ GPT EMD: 0.4307968732351154
 Programs: 19995
 CS idioms: 8
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.3340698052695255
 GPT EMD: 0.48862458183341334
+Random EMD: 0.31304475016290567
 =====================================
 
 
@@ -506,8 +618,10 @@ GPT EMD: 0.48862458183341334
 Programs: 5105
 CS idioms: 60
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.3062382203287039
 GPT EMD: 0.4453051612982263
+Random EMD: 0.4279273638374878
 =====================================
 
 
@@ -515,8 +629,10 @@ GPT EMD: 0.4453051612982263
 Programs: 17087
 CS idioms: 56
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.342277717644472
 GPT EMD: 0.5349716753795816
+Random EMD: 0.34728767180335113
 =====================================
 
 
@@ -524,8 +640,10 @@ GPT EMD: 0.5349716753795816
 Programs: 3827
 CS idioms: 61
 GPT idioms: 3
+Random idioms: 3
 CS EMD: 0.2715624567721011
 GPT EMD: 0.4378495201544408
+Random EMD: 0.2592864089137663
 =====================================
 
 

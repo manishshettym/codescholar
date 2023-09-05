@@ -39,10 +39,14 @@ def main(args):
         prog_embeddings = embs["prog_embeddings"]
         cs_idiom_embeddings = embs["cs_idiom_embeddings"]
         gpt_idiom_embeddings = embs["gpt_idiom_embeddings"]
+        k = int(round(len(prog_embeddings) * 0.1, 0))
+        k = min(k, len(cs_idiom_embeddings), len(gpt_idiom_embeddings))
+        random_idiom_embeddings = prog_embeddings[np.random.choice(prog_embeddings.shape[0], k, replace=False), :]
 
         print(f"Programs: {len(prog_embeddings)}", flush=True)
         print(f"CS idioms: {len(cs_idiom_embeddings)}", flush=True)
         print(f"GPT idioms: {len(gpt_idiom_embeddings)}", flush=True)
+        print(f"Random idioms: {len(random_idiom_embeddings)}", flush=True)
 
     else:
         os.makedirs(osp.dirname(args.emb_cache_file), exist_ok=True)
@@ -82,7 +86,12 @@ def main(args):
             gpt_idiom_embeddings=gpt_idiom_embeddings,
         )
 
-    return (compute_emd(prog_embeddings, cs_idiom_embeddings), compute_emd(prog_embeddings, gpt_idiom_embeddings))
+    # return (compute_emd(prog_embeddings, cs_idiom_embeddings), compute_emd(prog_embeddings, gpt_idiom_embeddings))
+    return (
+        compute_emd(prog_embeddings, cs_idiom_embeddings),
+        compute_emd(prog_embeddings, gpt_idiom_embeddings),
+        compute_emd(prog_embeddings, random_idiom_embeddings),
+    )
 
 
 def eval_singlebench(args):
@@ -97,9 +106,11 @@ def eval_singlebench(args):
             args.query = api
 
             print(f"========== [{lib}: {api}] ==========", flush=True)
-            cs_emd, gpt_emd = main(args)
+            # cs_emd, gpt_emd = main(args)
+            cs_emd, gpt_emd, random_emd = main(args)
             print(f"CS EMD: {cs_emd}", flush=True)
             print(f"GPT EMD: {gpt_emd}", flush=True)
+            print(f"Random EMD: {random_emd}", flush=True)
             print("=====================================\n\n", flush=True)
 
 
@@ -116,9 +127,11 @@ def eval_multibench(args):
             args.query = apis
 
             print(f"========== [{type}: {query}] ==========", flush=True)
-            cs_emd, gpt_emd = main(args)
+            # cs_emd, gpt_emd = main(args)
+            cs_emd, gpt_emd, random_emd = main(args)
             print(f"CS EMD: {cs_emd}", flush=True)
             print(f"GPT EMD: {gpt_emd}", flush=True)
+            print(f"Random EMD: {random_emd}", flush=True)
             print("=====================================\n\n", flush=True)
 
 
