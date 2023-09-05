@@ -6,7 +6,7 @@ warrants either a deep understanding of the API landscape or access
 to high-quality documentation and usage examples. While the for-
 mer is infeasible, the latter is often limited in practice. 
 
-`CodeScholar` (📝 Paper: [Programming by (Idiomatic) Examples](-)) is a tool that generates idiomatic code examples for
+`CodeScholar` (📝 Paper: [Under Peer-Review](-)) is a tool that generates idiomatic code examples for
 query APIs (single and multiple). It finds idiomatic examples for APIS by searching a large
 corpus of code and growing program graphs *idiomatically* guided by a neural model.
 
