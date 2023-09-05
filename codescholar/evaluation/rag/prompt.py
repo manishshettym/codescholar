@@ -209,7 +209,7 @@ def create_apischolar_prompt(
     prompt = create_prompt_nl2code(template=GPT_NL2CODE_TASK, sample=sample, num_tests=num_tests, function_name=function_name)
     api = sample["api"]
 
-    with open("./data/api2idioms.json", "r") as f:
+    with open("./dataset/api2idioms.json", "r") as f:
         api2idioms = json.load(f)
 
     idioms = api2idioms.get(api, [])

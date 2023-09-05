@@ -87,7 +87,7 @@ def main(args):
     # Phase 1: get the API for each task
     if args.get_apis:
         dataset = []
-        with open("./data/cs_rag.jsonl", "r") as f:
+        with open("./dataset/cs_rag.jsonl", "r") as f:
             for l in f:
                 d = json.loads(l.strip())
                 d["api"] = gpt_find_api(d["intent"])
@@ -95,12 +95,12 @@ def main(args):
                 dataset.append(d)
 
         # write the dataset back to file
-        with open("./data/cs_rag.jsonl", "w") as f:
+        with open("./dataset/cs_rag.jsonl", "w") as f:
             for d in dataset:
                 f.write(json.dumps(d) + "\n")
 
     queries = {}
-    with open("./data/cs_rag.jsonl", "r") as f:
+    with open("./dataset/cs_rag.jsonl", "r") as f:
         for l in f:
             d = json.loads(l.strip())
             lib, api = d["library"], d["api"]
@@ -115,7 +115,7 @@ def main(args):
 
     # Phase 3: build a queriable map of api -> idioms
     if args.build_index:
-        with open("./data/api2idioms.json", "w") as f:
+        with open("./dataset/api2idioms.json", "w") as f:
             d = codescholar_build_index(queries)
             json.dump(d, f, indent=4)
 

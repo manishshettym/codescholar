@@ -124,7 +124,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # data settings
-    parser.add_argument("--input_path", type=str, default="./data/cs_rag.jsonl")
+    parser.add_argument("--input_path", type=str, default="./dataset/cs_rag.jsonl")
     parser.add_argument("--output_path", type=str, required=False)
 
     # gpt settings
