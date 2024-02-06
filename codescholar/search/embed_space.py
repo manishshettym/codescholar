@@ -273,10 +273,10 @@ def main():
 
     # data config
     args.format = "source"  # {graphs, source}
-    args.source_dir = {DATA_DIR}/{args.dataset}/source/"
-    args.graphs_dir = {DATA_DIR}/{args.dataset}/graphs/"
-    args.processed_dir = {DATA_DIR}/{args.dataset}/processed/"
-    args.emb_dir = {DATA_DIR}/{args.dataset}/emb/"
+    args.source_dir = f"{DATA_DIR}/{args.dataset}/source/"
+    args.graphs_dir = f"{DATA_DIR}/{args.dataset}/graphs/"
+    args.processed_dir = f"{DATA_DIR}/{args.dataset}/processed/"
+    args.emb_dir = f"{DATA_DIR}/{args.dataset}/emb/"
 
     # model config
     args.test = True

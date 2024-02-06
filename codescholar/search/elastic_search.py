@@ -97,8 +97,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # data config
-    args.prog_dir = {DATA_DIR}/{args.dataset}/source/"
-    args.source_dir = {DATA_DIR}/{args.dataset}/graphs/"
-    args.emb_dir = {DATA_DIR}/{args.dataset}/emb/"
+    args.prog_dir = f"{DATA_DIR}/{args.dataset}/source/"
+    args.source_dir = f"{DATA_DIR}/{args.dataset}/graphs/"
+    args.emb_dir = f"{DATA_DIR}/{args.dataset}/emb/"
 
     index_files(args)

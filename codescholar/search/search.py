@@ -390,9 +390,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # data config
-    args.prog_dir = {DATA_DIR}/{args.dataset}/source/"
-    args.source_dir = {DATA_DIR}/{args.dataset}/graphs/"
-    args.emb_dir = {DATA_DIR}/{args.dataset}/emb/"
+    args.prog_dir = f"{DATA_DIR}/{args.dataset}/source/"
+    args.source_dir = f"{DATA_DIR}/{args.dataset}/graphs/"
+    args.emb_dir = f"{DATA_DIR}/{args.dataset}/emb/"
     args.result_dir = f"./results/{args.seed}/" if (args.mode == "q" or args.mode == "mq") else "./results/"
     args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
     args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"

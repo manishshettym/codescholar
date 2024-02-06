@@ -130,7 +130,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_workers", type=int, default=4, help="Number of workers")
     args = parser.parse_args()
 
-    SRC_DIR = {DATA_DIR}/{args.dataset}/raw"
+    SRC_DIR = f"{DATA_DIR}/{args.dataset}/raw"
     files = [f for f in sorted(glob.glob(osp.join(SRC_DIR, "*.py")))]
 
     if args.samples != -1:
@@ -149,8 +149,8 @@ if __name__ == "__main__":
 
     # create methods to build search space
     elif args.task == "search":
-        DEST_DIR = {DATA_DIR}/{args.dataset}/methods/"
+        DEST_DIR = f"{DATA_DIR}/{args.dataset}/methods/"
         methods_to_fileid = create_search_dataset(args, sampled_files)
 
-        with open({DATA_DIR}/{args.dataset}/mappings/meth_to_fileid.json", "w") as f:
+        with open(f"{DATA_DIR}/{args.dataset}/mappings/meth_to_fileid.json", "w") as f:
             json.dump(methods_to_fileid, f)
