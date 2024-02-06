@@ -10,6 +10,7 @@ import torch.multiprocessing as mp
 
 from codescholar.representation import config
 from codescholar.search import search_config
+from codescholar.constants import DATA_DIR
 
 
 def start_workers_bulk_index(in_queue, out_queue, args):
@@ -96,8 +97,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # data config
-    args.prog_dir = f"../data/{args.dataset}/source/"
-    args.source_dir = f"../data/{args.dataset}/graphs/"
-    args.emb_dir = f"../data/{args.dataset}/emb/"
+    args.prog_dir = {DATA_DIR}/{args.dataset}/source/"
+    args.source_dir = {DATA_DIR}/{args.dataset}/graphs/"
+    args.emb_dir = {DATA_DIR}/{args.dataset}/emb/"
 
     index_files(args)

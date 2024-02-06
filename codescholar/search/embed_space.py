@@ -17,6 +17,7 @@ from codescholar.representation import models, config
 from codescholar.utils.graph_utils import program_graph_to_nx
 from codescholar.utils.train_utils import build_model, get_device, featurize_graph
 from codescholar.search import search_config
+from codescholar.constants import DATA_DIR
 
 
 # ########## MULTI PROC ##########
@@ -272,10 +273,10 @@ def main():
 
     # data config
     args.format = "source"  # {graphs, source}
-    args.source_dir = f"../data/{args.dataset}/source/"
-    args.graphs_dir = f"../data/{args.dataset}/graphs/"
-    args.processed_dir = f"../data/{args.dataset}/processed/"
-    args.emb_dir = f"../data/{args.dataset}/emb/"
+    args.source_dir = {DATA_DIR}/{args.dataset}/source/"
+    args.graphs_dir = {DATA_DIR}/{args.dataset}/graphs/"
+    args.processed_dir = {DATA_DIR}/{args.dataset}/processed/"
+    args.emb_dir = {DATA_DIR}/{args.dataset}/emb/"
 
     # model config
     args.test = True

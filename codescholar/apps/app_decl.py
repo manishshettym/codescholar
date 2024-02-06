@@ -13,6 +13,7 @@ from codescholar.apps.utils import find_api, clean_idiom, write_idiom, get_resul
 from codescholar.apps.async_utils import get_celery_app_instance
 from codescholar.representation import config
 from codescholar.search import search_config
+from codescholar.constants import DATA_DIR
 
 api_cache_dir = "./cache/"
 
@@ -62,9 +63,9 @@ def search():
 
         # data config
         args.dataset = "pnosmt"
-        args.prog_dir = f"../data/{args.dataset}/source/"
-        args.source_dir = f"../data/{args.dataset}/graphs/"
-        args.emb_dir = f"../data/{args.dataset}/emb/"
+        args.prog_dir = {DATA_DIR}/{args.dataset}/source/"
+        args.source_dir = {DATA_DIR}/{args.dataset}/graphs/"
+        args.emb_dir = {DATA_DIR}/{args.dataset}/emb/"
 
         # model config
         args.test = True

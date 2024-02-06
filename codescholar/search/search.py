@@ -39,6 +39,7 @@ from codescholar.utils.search_utils import (
 from codescholar.utils.train_utils import build_model, get_device, featurize_graph
 from codescholar.utils.graph_utils import nx_to_program_graph, program_graph_to_nx
 from codescholar.utils.perf import perftimer
+from codescholar.constants import DATA_DIR
 
 
 ######### IDIOM STORE ############
@@ -389,9 +390,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # data config
-    args.prog_dir = f"../data/{args.dataset}/source/"
-    args.source_dir = f"../data/{args.dataset}/graphs/"
-    args.emb_dir = f"../data/{args.dataset}/emb/"
+    args.prog_dir = {DATA_DIR}/{args.dataset}/source/"
+    args.source_dir = {DATA_DIR}/{args.dataset}/graphs/"
+    args.emb_dir = {DATA_DIR}/{args.dataset}/emb/"
     args.result_dir = f"./results/{args.seed}/" if (args.mode == "q" or args.mode == "mq") else "./results/"
     args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
     args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
