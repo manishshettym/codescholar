@@ -76,9 +76,6 @@ def init_grow(args, prog_indices, device_id=None):
     return embs, feat_tokenizer, feat_model, subg_model
 
 def grow(args, prog_indices, beam_set, device_id=None):
-    # yappi.set_clock_type("wall")
-    # yappi.start()
-
     torch.cuda.set_device(device_id)
     embs, feat_tokenizer, feat_model, model = init_grow(args, prog_indices, device_id=device_id)
 
@@ -158,8 +155,5 @@ def grow(args, prog_indices, beam_set, device_id=None):
 
     # STEP 3: filter top-k beams
     new_beams = new_beams[: args.n_beams]
-    
-    # yappi.stop()
-    # yappi.get_func_stats().save(f"grow_{os.getpid()}.prof", type="pstat")
     
     return new_beams
