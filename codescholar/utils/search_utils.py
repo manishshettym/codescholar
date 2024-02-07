@@ -9,6 +9,9 @@ import torch
 import networkx as nx
 from elasticsearch import Elasticsearch
 
+import redis
+redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+
 
 ########## SEARCH MACROS ##########
 
@@ -59,6 +62,57 @@ def ping_elasticindex(index_name: str = "python_files"):
         return False
 
     return True
+
+
+########## SEARCH REDIS UTILS ##########
+
+
+def save_embedding_to_redis(idx, embedding):
+    # Serialize the embedding tensor to a byte array and save it in Redis
+    emb_key = f"emb_{idx}"
+    emb_bytes = embedding.cpu().numpy().tobytes()
+    redis_client.set(emb_key, emb_bytes)
+
+
+def read_embedding_from_redis(args, idx):
+    # Read the embedding tensor from Redis
+    emb_key = f"emb_{idx}"
+    emb_bytes = redis_client.get(emb_key)
+
+    if emb_bytes:
+        num_elements = len(emb_bytes) // 4
+        assert num_elements % 64 == 0, "elements is not a multiple of 64"
+        original_shape = (num_elements // 64, 64)
+        
+        emb_array = np.frombuffer(emb_bytes, dtype=np.float32).reshape(original_shape)
+        emb_tensor = torch.tensor(emb_array, dtype=torch.float32) 
+        return emb_tensor
+    else:
+        return None
+
+
+def read_embeddings_batched_redis(args, prog_indices):
+    embs = []
+
+    for i in range(0, len(prog_indices), args.batch_size):
+        batch_indices = prog_indices[i:i + args.batch_size]
+        emb_keys = [f"emb_{idx}" for idx in batch_indices]
+        emb_bytes_list = redis_client.mget(emb_keys)
+
+        batch_embs = []
+        for emb_bytes in emb_bytes_list:
+            if emb_bytes:
+                num_elements = len(emb_bytes) // 4
+                assert num_elements % 64 == 0, "elements is not a multiple of 64"
+                original_shape = (num_elements // 64, 64)
+                emb_array = np.frombuffer(emb_bytes, dtype=np.float32).reshape(original_shape)
+                emb_tensor = torch.tensor(emb_array, dtype=torch.float32)
+                batch_embs.append(emb_tensor)
+
+        if batch_embs:
+            embs.append(torch.cat(batch_embs, dim=0))
+
+    return embs
 
 
 ########## SEARCH DISK UTILS ##########
