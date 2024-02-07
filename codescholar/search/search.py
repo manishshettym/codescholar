@@ -28,7 +28,7 @@ from codescholar.utils.search_utils import (
     _write_mine_logs,
     read_graph
 )
-from codescholar.utils.search_utils import read_embedding, save_embedding_to_redis
+from codescholar.utils.search_utils import load_embeddings_batched_redis
 from codescholar.utils.graph_utils import nx_to_program_graph
 from codescholar.utils.perf import perftimer
 from codescholar.constants import DATA_DIR
@@ -205,8 +205,7 @@ def main(args):
         raise ValueError(f"Invalid search mode {args.mode}!")
 
     # load all embeddings of prog_indices to redis
-    for idx in tqdm(prog_indices, desc="Load embeddings"):
-        save_embedding_to_redis(idx, read_embedding(args, idx))
+    load_embeddings_batched_redis(args, prog_indices)
 
     # STEP 2: search for idioms; saves idioms gradually
     mine_summary = search(args, prog_indices, beam_sets)

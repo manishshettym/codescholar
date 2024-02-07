@@ -2,8 +2,10 @@ import os.path as osp
 import numpy as np
 import glob
 import random
+from tqdm import tqdm
 from typing import List
 from itertools import chain
+from multiprocessing import Pool
 
 import torch
 import networkx as nx
@@ -67,28 +69,32 @@ def ping_elasticindex(index_name: str = "python_files"):
 ########## SEARCH REDIS UTILS ##########
 
 
-def save_embedding_to_redis(idx, embedding):
-    # Serialize the embedding tensor to a byte array and save it in Redis
-    emb_key = f"emb_{idx}"
-    emb_bytes = embedding.cpu().numpy().tobytes()
-    redis_client.set(emb_key, emb_bytes)
+def save_embeddings_to_redis(batch):
+    pipeline = redis_client.pipeline()
+    for key, value in batch:
+        pipeline.set(key, value)
+    pipeline.execute()
 
 
-def read_embedding_from_redis(args, idx):
-    # Read the embedding tensor from Redis
-    emb_key = f"emb_{idx}"
-    emb_bytes = redis_client.get(emb_key)
+def load_embeddings(args, idx_list):
+    embeddings = []
+    for idx in idx_list:
+        emb_path = osp.join(args.emb_dir, f"emb_{idx}.pt")
+        embedding = torch.load(emb_path, map_location=torch.device("cpu"))
+        emb_bytes = embedding.cpu().numpy().tobytes()
+        embeddings.append((f"emb_{idx}", emb_bytes))
+    return embeddings
 
-    if emb_bytes:
-        num_elements = len(emb_bytes) // 4
-        assert num_elements % 64 == 0, "elements is not a multiple of 64"
-        original_shape = (num_elements // 64, 64)
-        
-        emb_array = np.frombuffer(emb_bytes, dtype=np.float32).reshape(original_shape)
-        emb_tensor = torch.tensor(emb_array, dtype=torch.float32) 
-        return emb_tensor
-    else:
-        return None
+
+def load_embeddings_batched_redis(args, prog_indices):
+    batch_size = 100
+    batches = [prog_indices[i:i + batch_size] for i in range(0, len(prog_indices), batch_size)]
+
+    with Pool() as pool:
+        results = pool.starmap(load_embeddings, [(args, batch) for batch in batches])
+        all_embeddings = [item for sublist in results for item in sublist]
+        for batch in tqdm([all_embeddings[i:i + batch_size] for i in range(0, len(all_embeddings), batch_size)], desc="[redis_load]"):
+            save_embeddings_to_redis(batch)
 
 
 def read_embeddings_batched_redis(args, prog_indices):
