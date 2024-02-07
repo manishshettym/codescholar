@@ -6,20 +6,15 @@ import numpy as np
 from tqdm import tqdm
 from math import log
 from collections import defaultdict
-from itertools import chain
-from cachetools import cached, LRUCache
-from cachetools.keys import hashkey
 
 import torch
 import networkx as nx
-from deepsnap.batch import Batch
 import scipy.stats as stats
-import torch.multiprocessing as mp
-from transformers import RobertaTokenizer, RobertaModel
+from multiprocessing import Pool
 
 from codescholar.sast.visualizer import render_sast
 from codescholar.sast.sast_utils import sast_to_prog
-from codescholar.representation import models, config
+from codescholar.representation import config
 from codescholar.search import search_config
 from codescholar.search.grow import grow
 from codescholar.search.elastic_search import grep_programs
@@ -34,8 +29,7 @@ from codescholar.utils.search_utils import (
     read_graph
 )
 from codescholar.utils.search_utils import read_embedding, save_embedding_to_redis
-from codescholar.utils.train_utils import build_model, get_device, featurize_graph
-from codescholar.utils.graph_utils import nx_to_program_graph, program_graph_to_nx
+from codescholar.utils.graph_utils import nx_to_program_graph
 from codescholar.utils.perf import perftimer
 from codescholar.constants import DATA_DIR
 
@@ -104,22 +98,7 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
     else:
         return True
 
-
-######### BEAM SEARCH ############
-
-
-def start_workers_grow(prog_indices, in_queue, out_queue, args, gpu):
-    torch.cuda.set_device(gpu)
-    workers = []
-    for _ in tqdm(range(args.n_workers), desc="[workers]"):
-        worker = mp.Process(target=grow, args=(args, prog_indices, in_queue, out_queue, gpu))
-        worker.start()
-        workers.append(worker)
-
-    return workers
-
 ######### MAIN ############
-
 
 # @perftimer
 def search(args, prog_indices, beam_sets):
@@ -131,54 +110,47 @@ def search(args, prog_indices, beam_sets):
         return mine_summary
 
     num_gpus = torch.cuda.device_count()
-    workers_list = []
-    in_queues, out_queues = [], []
 
-    for gpu in range(num_gpus):
-        in_queue, out_queue = mp.Queue(), mp.Queue()
-        workers = start_workers_grow(prog_indices, in_queue, out_queue, args, gpu)
-        workers_list.append(workers)
-        in_queues.append(in_queue)
-        out_queues.append(out_queue)
+    # create a pool of workers for each GPU
+    pools = [Pool(args.n_workers) for _ in range(num_gpus)]
 
     continue_search = True
     while continue_search and len(beam_sets) != 0:
+        results = []
         for i, beam_set in enumerate(beam_sets):
             gpu = i % num_gpus
-            in_queues[gpu].put(("beam_set", beam_set))
+            # use apply_async to submit the grow task to the pool
+            result = pools[gpu].apply_async(grow, (args, prog_indices, beam_set, gpu))
+            results.append(result)
 
         # idioms for generation i
         idiommine_gen = defaultdict(list)
         new_beam_sets = []
 
         # beam search over this generation
-        results_count = 0
         pbar = tqdm(total=len(beam_sets), desc=f"[search {size}]")
-        while results_count < len(beam_sets):
-            for gpu in range(num_gpus):
-                while not out_queues[gpu].empty():
-                    msg, new_beams = out_queues[gpu].get()
-                    results_count += 1
+        for result in results:
+            new_beams = result.get()  # Wait for the result and get it
+            pbar.update(1)
 
-                    # candidates from only top-scoring beams in the beam set
-                    for new_beam in new_beams[:1]:
-                        score, holes, neigh, _, _, graph_idx = new_beam
-                        graph = read_graph(args, graph_idx)
+            # candidates from only top-scoring beams in the beam set
+            for new_beam in new_beams[:1]:
+                score, holes, neigh, _, _, graph_idx = new_beam
+                graph = read_graph(args, graph_idx)
 
-                        neigh_g = graph.subgraph(neigh).copy()
-                        neigh_g.remove_edges_from(nx.selfloop_edges(neigh_g))
+                neigh_g = graph.subgraph(neigh).copy()
+                neigh_g.remove_edges_from(nx.selfloop_edges(neigh_g))
 
-                        for v in neigh_g.nodes:
-                            neigh_g.nodes[v]["anchor"] = 1 if v == neigh[0] else 0
+                for v in neigh_g.nodes:
+                    neigh_g.nodes[v]["anchor"] = 1 if v == neigh[0] else 0
 
-                        neigh_g_hash = wl_hash(neigh_g)
-                        idiommine_gen[neigh_g_hash].append((neigh_g, score, holes))
-                        mine_summary[len(neigh_g)][neigh_g_hash] += 1
+                neigh_g_hash = wl_hash(neigh_g)
+                idiommine_gen[neigh_g_hash].append((neigh_g, score, holes))
+                mine_summary[len(neigh_g)][neigh_g_hash] += 1
 
-                    if len(new_beams) > 0:
-                        new_beam_sets.append(new_beams)
+            if len(new_beams) > 0:
+                new_beam_sets.append(new_beams)
 
-                    pbar.update(1)
         pbar.close()
 
         # save generation
@@ -189,13 +161,10 @@ def search(args, prog_indices, beam_sets):
         if size >= args.min_idiom_size and size <= args.max_idiom_size:
             continue_search = _save_idiom_generation(args, idiommine_gen)
 
-    for in_queue in in_queues:
-        for _ in range(num_gpus):
-            in_queue.put(("done", None))
-
-    for workers in workers_list:
-        for worker in workers:
-            worker.join()
+    # Terminate all pools
+    for pool in pools:
+        pool.terminate()
+        pool.join()
 
     return mine_summary
 

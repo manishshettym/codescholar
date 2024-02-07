@@ -1,9 +1,9 @@
+import os
+import numpy as np
+import yappi
 from itertools import chain
 
-import os
-import yappi
 import torch
-import numpy as np
 import networkx as nx
 from deepsnap.batch import Batch
 from transformers import RobertaTokenizer, RobertaModel
@@ -78,92 +78,84 @@ def init_grow(args, prog_indices, device_id=None):
     
     return embs, feat_tokenizer, feat_model, subg_model
 
-def grow(args, prog_indices, in_queue, out_queue, device_id=None):
+def grow(args, prog_indices, beam_set, device_id=None):
+    torch.cuda.set_device(device_id)
     embs, feat_tokenizer, feat_model, model = init_grow(args, prog_indices, device_id=device_id)
 
-    done = False
-    while not done:
-        msg, beam_set = in_queue.get()
+    new_beams = []
 
-        if msg == "done":
-            del embs
-            done = True
-            break
+    # STEP 1: Explore all candidates in each beam of the beam_set
+    for beam in beam_set:
+        _, holes, neigh, frontier, visited, graph_idx = beam
+        graph = read_graph(args, graph_idx)
 
-        new_beams = []
+        if len(neigh) >= args.max_idiom_size or not frontier:
+            continue
 
-        # STEP 1: Explore all candidates in each beam of the beam_set
-        for beam in beam_set:
-            _, holes, neigh, frontier, visited, graph_idx = beam
-            graph = read_graph(args, graph_idx)
+        cand_neighs = []
 
-            if len(neigh) >= args.max_idiom_size or not frontier:
+        # EMBED CANDIDATES
+        for i, cand_node in enumerate(frontier):
+            cand_neigh = graph.subgraph(neigh + [cand_node])
+            connected_comps = list(nx.connected_components(cand_neigh.to_undirected()))
+
+            if len(connected_comps) == 1:
+                cand_neigh = featurize_graph(cand_neigh, feat_tokenizer, feat_model, anchor=neigh[0], device_id=device_id)
+                cand_neighs.append(cand_neigh)
+            else:
+                comp_neighs = []
+                for comp in connected_comps:
+                    comp_neigh = cand_neigh.subgraph(comp)
+                    comp_root = [n for n in comp_neigh.nodes if comp_neigh.in_degree(n) == 0][0]
+                    comp_neigh = featurize_graph(comp_neigh, feat_tokenizer, feat_model, anchor=comp_root, device_id=device_id)
+                    comp_neighs.append(comp_neigh)
+
+                cand_neighs.append(comp_neighs)
+
+        flat_cand_neighs = list(chain.from_iterable([x if isinstance(x, list) else [x] for x in cand_neighs]))
+        cand_batch = Batch.from_data_list(flat_cand_neighs).to(get_device(device_id))
+
+        with torch.no_grad():
+            cand_embs = model.encoder(cand_batch)
+
+        # SCORE CANDIDATES (freq)
+        for i, (cand_node, cand_neigh) in enumerate(zip(frontier, cand_neighs)):
+            if isinstance(cand_neigh, list):
+                cand_emb = cand_embs[i : i + len(cand_neigh)]
+            else:
+                cand_emb = cand_embs[i : i + 1]
+
+            # first, add new holes introduced
+            # then, remove hole filled in/by cand_node (incoming/outgoing edge resp)
+            new_holes = holes + graph.nodes[cand_node]["span"].count("#") - 1
+
+            # filter out candidates that exceed max_holes
+            if new_holes < 0 or new_holes > args.max_holes:
                 continue
 
-            cand_neighs = []
+            new_neigh = neigh + [cand_node]
 
-            # EMBED CANDIDATES
-            for i, cand_node in enumerate(frontier):
-                cand_neigh = graph.subgraph(neigh + [cand_node])
-                connected_comps = list(nx.connected_components(cand_neigh.to_undirected()))
+            # new frontier = {prev frontier} U {outgoing and incoming neighbors of cand_node} - {visited}
+            # note: one can use type='neigh' to add only outgoing neighbors
+            new_frontier = list(((set(frontier) | _frontier(graph, cand_node, type="radial")) - visited) - set([cand_node]))
 
-                if len(connected_comps) == 1:
-                    cand_neigh = featurize_graph(cand_neigh, feat_tokenizer, feat_model, anchor=neigh[0], device_id=device_id)
-                    cand_neighs.append(cand_neigh)
-                else:
-                    comp_neighs = []
-                    for comp in connected_comps:
-                        comp_neigh = cand_neigh.subgraph(comp)
-                        comp_root = [n for n in comp_neigh.nodes if comp_neigh.in_degree(n) == 0][0]
-                        comp_neigh = featurize_graph(comp_neigh, feat_tokenizer, feat_model, anchor=comp_root, device_id=device_id)
-                        comp_neighs.append(comp_neigh)
+            new_visited = visited | set([cand_node])
 
-                    cand_neighs.append(comp_neighs)
+            score = score_candidate_freq(args, model, embs, cand_emb, device_id=device_id)
+            new_beams.append((score, new_holes, new_neigh, new_frontier, new_visited, graph_idx))
 
-            flat_cand_neighs = list(chain.from_iterable([x if isinstance(x, list) else [x] for x in cand_neighs]))
-            cand_batch = Batch.from_data_list(flat_cand_neighs).to(get_device(device_id))
+    # STEP 2: Sort new beams by freq_score/#holes
+    new_beams = list(sorted(new_beams, key=lambda x: x[0] / x[1] if x[1] > 0 else x[0], reverse=True))
 
-            with torch.no_grad():
-                cand_embs = model.encoder(cand_batch)
+    # print("===== [debugger] new beams =====")
+    # for beam in new_beams:
+    #     print("freq: ", beam[0])
+    #     print("holes: ", beam[1])
+    #     print("nodes: ", [graph.nodes[n]['span'] for n in beam[2]])
+    #     print("frontier: ", [graph.nodes[n]['span'] for n in beam[3]])
+    #     print()
+    # print("================================")
 
-            # SCORE CANDIDATES (freq)
-            for i, (cand_node, cand_neigh) in enumerate(zip(frontier, cand_neighs)):
-                if isinstance(cand_neigh, list):
-                    cand_emb = cand_embs[i : i + len(cand_neigh)]
-                else:
-                    cand_emb = cand_embs[i : i + 1]
-
-                # first, add new holes introduced
-                # then, remove hole filled in/by cand_node (incoming/outgoing edge resp)
-                new_holes = holes + graph.nodes[cand_node]["span"].count("#") - 1
-
-                # filter out candidates that exceed max_holes
-                if new_holes < 0 or new_holes > args.max_holes:
-                    continue
-
-                new_neigh = neigh + [cand_node]
-
-                # new frontier = {prev frontier} U {outgoing and incoming neighbors of cand_node} - {visited}
-                # note: one can use type='neigh' to add only outgoing neighbors
-                new_frontier = list(((set(frontier) | _frontier(graph, cand_node, type="radial")) - visited) - set([cand_node]))
-
-                new_visited = visited | set([cand_node])
-
-                score = score_candidate_freq(args, model, embs, cand_emb, device_id=device_id)
-                new_beams.append((score, new_holes, new_neigh, new_frontier, new_visited, graph_idx))
-
-        # STEP 2: Sort new beams by freq_score/#holes
-        new_beams = list(sorted(new_beams, key=lambda x: x[0] / x[1] if x[1] > 0 else x[0], reverse=True))
-
-        # print("===== [debugger] new beams =====")
-        # for beam in new_beams:
-        #     print("freq: ", beam[0])
-        #     print("holes: ", beam[1])
-        #     print("nodes: ", [graph.nodes[n]['span'] for n in beam[2]])
-        #     print("frontier: ", [graph.nodes[n]['span'] for n in beam[3]])
-        #     print()
-        # print("================================")
-
-        # STEP 3: filter top-k beams
-        new_beams = new_beams[: args.n_beams]
-        out_queue.put(("complete", new_beams))
+    # STEP 3: filter top-k beams
+    new_beams = new_beams[: args.n_beams]
+    return new_beams
