@@ -8,9 +8,9 @@ import networkx as nx
 from deepsnap.batch import Batch
 from transformers import RobertaTokenizer, RobertaModel
 
-from codescholar.utils.search_utils import _frontier, read_graph, read_embeddings_batched_redis
+from codescholar.utils.search_utils import _frontier, read_graph, read_embeddings_batched_redis, featurize_graph
 from codescholar.representation import models
-from codescholar.utils.train_utils import build_model, get_device, featurize_graph
+from codescholar.utils.train_utils import build_model, get_device
 
 
 
@@ -54,31 +54,31 @@ def score_candidate_freq(args, model, embs, cand_emb, device_id=None):
     return score
 
 
+is_global_init = False
 embs = None
 feat_tokenizer = None
 feat_model = None
 subg_model = None
 def init_grow(args, prog_indices, device_id=None):
+    global is_global_init
     global embs, feat_tokenizer, feat_model, subg_model
     codebert_name = "microsoft/codebert-base"
     
-    if embs is None:
+    if not is_global_init:
         embs = read_embeddings_batched_redis(args, prog_indices)
-
-    if feat_tokenizer is None:
         feat_tokenizer = RobertaTokenizer.from_pretrained(codebert_name)
-
-    if feat_model is None:
         feat_model = RobertaModel.from_pretrained(codebert_name).to(get_device(device_id))
         feat_model.eval()
-
-    if subg_model is None:
         subg_model = build_model(models.SubgraphEmbedder, args, device_id=device_id)
         subg_model.eval()
+        is_global_init = True
     
     return embs, feat_tokenizer, feat_model, subg_model
 
 def grow(args, prog_indices, beam_set, device_id=None):
+    # yappi.set_clock_type("wall")
+    # yappi.start()
+
     torch.cuda.set_device(device_id)
     embs, feat_tokenizer, feat_model, model = init_grow(args, prog_indices, device_id=device_id)
 
@@ -158,4 +158,8 @@ def grow(args, prog_indices, beam_set, device_id=None):
 
     # STEP 3: filter top-k beams
     new_beams = new_beams[: args.n_beams]
+    
+    # yappi.stop()
+    # yappi.get_func_stats().save(f"grow_{os.getpid()}.prof", type="pstat")
+    
     return new_beams

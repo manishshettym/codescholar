@@ -2,6 +2,7 @@ import os.path as osp
 import numpy as np
 import glob
 import random
+import re
 from tqdm import tqdm
 from typing import List
 from itertools import chain
@@ -10,6 +11,12 @@ from multiprocessing import Pool
 import torch
 import networkx as nx
 from elasticsearch import Elasticsearch
+from deepsnap.graph import Graph as DSGraph
+
+
+from codescholar.utils.train_utils import get_device
+from codescholar.utils.graph_utils import GraphEdgeLabel, GraphNodeLabel
+
 
 import redis
 redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
@@ -270,3 +277,54 @@ def _write_mine_logs(mine_summary, filepath):
                 else:
                     fp.write(f"    ├── [{idx}] {count} idiom(s)" + "\n")
         fp.write("==========+================+==========" + "\n")
+
+
+############# FEATURIZER UTILS #############
+
+def featurize_graph(g, feat_tokenizer, feat_model, anchor=None, device_id=None):
+    assert len(g.nodes) > 0
+    assert len(g.edges) > 0
+
+    if anchor is not None:
+        pagerank = nx.pagerank(g)
+        clustering_coeff = nx.clustering(g)
+        
+        # Batch tokenization and embedding
+        spans = [g.nodes[v]["span"] for v in g.nodes]
+        spans = [re.sub("\s+", " ", span) for span in spans]
+        tokens_ids = feat_tokenizer(spans, padding=True, truncation=True, return_tensors="pt")
+        tokens_tensor = tokens_ids["input_ids"].to(get_device(device_id))
+        
+        with torch.no_grad():
+            context_embeddings = feat_model(tokens_tensor)[0]
+        context_embeddings = torch.mean(context_embeddings, dim=1)
+        
+        # Assign features to nodes
+        for i, v in enumerate(g.nodes):
+            g.nodes[v]["node_feature"] = torch.tensor([float(v == anchor)], dtype=torch.float, device=get_device(device_id))
+            
+            node_type_name = g.nodes[v]["ast_type"]
+            if isinstance(node_type_name, str):
+                try:
+                    node_type_val = GraphNodeLabel[node_type_name].value
+                except KeyError:
+                    node_type_val = GraphNodeLabel["Other"].value
+
+                g.nodes[v]["ast_type"] = torch.tensor([node_type_val], device=get_device(device_id))
+
+            g.nodes[v]["node_span"] = context_embeddings[i].unsqueeze(0)
+            g.nodes[v]["node_degree"] = torch.tensor([g.degree(v)], dtype=torch.float, device=get_device(device_id))
+            g.nodes[v]["node_pagerank"] = torch.tensor([pagerank[v]], dtype=torch.float, device=get_device(device_id))
+            g.nodes[v]["node_cc"] = torch.tensor([clustering_coeff[v]], dtype=torch.float, device=get_device(device_id))
+
+    for e in g.edges:
+        edge_type_name = g.edges[e]["flow_type"]
+
+        if isinstance(edge_type_name, str):
+            edge_type_val = GraphEdgeLabel[edge_type_name].value
+            g.edges[e]["flow_type"] = torch.tensor([edge_type_val])
+
+    # Note: no need to sort the nodes of the graph
+    # to maintain an order. GNN is permutation invariant.
+
+    return DSGraph(g)
