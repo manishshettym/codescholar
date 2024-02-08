@@ -8,6 +8,7 @@ from codescholar.sast.simplified_ast import get_simplified_ast
 from codescholar.sast.sast_utils import remove_node
 from codescholar.utils.graph_utils import program_graph_to_nx
 from codescholar.utils.search_utils import read_graph, _frontier, _reduce
+from codescholar.utils.cluster_utils import cluster_programs
 from codescholar.utils.perf import perftimer
 
 ########### IDIOM MINING ############
@@ -60,8 +61,9 @@ def init_search_q(args, prog_indices, seed):
     remove_node(seed_sast, module_nid)
 
     seed_graph = program_graph_to_nx(seed_sast, directed=True)
+    cluster_center_indices = cluster_programs(args, prog_indices, n_clusters=10)
 
-    for idx in tqdm(prog_indices, desc="[init_search]"):
+    for idx in tqdm(cluster_center_indices, desc="[init_search]"):
         if count >= args.max_init_beams:
             continue
 
@@ -155,3 +157,25 @@ def init_search_mq(args, prog_indices, seeds):
         count += 1
 
     return beam_sets
+
+
+########### DEBUGGING ############
+
+
+def debug_beams(args, beam_sets):
+    node2span = lambda graph, node: graph.nodes[node]["span"]
+
+    for beam_set in beam_sets:
+        print("============== BEAM SET ==============")
+        for beam in beam_set:
+            _, _, subg, frontier, _, idx = beam
+
+            g = read_graph(args, idx)
+            p = read_prog(args, idx)
+            f_span = [node2span(g, n) for n in frontier]
+            print(f"Graph: {idx}")
+            print(f"Subgraph: {[node2span(g, n) for n in subg]}")
+            print(f"Frontier: {f_span}")
+            print(f"Program:\n{p}")
+
+    print("=====================================")

@@ -128,6 +128,23 @@ def read_embeddings_batched_redis(args, prog_indices):
     return embs
 
 
+def read_embeddings_redis(args, prog_indices):
+    emb_keys = [f"emb_{idx}" for idx in prog_indices]
+    emb_bytes_list = redis_client.mget(emb_keys)
+
+    embs = []
+    for emb_bytes in emb_bytes_list:
+        if emb_bytes:
+            num_elements = len(emb_bytes) // 4
+            assert num_elements % 64 == 0, "elements is not a multiple of 64"
+            original_shape = (num_elements // 64, 64)
+            emb_array = np.frombuffer(emb_bytes, dtype=np.float32).reshape(original_shape)
+            emb_tensor = torch.tensor(emb_array, dtype=torch.float32)
+            embs.append(emb_tensor)
+
+    return embs
+
+
 ########## SEARCH DISK UTILS ##########
 
 

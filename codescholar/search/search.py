@@ -192,6 +192,9 @@ def main(args):
         prog_indices = list(prog_indices)[: args.prog_samples]
     else:
         prog_indices = grep_programs(args, args.seed)[: args.prog_samples]
+    
+    # load all embeddings of prog_indices to redis
+    load_embeddings_batched_redis(args, prog_indices)
 
     # STEP 1: initialize search space
     if args.mode == "q":
@@ -204,13 +207,9 @@ def main(args):
     else:
         raise ValueError(f"Invalid search mode {args.mode}!")
 
-    # load all embeddings of prog_indices to redis
-    load_embeddings_batched_redis(args, prog_indices)
-
     # STEP 2: search for idioms; saves idioms gradually
     mine_summary = search(args, prog_indices, beam_sets)
     _write_mine_logs(mine_summary, f"{args.result_dir}/mine_summary.log")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
