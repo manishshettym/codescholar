@@ -55,34 +55,58 @@ for lib in benchmarks:
     for api in benchmarks[lib]:
         api_options.add(api)
 
-st.session_state.dropdown_api = st.selectbox("Go ahead, try it out! Select a popular API:", api_options, on_change=dropdown_selected)
+st.session_state.dropdown_api = st.selectbox(
+    "Go ahead, try it out! Select a popular API:",
+    api_options,
+    on_change=dropdown_selected,
+)
 
 with st.expander("Can't find your API? 🧐"):
     query = st.text_input(
-        "Just type your API/query below and we'll find some usage examples for you!", value="", key="search", on_change=search_selected
+        "Just type your API/query below and we'll find some usage examples for you!",
+        value="",
+        key="search",
+        on_change=search_selected,
     )
 
     if query:
         if st.session_state.last_query != query:
             st.session_state.last_query = query
             with st.spinner("Finding your API 🗺️..."):
-                response = requests.post(f"http://{endpoint}/findapi", json={"query": query})
+                response = requests.post(
+                    f"http://{endpoint}/findapi", json={"query": query}
+                )
 
             st.session_state.search_api = response.json()["api"]
-            st.write("We found the following API for your query: **{}**".format(st.session_state.search_api))
+            st.write(
+                "We found the following API for your query: **{}**".format(
+                    st.session_state.search_api
+                )
+            )
         else:
-            st.write("We found the following API for your query: **{}**".format(st.session_state.search_api))
+            st.write(
+                "We found the following API for your query: **{}**".format(
+                    st.session_state.search_api
+                )
+            )
 
 
-if st.session_state.input_type == "dropdown" and st.session_state.dropdown_api is not None:
+if (
+    st.session_state.input_type == "dropdown"
+    and st.session_state.dropdown_api is not None
+):
     API = st.session_state.dropdown_api
-elif st.session_state.input_type == "search" and st.session_state.search_api is not None:
+elif (
+    st.session_state.input_type == "search" and st.session_state.search_api is not None
+):
     API = st.session_state.search_api
 
 size = st.slider("Choose the size of your idiom:", 4, 20, 4)
 
 with st.spinner("Growing your idioms 🌱..."):
-    response = requests.post(f"http://{endpoint}/search", json={"api": API, "size": size})
+    response = requests.post(
+        f"http://{endpoint}/search", json={"api": API, "size": size}
+    )
     idioms = response.json()
 
     if "status" in idioms:
@@ -90,7 +114,12 @@ with st.spinner("Growing your idioms 🌱..."):
     elif len(idioms) == 0:
         st.error("No idioms found for API: {} 🫙".format(API))
     else:
-        idioms = [v for k, v in sorted(idioms.items(), key=lambda item: int(item[1]["freq"]), reverse=True)]
+        idioms = [
+            v
+            for k, v in sorted(
+                idioms.items(), key=lambda item: int(item[1]["freq"]), reverse=True
+            )
+        ]
         tabs = st.tabs(["Idiom {}".format(i + 1) for i in range(len(idioms))])
 
         for idiom, tab in zip(idioms, tabs):
@@ -100,18 +129,28 @@ with st.spinner("Growing your idioms 🌱..."):
 
                 colbut1, colbut2 = st.columns([0.25, 0.8])
                 with colbut1:
-                    but1 = st.button("Clean this idiom?", key=f"clean_{tabs.index(tab)}")
+                    but1 = st.button(
+                        "Clean this idiom?", key=f"clean_{tabs.index(tab)}"
+                    )
                 with colbut2:
-                    but2 = st.button("Code with this idiom?", key=f"write_{tabs.index(tab)}")
+                    but2 = st.button(
+                        "Code with this idiom?", key=f"write_{tabs.index(tab)}"
+                    )
 
                 if but1:
                     with st.spinner("Cleaning your idioms 🧹..."):
-                        response = requests.post(f"http://{endpoint}/clean", json={"api": API, "idiom": idiom["idiom"]})
+                        response = requests.post(
+                            f"http://{endpoint}/clean",
+                            json={"api": API, "idiom": idiom["idiom"]},
+                        )
                         # st.error("This feature is not available yet! 🫙")
                     st.code(response.json()["idiom"], language="python")
                 if but2:
                     with st.spinner("Writing some code 👩🏻‍💻..."):
-                        response = requests.post(f"http://{endpoint}/write", json={"api": API, "idiom": idiom["idiom"]})
+                        response = requests.post(
+                            f"http://{endpoint}/write",
+                            json={"api": API, "idiom": idiom["idiom"]},
+                        )
                         # st.error("This feature is not available yet! 🫙")
                     st.code(response.json()["idiom"], language="python")
 
@@ -124,7 +163,13 @@ with st.spinner("Growing your idioms 🌱..."):
             response = requests.post(f"http://{endpoint}/plot", json={"api": API})
 
         metrics = response.json()
-        metrics_df = pd.DataFrame({"size": metrics["sizes"], "cluster": metrics["clusters"], "freq": metrics["freq"]})
+        metrics_df = pd.DataFrame(
+            {
+                "size": metrics["sizes"],
+                "cluster": metrics["clusters"],
+                "freq": metrics["freq"],
+            }
+        )
 
         x = metrics_df["size"].unique()
         y1 = np.log(metrics_df.groupby("size")["cluster"].nunique())
@@ -135,9 +180,17 @@ with st.spinner("Growing your idioms 🌱..."):
         except IndexError:
             pass
         else:
-            chart_data = pd.DataFrame({"Size (Expressivity)": sorted(x), "Diversity": y1, "Reusability": y2})
+            chart_data = pd.DataFrame(
+                {"Size (Expressivity)": sorted(x), "Diversity": y1, "Reusability": y2}
+            )
 
             col1, col2 = st.columns([2, 1])
-            col1.line_chart(chart_data, x="Size (Expressivity)", y=["Diversity", "Reusability"])
-            col2.write("Ideal Idiom Size is **{} (± 1)** for {}".format(ideal_size, API))
-            col2.write("At this size, reusability, diversity, and expressivity are at an equilibrium!!")
+            col1.line_chart(
+                chart_data, x="Size (Expressivity)", y=["Diversity", "Reusability"]
+            )
+            col2.write(
+                "Ideal Idiom Size is **{} (± 1)** for {}".format(ideal_size, API)
+            )
+            col2.write(
+                "At this size, reusability, diversity, and expressivity are at an equilibrium!!"
+            )

@@ -13,9 +13,24 @@ def create_dummy_function(body) -> ast.FunctionDef:
     Create a dummy ast.FunctionDef object with
     name = "main" and body = body
     """
-    func_args = ast.arguments(posonlyargs=[], args=[], vararg=None, kwonlyargs=[], kw_defaults=[], kwarg=None, defaults=[])
+    func_args = ast.arguments(
+        posonlyargs=[],
+        args=[],
+        vararg=None,
+        kwonlyargs=[],
+        kw_defaults=[],
+        kwarg=None,
+        defaults=[],
+    )
 
-    func = ast.FunctionDef(name="main", args=func_args, body=body, decorator_list=[], returns=None, type_comment=None)
+    func = ast.FunctionDef(
+        name="main",
+        args=func_args,
+        body=body,
+        decorator_list=[],
+        returns=None,
+        type_comment=None,
+    )
 
     return func
 

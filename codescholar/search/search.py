@@ -26,14 +26,15 @@ from codescholar.utils.search_utils import (
     save_idiom,
     _print_mine_logs,
     _write_mine_logs,
-    read_graph
+    read_graph,
 )
 from codescholar.utils.search_utils import load_embeddings_batched_redis
 from codescholar.utils.graph_utils import nx_to_program_graph
+from codescholar.utils.cluster_utils import cluster_programs
 from codescholar.utils.perf import perftimer
 from codescholar.constants import DATA_DIR
 
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+redis_client = redis.StrictRedis(host="localhost", port=6379, db=0)
 
 ######### IDIOM STORE ############
 
@@ -76,7 +77,9 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
             prog = sast_to_prog(sast).replace("#", "_")
 
             if args.mode == "mq":
-                prog = "\n".join([line for line in prog.split("\n") if line.strip() != "_"])
+                prog = "\n".join(
+                    [line for line in prog.split("\n") if line.strip() != "_"]
+                )
 
             save_idiom(path, prog)
 
@@ -98,7 +101,9 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
     else:
         return True
 
+
 ######### MAIN ############
+
 
 # @perftimer
 def search(args, prog_indices, beam_sets):
@@ -174,10 +179,14 @@ def main(args):
         parser.error("query modes require --seed to begin search.")
 
     if not ping_elasticsearch():
-        raise ConnectionError("Elasticsearch not running on localhost:9200! Please start Elasticsearch and try again.")
+        raise ConnectionError(
+            "Elasticsearch not running on localhost:9200! Please start Elasticsearch and try again."
+        )
 
     if not ping_elasticindex():
-        raise ValueError("Elasticsearch index `python_files` not found! Please run `elastic_search.py` to create the index.")
+        raise ValueError(
+            "Elasticsearch index `python_files` not found! Please run `elastic_search.py` to create the index."
+        )
 
     # sample and constrain the search space
     if args.mode == "mq":
@@ -192,15 +201,20 @@ def main(args):
         prog_indices = list(prog_indices)[: args.prog_samples]
     else:
         prog_indices = grep_programs(args, args.seed)[: args.prog_samples]
-    
+
     # load all embeddings of prog_indices to redis
+    # TODO: do this offline for *all* progs?
     load_embeddings_batched_redis(args, prog_indices)
+
+    # identify seed programs by clustering
+    if args.mode in ["q", "mq"]:
+        seed_indices = cluster_programs(args, prog_indices, n_clusters=10)
 
     # STEP 1: initialize search space
     if args.mode == "q":
-        beam_sets = init_search_q(args, prog_indices, seed=args.seed)
+        beam_sets = init_search_q(args, seed_indices, seed=args.seed)
     elif args.mode == "mq":
-        beam_sets = init_search_mq(args, prog_indices, seeds=args.seed.split(";"))
+        beam_sets = init_search_mq(args, seed_indices, seeds=args.seed.split(";"))
     elif args.mode == "m":
         prog_indices = grep_programs(args, args.seed)[: args.prog_samples]
         beam_sets = init_search_m(args, prog_indices)
@@ -210,6 +224,7 @@ def main(args):
     # STEP 2: search for idioms; saves idioms gradually
     mine_summary = search(args, prog_indices, beam_sets)
     _write_mine_logs(mine_summary, f"{args.result_dir}/mine_summary.log")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -222,7 +237,11 @@ if __name__ == "__main__":
     args.prog_dir = f"{DATA_DIR}/{args.dataset}/source/"
     args.source_dir = f"{DATA_DIR}/{args.dataset}/graphs/"
     args.emb_dir = f"{DATA_DIR}/{args.dataset}/emb/"
-    args.result_dir = f"./results/{args.seed}/" if (args.mode == "q" or args.mode == "mq") else "./results/"
+    args.result_dir = (
+        f"./results/{args.seed}/"
+        if (args.mode == "q" or args.mode == "mq")
+        else "./results/"
+    )
     args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
     args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
 

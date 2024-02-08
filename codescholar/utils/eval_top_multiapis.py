@@ -17,7 +17,9 @@ def extract_api_calls(code):
 
     # Note: this regex is a quick hack to filter out some interesting APIs
     # However, codescholar's search is not limited to these APIs by any means!!
-    pattern = r"\b(pd|df|np|os|json|nn|plt|pandas|sklearn|torch)\.([a-zA-Z_][a-zA-Z0-9_.]+)\("
+    pattern = (
+        r"\b(pd|df|np|os|json|nn|plt|pandas|sklearn|torch)\.([a-zA-Z_][a-zA-Z0-9_.]+)\("
+    )
     matches = re.findall(pattern, code)
 
     for match in matches:

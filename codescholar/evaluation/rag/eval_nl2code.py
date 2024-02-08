@@ -18,7 +18,11 @@ from tenacity import (
 from codescholar.evaluation.rag.templates import GPT_FIND_API
 from codescholar.evaluation.rag.utils import select_fewshot_examples
 from codescholar.evaluation.rag.verify import get_valid_solutions, wrap_check
-from codescholar.evaluation.rag.prompt import create_baseline_prompt, create_apidisc_prompt, create_apischolar_prompt
+from codescholar.evaluation.rag.prompt import (
+    create_baseline_prompt,
+    create_apidisc_prompt,
+    create_apischolar_prompt,
+)
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -26,7 +30,10 @@ openai.api_key = os.getenv("OPENAI_API_KEY")
 @retry(wait=wait_random_exponential(min=1, max=60))
 def gpt_get_predictions(model, prompt, sample, index, verbose) -> List[str]:
     prompts = [
-        {"role": "system", "content": "You are a helpful programming assistant who can complete python code given the intent."},
+        {
+            "role": "system",
+            "content": "You are a helpful programming assistant who can complete python code given the intent.",
+        },
         {"role": "user", "content": prompt},
     ]
 
@@ -70,7 +77,9 @@ def eval_gpt(dataset):
             method=args.fewshot_method,
         )
 
-        prompt = get_prompt(args.experiment, sample, examples, args.num_tests, args.function_name)
+        prompt = get_prompt(
+            args.experiment, sample, examples, args.num_tests, args.function_name
+        )
 
         predictions = gpt_get_predictions(
             model=args.model,
@@ -84,7 +93,9 @@ def eval_gpt(dataset):
         valid_predictions = get_valid_solutions(predictions, deduplicate=False)
         num_valid = len(valid_predictions)
 
-        assert num_valid == args.n, f"Number of valid predictions {num_valid} != {args.n}"
+        assert (
+            num_valid == args.n
+        ), f"Number of valid predictions {num_valid} != {args.n}"
 
         scores, outputs = wrap_check(
             sample,
@@ -128,8 +139,15 @@ if __name__ == "__main__":
     parser.add_argument("--output_path", type=str, required=False)
 
     # gpt settings
-    parser.add_argument("--model", type=str, default="gpt-3.5-turbo", choices=["gpt-3.5-turbo"])
-    parser.add_argument("--n", type=int, default=10, help="Number of predictions required for each api call.")
+    parser.add_argument(
+        "--model", type=str, default="gpt-3.5-turbo", choices=["gpt-3.5-turbo"]
+    )
+    parser.add_argument(
+        "--n",
+        type=int,
+        default=10,
+        help="Number of predictions required for each api call.",
+    )
     parser.add_argument("--max_tokens", type=int, default=1024)
     parser.add_argument("--temperature", type=float, default=0.8)
     parser.add_argument("--top_p", type=float, default=1)
@@ -140,25 +158,41 @@ if __name__ == "__main__":
 
     # function name settings
     parser.add_argument(
-        "--function_name", type=str, default="id", choices=["id", "constant", "intent"], help="Method to construct the function name. "
+        "--function_name",
+        type=str,
+        default="id",
+        choices=["id", "constant", "intent"],
+        help="Method to construct the function name. ",
     )
 
     # fewshot settings
-    parser.add_argument("--k_shot", type=int, default=0, help="Number of examples included in the current prompt input. ")
     parser.add_argument(
-        "--fewshot_method", type=str, default="random", choices=["random"], help="Method to select the prefix examples for prompt creation."
+        "--k_shot",
+        type=int,
+        default=0,
+        help="Number of examples included in the current prompt input. ",
+    )
+    parser.add_argument(
+        "--fewshot_method",
+        type=str,
+        default="random",
+        choices=["random"],
+        help="Method to select the prefix examples for prompt creation.",
     )
 
     # experiment settings
-    parser.add_argument("--experiment", type=str, default="baseline", choices=["baseline", "apidisc", "apischolar"])
+    parser.add_argument(
+        "--experiment",
+        type=str,
+        default="baseline",
+        choices=["baseline", "apidisc", "apischolar"],
+    )
     parser.add_argument("--verbose", action="store_true")
 
     args = parser.parse_args()
 
     if not args.output_path:
-        args.output_path = (
-            f"res{args.model}-{args.experiment}-n{args.n}-t{args.temperature}-p{args.top_p}-m{args.max_tokens}-k{args.k_shot}.json"
-        )
+        args.output_path = f"res{args.model}-{args.experiment}-n{args.n}-t{args.temperature}-p{args.top_p}-m{args.max_tokens}-k{args.k_shot}.json"
 
     with open(args.input_path, "r") as fr:
         dataset = [json.loads(l.strip()) for l in fr]

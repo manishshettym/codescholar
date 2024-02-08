@@ -67,7 +67,9 @@ if __name__ == "__main__":
     config.init_optimizer_configs(parser)
     config.init_encoder_configs(parser)
     search_config.init_search_configs(parser)
-    parser.add_argument("--benchtype", type=str, default="single", choices=["single", "multi"])
+    parser.add_argument(
+        "--benchtype", type=str, default="single", choices=["single", "multi"]
+    )
     args = parser.parse_args()
 
     # data config

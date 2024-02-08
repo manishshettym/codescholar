@@ -13,7 +13,13 @@ import ot
 
 from codescholar.evaluation.emd.utils_codebert import embed_programs_codebert
 from codescholar.evaluation.emd.utils_gpt import embed_programs_gpt
-from codescholar.evaluation.emd.utils_emd import load_program, load_api_progs, load_gpt_idioms, load_cs_idioms, trim_code
+from codescholar.evaluation.emd.utils_emd import (
+    load_program,
+    load_api_progs,
+    load_gpt_idioms,
+    load_cs_idioms,
+    trim_code,
+)
 
 
 def compute_emd(code_embeddings, idiom_embeddings):
@@ -41,7 +47,9 @@ def main(args):
         gpt_idiom_embeddings = embs["gpt_idiom_embeddings"]
         k = int(round(len(prog_embeddings) * 0.1, 0))
         k = min(k, len(cs_idiom_embeddings), len(gpt_idiom_embeddings))
-        random_idiom_embeddings = prog_embeddings[np.random.choice(prog_embeddings.shape[0], k, replace=False), :]
+        random_idiom_embeddings = prog_embeddings[
+            np.random.choice(prog_embeddings.shape[0], k, replace=False), :
+        ]
 
         print(f"Programs: {len(prog_embeddings)}", flush=True)
         print(f"CS idioms: {len(cs_idiom_embeddings)}", flush=True)
@@ -137,7 +145,9 @@ def eval_multibench(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--benchtype", type=str, default="single", choices=["single", "multi"])
+    parser.add_argument(
+        "--benchtype", type=str, default="single", choices=["single", "multi"]
+    )
     parser.add_argument("--model", type=str, default="gpt", choices=["codebert", "gpt"])
     args = parser.parse_args()
 

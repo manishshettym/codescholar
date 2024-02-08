@@ -19,9 +19,14 @@ from codescholar.evaluation.rag.templates import GPT_FIND_API
 
 def gpt_find_api(query):
     """Find the API for the given query using GPT-3.5"""
-    prompt = GPT_FIND_API.format(query=query, libs="{pandas, numpy, os, sklearn, matplotlib, torch}")
+    prompt = GPT_FIND_API.format(
+        query=query, libs="{pandas, numpy, os, sklearn, matplotlib, torch}"
+    )
     prompts = [
-        {"role": "system", "content": "You are a helpful API assistant who can provide relevant API names given a programming task."},
+        {
+            "role": "system",
+            "content": "You are a helpful API assistant who can provide relevant API names given a programming task.",
+        },
         {"role": "user", "content": prompt},
     ]
 
@@ -125,9 +130,19 @@ if __name__ == "__main__":
     config.init_optimizer_configs(parser)
     config.init_encoder_configs(parser)
     search_config.init_search_configs(parser)
-    parser.add_argument("--get-apis", action="store_true", help="Get the API for each task using GPT-3.5")
-    parser.add_argument("--mine-examples", action="store_true", help="Mine idioms for each API")
-    parser.add_argument("--build-index", action="store_true", help="Build a queriable map of api -> idioms")
+    parser.add_argument(
+        "--get-apis",
+        action="store_true",
+        help="Get the API for each task using GPT-3.5",
+    )
+    parser.add_argument(
+        "--mine-examples", action="store_true", help="Mine idioms for each API"
+    )
+    parser.add_argument(
+        "--build-index",
+        action="store_true",
+        help="Build a queriable map of api -> idioms",
+    )
     args = parser.parse_args()
 
     # search config

@@ -13,10 +13,13 @@ import torch.multiprocessing as mp
 
 from codescholar.constants import DATA_DIR
 
+
 def start_workers_rename(in_queue, out_queue, methods_to_fileid, args):
     workers = []
     for _ in tqdm(range(args.n_workers), desc="Workers"):
-        worker = mp.Process(target=mp_rename, args=(args, methods_to_fileid, in_queue, out_queue))
+        worker = mp.Process(
+            target=mp_rename, args=(args, methods_to_fileid, in_queue, out_queue)
+        )
         worker.start()
         workers.append(worker)
 
@@ -68,7 +71,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, help="Dataset to use")
     parser.add_argument("--n_workers", type=int, default=4, help="Number of workers")
-    parser.add_argument("--apply_filters", action="store_true", help="Whether to run on filtered methods")
+    parser.add_argument(
+        "--apply_filters",
+        action="store_true",
+        help="Whether to run on filtered methods",
+    )
     args = parser.parse_args()
 
     if args.apply_filters:

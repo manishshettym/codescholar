@@ -19,7 +19,8 @@ from codescholar.utils.graph_utils import GraphEdgeLabel, GraphNodeLabel
 
 
 import redis
-redis_client = redis.StrictRedis(host='localhost', port=6379, db=0)
+
+redis_client = redis.StrictRedis(host="localhost", port=6379, db=0)
 
 
 ########## SEARCH MACROS ##########
@@ -95,12 +96,21 @@ def load_embeddings(args, idx_list):
 
 def load_embeddings_batched_redis(args, prog_indices):
     batch_size = 100
-    batches = [prog_indices[i:i + batch_size] for i in range(0, len(prog_indices), batch_size)]
+    batches = [
+        prog_indices[i : i + batch_size]
+        for i in range(0, len(prog_indices), batch_size)
+    ]
 
     with Pool() as pool:
         results = pool.starmap(load_embeddings, [(args, batch) for batch in batches])
         all_embeddings = [item for sublist in results for item in sublist]
-        for batch in tqdm([all_embeddings[i:i + batch_size] for i in range(0, len(all_embeddings), batch_size)], desc="[redis_load]"):
+        for batch in tqdm(
+            [
+                all_embeddings[i : i + batch_size]
+                for i in range(0, len(all_embeddings), batch_size)
+            ],
+            desc="[redis_load]",
+        ):
             save_embeddings_to_redis(batch)
 
 
@@ -108,7 +118,7 @@ def read_embeddings_batched_redis(args, prog_indices):
     embs = []
 
     for i in range(0, len(prog_indices), args.batch_size):
-        batch_indices = prog_indices[i:i + args.batch_size]
+        batch_indices = prog_indices[i : i + args.batch_size]
         emb_keys = [f"emb_{idx}" for idx in batch_indices]
         emb_bytes_list = redis_client.mget(emb_keys)
 
@@ -118,7 +128,9 @@ def read_embeddings_batched_redis(args, prog_indices):
                 num_elements = len(emb_bytes) // 4
                 assert num_elements % 64 == 0, "elements is not a multiple of 64"
                 original_shape = (num_elements // 64, 64)
-                emb_array = np.frombuffer(emb_bytes, dtype=np.float32).reshape(original_shape)
+                emb_array = np.frombuffer(emb_bytes, dtype=np.float32).reshape(
+                    original_shape
+                )
                 emb_tensor = torch.tensor(emb_array, dtype=torch.float32)
                 batch_embs.append(emb_tensor)
 
@@ -138,7 +150,9 @@ def read_embeddings_redis(args, prog_indices):
             num_elements = len(emb_bytes) // 4
             assert num_elements % 64 == 0, "elements is not a multiple of 64"
             original_shape = (num_elements // 64, 64)
-            emb_array = np.frombuffer(emb_bytes, dtype=np.float32).reshape(original_shape)
+            emb_array = np.frombuffer(emb_bytes, dtype=np.float32).reshape(
+                original_shape
+            )
             emb_tensor = torch.tensor(emb_array, dtype=torch.float32)
             embs.append(emb_tensor)
 
@@ -298,6 +312,7 @@ def _write_mine_logs(mine_summary, filepath):
 
 ############# FEATURIZER UTILS #############
 
+
 def featurize_graph(g, feat_tokenizer, feat_model, anchor=None, device_id=None):
     assert len(g.nodes) > 0
     assert len(g.edges) > 0
@@ -305,21 +320,25 @@ def featurize_graph(g, feat_tokenizer, feat_model, anchor=None, device_id=None):
     if anchor is not None:
         pagerank = nx.pagerank(g)
         clustering_coeff = nx.clustering(g)
-        
+
         # Batch tokenization and embedding
         spans = [g.nodes[v]["span"] for v in g.nodes]
         spans = [re.sub("\s+", " ", span) for span in spans]
-        tokens_ids = feat_tokenizer(spans, padding=True, truncation=True, return_tensors="pt")
+        tokens_ids = feat_tokenizer(
+            spans, padding=True, truncation=True, return_tensors="pt"
+        )
         tokens_tensor = tokens_ids["input_ids"].to(get_device(device_id))
-        
+
         with torch.no_grad():
             context_embeddings = feat_model(tokens_tensor)[0]
         context_embeddings = torch.mean(context_embeddings, dim=1)
-        
+
         # Assign features to nodes
         for i, v in enumerate(g.nodes):
-            g.nodes[v]["node_feature"] = torch.tensor([float(v == anchor)], dtype=torch.float, device=get_device(device_id))
-            
+            g.nodes[v]["node_feature"] = torch.tensor(
+                [float(v == anchor)], dtype=torch.float, device=get_device(device_id)
+            )
+
             node_type_name = g.nodes[v]["ast_type"]
             if isinstance(node_type_name, str):
                 try:
@@ -327,12 +346,20 @@ def featurize_graph(g, feat_tokenizer, feat_model, anchor=None, device_id=None):
                 except KeyError:
                     node_type_val = GraphNodeLabel["Other"].value
 
-                g.nodes[v]["ast_type"] = torch.tensor([node_type_val], device=get_device(device_id))
+                g.nodes[v]["ast_type"] = torch.tensor(
+                    [node_type_val], device=get_device(device_id)
+                )
 
             g.nodes[v]["node_span"] = context_embeddings[i].unsqueeze(0)
-            g.nodes[v]["node_degree"] = torch.tensor([g.degree(v)], dtype=torch.float, device=get_device(device_id))
-            g.nodes[v]["node_pagerank"] = torch.tensor([pagerank[v]], dtype=torch.float, device=get_device(device_id))
-            g.nodes[v]["node_cc"] = torch.tensor([clustering_coeff[v]], dtype=torch.float, device=get_device(device_id))
+            g.nodes[v]["node_degree"] = torch.tensor(
+                [g.degree(v)], dtype=torch.float, device=get_device(device_id)
+            )
+            g.nodes[v]["node_pagerank"] = torch.tensor(
+                [pagerank[v]], dtype=torch.float, device=get_device(device_id)
+            )
+            g.nodes[v]["node_cc"] = torch.tensor(
+                [clustering_coeff[v]], dtype=torch.float, device=get_device(device_id)
+            )
 
     for e in g.edges:
         edge_type_name = g.edges[e]["flow_type"]

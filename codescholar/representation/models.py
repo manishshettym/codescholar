@@ -44,7 +44,9 @@ class Preprocess(nn.Module):
 class SubgraphEmbedder(nn.Module):
     def __init__(self, input_dim, hidden_dim, args, device_id=None):
         super(SubgraphEmbedder, self).__init__()
-        self.encoder = BasicGNN(input_dim, hidden_dim, hidden_dim, args, device_id=device_id)
+        self.encoder = BasicGNN(
+            input_dim, hidden_dim, hidden_dim, args, device_id=device_id
+        )
         self.margin = args.margin
         self.use_intersection = False
 
@@ -66,13 +68,20 @@ class SubgraphEmbedder(nn.Module):
 
         # sum(||max{0, z_q - z_u}||_2^2))
         error = torch.sum(
-            torch.max(torch.zeros_like(emb_targets, device=get_device(self.device_id)), emb_queries - emb_targets) ** 2, dim=1
+            torch.max(
+                torch.zeros_like(emb_targets, device=get_device(self.device_id)),
+                emb_queries - emb_targets,
+            )
+            ** 2,
+            dim=1,
         )
 
         margin = self.margin
 
         # rewrite loss for -ve examples
-        error[labels == 0] = torch.max(torch.tensor(0.0, device=get_device(self.device_id)), margin - error)[labels == 0]
+        error[labels == 0] = torch.max(
+            torch.tensor(0.0, device=get_device(self.device_id)), margin - error
+        )[labels == 0]
 
         relation_loss = torch.sum(error)
 
@@ -86,7 +95,14 @@ class SubgraphEmbedder(nn.Module):
             pred (List<emb_t, emb_q>): embeddings of pairs of graphs
         """
         emb_targets, emb_queries = pred
-        is_subgraph = torch.sum(torch.max(torch.zeros_like(emb_targets, device=emb_targets.device), emb_queries - emb_targets) ** 2, dim=1)
+        is_subgraph = torch.sum(
+            torch.max(
+                torch.zeros_like(emb_targets, device=emb_targets.device),
+                emb_queries - emb_targets,
+            )
+            ** 2,
+            dim=1,
+        )
 
         return is_subgraph
 
@@ -121,7 +137,9 @@ class SubgraphEmbedder(nn.Module):
 
         # 1 indicates violation is in < DIM_RATIO*emb_size dimensions => subgraph
         # 0 indicates otherwise. => !subgraph
-        predictions = (indicator_sum < MAX_VIO_DIMS).view(-1, 1).type(torch.cuda.FloatTensor)
+        predictions = (
+            (indicator_sum < MAX_VIO_DIMS).view(-1, 1).type(torch.cuda.FloatTensor)
+        )
         scores = 1 - indicator_sum / emb_size
 
         return predictions, scores
@@ -184,11 +202,15 @@ class BasicGNN(nn.Module):
 
         # graph isomorphism + weighted edges
         elif type == "GIN":
-            return lambda i, h: WeightedGINConv(nn.Sequential(nn.Linear(i, h), nn.ReLU(), nn.Linear(h, h)))
+            return lambda i, h: WeightedGINConv(
+                nn.Sequential(nn.Linear(i, h), nn.ReLU(), nn.Linear(h, h))
+            )
 
         # graph isomorphism net + edge features
         elif type == "GINE":
-            return lambda i, h: pyg_nn.GINEConv(nn.Sequential(nn.Linear(i, h), nn.ReLU(), nn.Linear(h, h)), edge_dim=1)
+            return lambda i, h: pyg_nn.GINEConv(
+                nn.Sequential(nn.Linear(i, h), nn.ReLU(), nn.Linear(h, h)), edge_dim=1
+            )
 
         else:
             print("unrecognized model type")
@@ -276,7 +298,10 @@ class WeightedGINConv(pyg_nn.MessagePassing):
         """"""
         x = x.unsqueeze(-1) if x.dim() == 1 else x
         edge_index, edge_weight = pyg_utils.remove_self_loops(edge_index, edge_weight)
-        out = self.nn((1 + self.eps) * x + self.propagate(edge_index, x=x, edge_weight=edge_weight))
+        out = self.nn(
+            (1 + self.eps) * x
+            + self.propagate(edge_index, x=x, edge_weight=edge_weight)
+        )
         return out
 
     def message(self, x_j, edge_weight):

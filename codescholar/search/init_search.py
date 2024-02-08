@@ -8,7 +8,6 @@ from codescholar.sast.simplified_ast import get_simplified_ast
 from codescholar.sast.sast_utils import remove_node
 from codescholar.utils.graph_utils import program_graph_to_nx
 from codescholar.utils.search_utils import read_graph, _frontier, _reduce
-from codescholar.utils.cluster_utils import cluster_programs
 from codescholar.utils.perf import perftimer
 
 ########### IDIOM MINING ############
@@ -61,9 +60,8 @@ def init_search_q(args, prog_indices, seed):
     remove_node(seed_sast, module_nid)
 
     seed_graph = program_graph_to_nx(seed_sast, directed=True)
-    cluster_center_indices = cluster_programs(args, prog_indices, n_clusters=10)
 
-    for idx in tqdm(cluster_center_indices, desc="[init_search]"):
+    for idx in tqdm(prog_indices, desc="[init_search]"):
         if count >= args.max_init_beams:
             continue
 
@@ -71,7 +69,9 @@ def init_search_q(args, prog_indices, seed):
 
         # find all matches of the seed graph in the program graph
         # uses exact subgraph isomorphism - not that expensive because query is small (2-3 nodes)
-        node_match = lambda n1, n2: n1["span"] == n2["span"] and n1["ast_type"] == n2["ast_type"]
+        node_match = (
+            lambda n1, n2: n1["span"] == n2["span"] and n1["ast_type"] == n2["ast_type"]
+        )
         DiGM = DiGraphMatcher(graph, seed_graph, node_match=node_match)
         seed_matches = list(DiGM.subgraph_isomorphisms_iter())
 
@@ -83,7 +83,9 @@ def init_search_q(args, prog_indices, seed):
         neigh = list(random.choice(seed_matches).keys())
 
         # find frontier = {successors} U {predecessors} - {itself} = {supergraphs}
-        frontier = set(_reduce(list(_frontier(graph, n, type="radial") for n in neigh))) - set(neigh)
+        frontier = set(
+            _reduce(list(_frontier(graph, n, type="radial") for n in neigh))
+        ) - set(neigh)
         visited = set(neigh)
 
         beam_sets.append([(0, 0, neigh, frontier, visited, idx)])
@@ -115,7 +117,9 @@ def init_search_mq(args, prog_indices, seeds):
     def match_seed_graph(seed_graph, target_graph) -> list[dict]:
         """find all matches of the seed graph in the target graph"""
         # uses exact subgraph isomorphism - not that expensive because query is small (2-3 nodes)
-        node_match = lambda n1, n2: n1["span"] == n2["span"] and n1["ast_type"] == n2["ast_type"]
+        node_match = (
+            lambda n1, n2: n1["span"] == n2["span"] and n1["ast_type"] == n2["ast_type"]
+        )
         DiGM = DiGraphMatcher(target_graph, seed_graph, node_match=node_match)
         return list(DiGM.subgraph_isomorphisms_iter())
 
@@ -150,7 +154,9 @@ def init_search_mq(args, prog_indices, seeds):
         neigh = list(neigh.keys())
 
         # find frontier = {successors} U {predecessors} - {itself} = {supergraphs}
-        frontier = set(_reduce(list(_frontier(graph, n, type="radial") for n in neigh))) - set(neigh)
+        frontier = set(
+            _reduce(list(_frontier(graph, n, type="radial") for n in neigh))
+        ) - set(neigh)
         visited = set(neigh)
 
         beam_sets.append([(0, 0, neigh, frontier, visited, idx)])

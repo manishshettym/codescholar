@@ -36,7 +36,9 @@ def worker_bulk_index(args, in_queue, out_queue):
         with open(path) as file:
             contents = file.read()
 
-        out_queue.put({"_index": "python_files", "_id": idx, "_source": {"content": contents}})
+        out_queue.put(
+            {"_index": "python_files", "_id": idx, "_source": {"content": contents}}
+        )
 
 
 def bulk_index_generator(count, out_queue):
@@ -50,7 +52,9 @@ def index_files(args):
 
     in_queue, out_queue = mp.Queue(), mp.Queue()
     workers = start_workers_bulk_index(in_queue, out_queue, args)
-    valid_indices = [f.split("_")[-1][:-3] for f in glob.glob(osp.join(args.emb_dir, "*.pt"))]
+    valid_indices = [
+        f.split("_")[-1][:-3] for f in glob.glob(osp.join(args.emb_dir, "*.pt"))
+    ]
 
     for i in valid_indices:
         in_queue.put(("idx", i))
@@ -69,7 +73,12 @@ def grep_programs(args, keyword: str):
     es = Elasticsearch("http://localhost:9200/")
 
     # Perform the search
-    res = es.search(index="python_files", body={"query": {"match": {"content": keyword}}}, size=10000, scroll="1m")
+    res = es.search(
+        index="python_files",
+        body={"query": {"match": {"content": keyword}}},
+        size=10000,
+        scroll="1m",
+    )
 
     sid = res["_scroll_id"]
     scroll_size = len(res["hits"]["hits"])

@@ -16,15 +16,17 @@ def extract_textual_features(args, prog_indices):
     tfidf_matrix = vectorizer.fit_transform(programs)
     return tfidf_matrix.toarray()
 
+
 def extract_graph_features(args, prog_indices):
     graph_embs = read_embeddings_redis(args, prog_indices)
     graph_features = [torch.mean(f, axis=0).numpy() for f in graph_embs]
     return np.array(graph_features)
 
+
 def cluster_programs(args, prog_indices, n_clusters=10):
     textual_features = extract_textual_features(args, prog_indices)
-    graph_features = extract_graph_features(args, prog_indices)    
-    combined_features = np.hstack((textual_features,  graph_features))
+    graph_features = extract_graph_features(args, prog_indices)
+    combined_features = np.hstack((textual_features, graph_features))
 
     scaler = StandardScaler()
     pca = PCA(n_components=0.95, random_state=42)

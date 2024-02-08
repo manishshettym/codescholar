@@ -8,10 +8,14 @@ import networkx as nx
 from deepsnap.batch import Batch
 from transformers import RobertaTokenizer, RobertaModel
 
-from codescholar.utils.search_utils import _frontier, read_graph, read_embeddings_batched_redis, featurize_graph
+from codescholar.utils.search_utils import (
+    _frontier,
+    read_graph,
+    read_embeddings_batched_redis,
+    featurize_graph,
+)
 from codescholar.representation import models
 from codescholar.utils.train_utils import build_model, get_device
-
 
 
 def score_candidate_freq(args, model, embs, cand_emb, device_id=None):
@@ -33,13 +37,19 @@ def score_candidate_freq(args, model, embs, cand_emb, device_id=None):
             comp_preds = np.array([])
             for emb_batch in embs:
                 with torch.no_grad():
-                    is_subgraph_rel = model.predict((emb_batch.to(get_device(device_id)), comp_emb))
+                    is_subgraph_rel = model.predict(
+                        (emb_batch.to(get_device(device_id)), comp_emb)
+                    )
                     is_subgraph = model.classifier(is_subgraph_rel.unsqueeze(1))
-                    comp_preds = np.concatenate((comp_preds, torch.argmax(is_subgraph, axis=1).cpu().numpy()))
+                    comp_preds = np.concatenate(
+                        (comp_preds, torch.argmax(is_subgraph, axis=1).cpu().numpy())
+                    )
 
             preds.append(comp_preds)
 
-        assert len(set([len(pred) for pred in preds])) == 1, "component preds have different shapes!"
+        assert (
+            len(set([len(pred) for pred in preds])) == 1
+        ), "component preds have different shapes!"
 
         preds = np.array(preds)
         merged_preds = np.all(preds, axis=0)
@@ -47,7 +57,9 @@ def score_candidate_freq(args, model, embs, cand_emb, device_id=None):
     else:
         for emb_batch in embs:
             with torch.no_grad():
-                is_subgraph_rel = model.predict((emb_batch.to(get_device(device_id)), cand_emb))
+                is_subgraph_rel = model.predict(
+                    (emb_batch.to(get_device(device_id)), cand_emb)
+                )
                 is_subgraph = model.classifier(is_subgraph_rel.unsqueeze(1))
                 score += torch.sum(torch.argmax(is_subgraph, axis=1)).item()
 
@@ -59,25 +71,32 @@ embs = None
 feat_tokenizer = None
 feat_model = None
 subg_model = None
+
+
 def init_grow(args, prog_indices, device_id=None):
     global is_global_init
     global embs, feat_tokenizer, feat_model, subg_model
     codebert_name = "microsoft/codebert-base"
-    
+
     if not is_global_init:
         embs = read_embeddings_batched_redis(args, prog_indices)
         feat_tokenizer = RobertaTokenizer.from_pretrained(codebert_name)
-        feat_model = RobertaModel.from_pretrained(codebert_name).to(get_device(device_id))
+        feat_model = RobertaModel.from_pretrained(codebert_name).to(
+            get_device(device_id)
+        )
         feat_model.eval()
         subg_model = build_model(models.SubgraphEmbedder, args, device_id=device_id)
         subg_model.eval()
         is_global_init = True
-    
+
     return embs, feat_tokenizer, feat_model, subg_model
+
 
 def grow(args, prog_indices, beam_set, device_id=None):
     torch.cuda.set_device(device_id)
-    embs, feat_tokenizer, feat_model, model = init_grow(args, prog_indices, device_id=device_id)
+    embs, feat_tokenizer, feat_model, model = init_grow(
+        args, prog_indices, device_id=device_id
+    )
 
     new_beams = []
 
@@ -97,19 +116,37 @@ def grow(args, prog_indices, beam_set, device_id=None):
             connected_comps = list(nx.connected_components(cand_neigh.to_undirected()))
 
             if len(connected_comps) == 1:
-                cand_neigh = featurize_graph(cand_neigh, feat_tokenizer, feat_model, anchor=neigh[0], device_id=device_id)
+                cand_neigh = featurize_graph(
+                    cand_neigh,
+                    feat_tokenizer,
+                    feat_model,
+                    anchor=neigh[0],
+                    device_id=device_id,
+                )
                 cand_neighs.append(cand_neigh)
             else:
                 comp_neighs = []
                 for comp in connected_comps:
                     comp_neigh = cand_neigh.subgraph(comp)
-                    comp_root = [n for n in comp_neigh.nodes if comp_neigh.in_degree(n) == 0][0]
-                    comp_neigh = featurize_graph(comp_neigh, feat_tokenizer, feat_model, anchor=comp_root, device_id=device_id)
+                    comp_root = [
+                        n for n in comp_neigh.nodes if comp_neigh.in_degree(n) == 0
+                    ][0]
+                    comp_neigh = featurize_graph(
+                        comp_neigh,
+                        feat_tokenizer,
+                        feat_model,
+                        anchor=comp_root,
+                        device_id=device_id,
+                    )
                     comp_neighs.append(comp_neigh)
 
                 cand_neighs.append(comp_neighs)
 
-        flat_cand_neighs = list(chain.from_iterable([x if isinstance(x, list) else [x] for x in cand_neighs]))
+        flat_cand_neighs = list(
+            chain.from_iterable(
+                [x if isinstance(x, list) else [x] for x in cand_neighs]
+            )
+        )
         cand_batch = Batch.from_data_list(flat_cand_neighs).to(get_device(device_id))
 
         with torch.no_grad():
@@ -134,15 +171,24 @@ def grow(args, prog_indices, beam_set, device_id=None):
 
             # new frontier = {prev frontier} U {outgoing and incoming neighbors of cand_node} - {visited}
             # note: one can use type='neigh' to add only outgoing neighbors
-            new_frontier = list(((set(frontier) | _frontier(graph, cand_node, type="radial")) - visited) - set([cand_node]))
+            new_frontier = list(
+                ((set(frontier) | _frontier(graph, cand_node, type="radial")) - visited)
+                - set([cand_node])
+            )
 
             new_visited = visited | set([cand_node])
 
-            score = score_candidate_freq(args, model, embs, cand_emb, device_id=device_id)
-            new_beams.append((score, new_holes, new_neigh, new_frontier, new_visited, graph_idx))
+            score = score_candidate_freq(
+                args, model, embs, cand_emb, device_id=device_id
+            )
+            new_beams.append(
+                (score, new_holes, new_neigh, new_frontier, new_visited, graph_idx)
+            )
 
     # STEP 2: Sort new beams by freq_score/#holes
-    new_beams = list(sorted(new_beams, key=lambda x: x[0] / x[1] if x[1] > 0 else x[0], reverse=True))
+    new_beams = list(
+        sorted(new_beams, key=lambda x: x[0] / x[1] if x[1] > 0 else x[0], reverse=True)
+    )
 
     # print("===== [debugger] new beams =====")
     # for beam in new_beams:
@@ -155,5 +201,5 @@ def grow(args, prog_indices, beam_set, device_id=None):
 
     # STEP 3: filter top-k beams
     new_beams = new_beams[: args.n_beams]
-    
+
     return new_beams
