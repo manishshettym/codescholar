@@ -34,16 +34,38 @@ class Corpus:
     def __init__(self, dataset, n_train, n_test, train=True, save_json=False):
         if train:
             self.train_dataset = ProgramDataset(
-                root=f"./tmp/{dataset}/train", name=dataset, task="train", n_samples=n_train, save_json=save_json
+                root=f"./tmp/{dataset}/train",
+                name=dataset,
+                task="train",
+                n_samples=n_train,
+                save_json=save_json,
             )
 
-        self.test_dataset = ProgramDataset(root=f"./tmp/{dataset}/test", name=dataset, task="test", n_samples=n_test, save_json=save_json)
+        self.test_dataset = ProgramDataset(
+            root=f"./tmp/{dataset}/test",
+            name=dataset,
+            task="test",
+            n_samples=n_test,
+            save_json=save_json,
+        )
 
     def gen_data_loader(self, batch_size, train=True):
         if train:
-            return DataLoader(self.train_dataset, collate_fn=my_collate, batch_size=batch_size, sampler=None, shuffle=False)
+            return DataLoader(
+                self.train_dataset,
+                collate_fn=my_collate,
+                batch_size=batch_size,
+                sampler=None,
+                shuffle=False,
+            )
         else:
-            return DataLoader(self.test_dataset, collate_fn=my_collate, batch_size=batch_size, sampler=None, shuffle=False)
+            return DataLoader(
+                self.test_dataset,
+                collate_fn=my_collate,
+                batch_size=batch_size,
+                sampler=None,
+                shuffle=False,
+            )
 
 
 class ProgramDataset(Dataset):
@@ -168,7 +190,9 @@ class ProgramDataset(Dataset):
 
             size = random.randint(self.min_size + 1, self.max_size)
             graph_t, t = self.sample_neigh(program_size, count, size)
-            graph_q, q = self.sample_neigh(program_size, count, random.randint(self.min_size, size - 1))
+            graph_q, q = self.sample_neigh(
+                program_size, count, random.randint(self.min_size, size - 1)
+            )
 
             neg_t_anchor = list(graph_t.nodes)[0]
             neg_q_anchor = list(graph_q.nodes)[0]

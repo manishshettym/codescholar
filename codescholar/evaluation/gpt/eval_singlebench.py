@@ -68,7 +68,10 @@ def encode_question_chat(template, lib, api, alias):
     prompt = fill_template(template, lib, api, alias)
 
     prompts = [
-        {"role": "system", "content": "You are a helpful API assistant who can write idiomatic API usage examples given the API name."},
+        {
+            "role": "system",
+            "content": "You are a helpful API assistant who can write idiomatic API usage examples given the API name.",
+        },
         {"role": "user", "content": prompt},
     ]
     return prompts
@@ -150,7 +153,9 @@ if __name__ == "__main__":
             idioms = parse_response(response)
 
             if idioms == []:
-                print(f"Warning: No idioms parsed for [{lib}] [{api}]; but the response is:\n{response}")
+                print(
+                    f"Warning: No idioms parsed for [{lib}] [{api}]; but the response is:\n{response}"
+                )
 
             for i, idiom in enumerate(idioms):
                 with open(f"{result_dir}/idiom_{i}.py", "w") as f:

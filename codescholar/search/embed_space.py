@@ -17,6 +17,7 @@ from codescholar.representation import models, config
 from codescholar.utils.graph_utils import program_graph_to_nx
 from codescholar.utils.train_utils import build_model, get_device, featurize_graph
 from codescholar.search import search_config
+from codescholar.constants import DATA_DIR
 
 
 # ########## MULTI PROC ##########
@@ -26,7 +27,9 @@ def start_workers_process(in_queue, out_queue, args, gpu):
     torch.cuda.set_device(gpu)
     workers = []
     for _ in tqdm(range(args.n_workers), desc="Workers"):
-        worker = mp.Process(target=generate_neighborhoods, args=(args, in_queue, out_queue, gpu))
+        worker = mp.Process(
+            target=generate_neighborhoods, args=(args, in_queue, out_queue, gpu)
+        )
         worker.start()
         workers.append(worker)
 
@@ -37,7 +40,9 @@ def start_workers_embed(in_queue, out_queue, args, gpu):
     torch.cuda.set_device(gpu)
     workers = []
     for _ in tqdm(range(args.n_workers), desc="Workers"):
-        worker = mp.Process(target=generate_embeddings, args=(args, in_queue, out_queue, gpu))
+        worker = mp.Process(
+            target=generate_embeddings, args=(args, in_queue, out_queue, gpu)
+        )
         worker.start()
         workers.append(worker)
 
@@ -52,11 +57,18 @@ def get_neighborhoods(args, graph, feat_tokenizer, feat_model, device_id=None):
     neighs = []
 
     # choose top args.num_neighborhoods nodes with high degree to sample neighborhoods from
-    sampled_nodes = sorted(graph.nodes, key=lambda x: graph.degree[x], reverse=True)[: args.num_neighborhoods]
+    sampled_nodes = sorted(graph.nodes, key=lambda x: graph.degree[x], reverse=True)[
+        : args.num_neighborhoods
+    ]
 
     # find each node's neighbors via SSSP
     for j, node in enumerate(sampled_nodes):
-        shortest_paths = sorted(nx.single_source_shortest_path_length(graph, node, cutoff=args.radius).items(), key=lambda x: x[1])
+        shortest_paths = sorted(
+            nx.single_source_shortest_path_length(
+                graph, node, cutoff=args.radius
+            ).items(),
+            key=lambda x: x[1],
+        )
         neighbors = list(map(lambda x: x[0], shortest_paths))
 
         if args.neighborhood_size != 0:
@@ -71,7 +83,9 @@ def get_neighborhoods(args, graph, feat_tokenizer, feat_model, device_id=None):
             # edges between these nodes => in this case, a (sampled) radial n'hood
 
             neigh = graph.subgraph(neighbors)
-            neigh = featurize_graph(neigh, feat_tokenizer, feat_model, anchor=node, device_id=device_id)
+            neigh = featurize_graph(
+                neigh, feat_tokenizer, feat_model, anchor=node, device_id=device_id
+            )
             neighs.append(neigh)
 
     return neighs
@@ -166,7 +180,9 @@ def generate_neighborhoods(args, in_queue, out_queue, device_id=None):
         if args.format == "source":
             torch.save(graph, osp.join(args.graphs_dir, f"data_{idx}.pt"))
 
-        neighs = get_neighborhoods(args, graph, feat_tokenizer, feat_model, device_id=device_id)
+        neighs = get_neighborhoods(
+            args, graph, feat_tokenizer, feat_model, device_id=device_id
+        )
         torch.save(neighs, osp.join(args.processed_dir, f"data_{idx}.pt"))
 
         del graph
@@ -272,10 +288,10 @@ def main():
 
     # data config
     args.format = "source"  # {graphs, source}
-    args.source_dir = f"../data/{args.dataset}/source/"
-    args.graphs_dir = f"../data/{args.dataset}/graphs/"
-    args.processed_dir = f"../data/{args.dataset}/processed/"
-    args.emb_dir = f"../data/{args.dataset}/emb/"
+    args.source_dir = f"{DATA_DIR}/{args.dataset}/source/"
+    args.graphs_dir = f"{DATA_DIR}/{args.dataset}/graphs/"
+    args.processed_dir = f"{DATA_DIR}/{args.dataset}/processed/"
+    args.emb_dir = f"{DATA_DIR}/{args.dataset}/emb/"
 
     # model config
     args.test = True

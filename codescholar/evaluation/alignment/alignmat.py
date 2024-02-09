@@ -21,7 +21,12 @@ from codescholar.utils.graph_utils import nx_to_program_graph, program_graph_to_
 
 
 def get_anchor_neigh(args, graph, anchor):
-    shortest_paths = sorted(nx.single_source_shortest_path_length(graph, anchor, cutoff=args.radius).items(), key=lambda x: x[1])
+    shortest_paths = sorted(
+        nx.single_source_shortest_path_length(
+            graph, anchor, cutoff=args.radius
+        ).items(),
+        key=lambda x: x[1],
+    )
     neighbors = list(map(lambda x: x[0], shortest_paths))
 
     # if args.subgraph_sample_size != 0:
@@ -104,7 +109,13 @@ if __name__ == "__main__":
     vmin = min(np.min(matg), np.min(matb))
     vmax = max(np.max(matg), np.max(matb))
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(15, 15), gridspec_kw={"height_ratios": [matg.shape[1], matb.shape[1]]})
+    fig, (ax1, ax2) = plt.subplots(
+        2,
+        1,
+        sharex=True,
+        figsize=(15, 15),
+        gridspec_kw={"height_ratios": [matg.shape[1], matb.shape[1]]},
+    )
     x_labels = [t.nodes[i]["span"] for i in t.nodes]
 
     # plot gq

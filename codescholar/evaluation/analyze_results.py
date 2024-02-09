@@ -50,7 +50,9 @@ if __name__ == "__main__":
                 plens = []
 
                 try:
-                    for file in os.listdir(f"results/{DATE}/{lib}_res/{api}/idioms/progs"):
+                    for file in os.listdir(
+                        f"results/{DATE}/{lib}_res/{api}/idioms/progs"
+                    ):
                         _, size, cluster, nhood_count, hole = file.split("_")
                         hole = hole.split(".")[0]
 
@@ -59,7 +61,9 @@ if __name__ == "__main__":
                         neighborhoods.append(int(nhood_count))
                         holes.append(int(hole))
 
-                        with open(f"results/{DATE}/{lib}_res/{api}/idioms/progs/" + file, "r") as f:
+                        with open(
+                            f"results/{DATE}/{lib}_res/{api}/idioms/progs/" + file, "r"
+                        ) as f:
                             program = f.read()
                             programs.append(program)
 
@@ -68,11 +72,21 @@ if __name__ == "__main__":
                     pass
 
                 df = pd.DataFrame(
-                    {"size": sizes, "cluster": clusters, "freq": neighborhoods, "hole": holes, "plen": plens, "program": programs}
+                    {
+                        "size": sizes,
+                        "cluster": clusters,
+                        "freq": neighborhoods,
+                        "hole": holes,
+                        "plen": plens,
+                        "program": programs,
+                    }
                 )
 
                 # sort by metrics
-                df = df.sort_values(by=["size", "cluster", "freq", "hole", "plen"], ascending=[True, True, False, True, True])
+                df = df.sort_values(
+                    by=["size", "cluster", "freq", "hole", "plen"],
+                    ascending=[True, True, False, True, True],
+                )
 
                 # save as excel
                 df.to_excel(writer, sheet_name=f"{api}", index=False)

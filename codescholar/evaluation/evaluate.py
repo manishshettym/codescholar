@@ -8,6 +8,7 @@ import torch
 from codescholar.representation import config
 from codescholar.search.search import main as search_main
 from codescholar.search import search_config
+from codescholar.constants import DATA_DIR
 
 
 def multi_api_eval(args):
@@ -66,13 +67,15 @@ if __name__ == "__main__":
     config.init_optimizer_configs(parser)
     config.init_encoder_configs(parser)
     search_config.init_search_configs(parser)
-    parser.add_argument("--benchtype", type=str, default="single", choices=["single", "multi"])
+    parser.add_argument(
+        "--benchtype", type=str, default="single", choices=["single", "multi"]
+    )
     args = parser.parse_args()
 
     # data config
-    args.prog_dir = f"../data/{args.dataset}/source/"
-    args.source_dir = f"../data/{args.dataset}/graphs/"
-    args.emb_dir = f"../data/{args.dataset}/emb/"
+    args.prog_dir = f"{DATA_DIR}/{args.dataset}/source/"
+    args.source_dir = f"{DATA_DIR}/{args.dataset}/graphs/"
+    args.emb_dir = f"{DATA_DIR}/{args.dataset}/emb/"
 
     # model config
     args.test = True

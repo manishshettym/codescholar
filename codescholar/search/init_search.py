@@ -69,7 +69,9 @@ def init_search_q(args, prog_indices, seed):
 
         # find all matches of the seed graph in the program graph
         # uses exact subgraph isomorphism - not that expensive because query is small (2-3 nodes)
-        node_match = lambda n1, n2: n1["span"] == n2["span"] and n1["ast_type"] == n2["ast_type"]
+        node_match = (
+            lambda n1, n2: n1["span"] == n2["span"] and n1["ast_type"] == n2["ast_type"]
+        )
         DiGM = DiGraphMatcher(graph, seed_graph, node_match=node_match)
         seed_matches = list(DiGM.subgraph_isomorphisms_iter())
 
@@ -81,7 +83,9 @@ def init_search_q(args, prog_indices, seed):
         neigh = list(random.choice(seed_matches).keys())
 
         # find frontier = {successors} U {predecessors} - {itself} = {supergraphs}
-        frontier = set(_reduce(list(_frontier(graph, n, type="radial") for n in neigh))) - set(neigh)
+        frontier = set(
+            _reduce(list(_frontier(graph, n, type="radial") for n in neigh))
+        ) - set(neigh)
         visited = set(neigh)
 
         beam_sets.append([(0, 0, neigh, frontier, visited, idx)])
@@ -113,7 +117,9 @@ def init_search_mq(args, prog_indices, seeds):
     def match_seed_graph(seed_graph, target_graph) -> list[dict]:
         """find all matches of the seed graph in the target graph"""
         # uses exact subgraph isomorphism - not that expensive because query is small (2-3 nodes)
-        node_match = lambda n1, n2: n1["span"] == n2["span"] and n1["ast_type"] == n2["ast_type"]
+        node_match = (
+            lambda n1, n2: n1["span"] == n2["span"] and n1["ast_type"] == n2["ast_type"]
+        )
         DiGM = DiGraphMatcher(target_graph, seed_graph, node_match=node_match)
         return list(DiGM.subgraph_isomorphisms_iter())
 
@@ -148,10 +154,34 @@ def init_search_mq(args, prog_indices, seeds):
         neigh = list(neigh.keys())
 
         # find frontier = {successors} U {predecessors} - {itself} = {supergraphs}
-        frontier = set(_reduce(list(_frontier(graph, n, type="radial") for n in neigh))) - set(neigh)
+        frontier = set(
+            _reduce(list(_frontier(graph, n, type="radial") for n in neigh))
+        ) - set(neigh)
         visited = set(neigh)
 
         beam_sets.append([(0, 0, neigh, frontier, visited, idx)])
         count += 1
 
     return beam_sets
+
+
+########### DEBUGGING ############
+
+
+def debug_beams(args, beam_sets):
+    node2span = lambda graph, node: graph.nodes[node]["span"]
+
+    for beam_set in beam_sets:
+        print("============== BEAM SET ==============")
+        for beam in beam_set:
+            _, _, subg, frontier, _, idx = beam
+
+            g = read_graph(args, idx)
+            p = read_prog(args, idx)
+            f_span = [node2span(g, n) for n in frontier]
+            print(f"Graph: {idx}")
+            print(f"Subgraph: {[node2span(g, n) for n in subg]}")
+            print(f"Frontier: {f_span}")
+            print(f"Program:\n{p}")
+
+    print("=====================================")

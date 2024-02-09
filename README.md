@@ -62,8 +62,13 @@ How to run pre-trained CodeScholar:
 -----------------------
     
 ```bash
-# start an elasticsearch server at port 9200
+# start an elasticsearch server (hosts programs)
 docker run --rm -p 9200:9200 -p 9300:9300 -e "xpack.security.enabled=false" -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:8.7.0
+```
+
+```bash
+# start a redis server (hosts embeddings)
+docker run --rm -p 6379:6379 redis
 ```
 
 ```bash
@@ -71,6 +76,8 @@ docker run --rm -p 9200:9200 -p 9300:9300 -e "xpack.security.enabled=false" -e "
 cd codescholar/search
 python elastic_search.py --dataset <dataset_name>
 ```
+
+> TODO: index all embeddings into redis; currently index happens before each search
 
 ```bash
 # run the codescholar query (say np.mean) using /search/search.py

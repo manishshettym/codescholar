@@ -7,7 +7,13 @@ import json
 import random, string
 from typing import Dict, List, Union
 
-from codescholar.evaluation.rag.templates import GPT_NL2CODE, GPT_NL2CODE_FEWSHOT, GPT_NL2CODE_TASK, GPT_NL2CODE_API, GPT_NL2CODE_APISCHOLAR
+from codescholar.evaluation.rag.templates import (
+    GPT_NL2CODE,
+    GPT_NL2CODE_FEWSHOT,
+    GPT_NL2CODE_TASK,
+    GPT_NL2CODE_API,
+    GPT_NL2CODE_APISCHOLAR,
+)
 
 
 def remove_indent(test: str) -> str:
@@ -66,7 +72,9 @@ def create_entry_point(
     if verbose:
         print(f"[words 3] {words}")
 
-    words = ["".join([c for c in word if (not c in string.punctuation)]) for word in words]
+    words = [
+        "".join([c for c in word if (not c in string.punctuation)]) for word in words
+    ]
     words = [word for word in words if word.strip()]
     if verbose:
         print(f"[words 4] {words}")
@@ -115,7 +123,9 @@ def get_test_body(
     if clean_indent:
         selected_tests = [remove_indent(t) for t in selected_tests]
 
-    selected_tests = [replace_function_name_test(t, function_name) for t in selected_tests]
+    selected_tests = [
+        replace_function_name_test(t, function_name) for t in selected_tests
+    ]
     return "".join(selected_tests)
 
 
@@ -138,7 +148,9 @@ def create_prompt_nl2code(
 ) -> str:
     function_head, function_prefix = [p for p in sample["prompt"].split("\n")]
 
-    assert sample["intent"] is not None, f"NL intent is None for sample {sample['task_id']}"
+    assert (
+        sample["intent"] is not None
+    ), f"NL intent is None for sample {sample['task_id']}"
 
     if function_name == "id":
         function_name = get_default_entry_point(task_id=sample["task_id"])
@@ -151,7 +163,9 @@ def create_prompt_nl2code(
     else:
         raise ValueError(f"Method [{function_name}] Not Supported!")
 
-    test_str = get_test_body(function_name, sample["test"], num_tests, padding=False, clean_indent=False)
+    test_str = get_test_body(
+        function_name, sample["test"], num_tests, padding=False, clean_indent=False
+    )
     docstr = f'{sample["intent"].strip()}\n{test_str}'
     code_body = function_prefix.replace("\t", " " * 4)
 
@@ -161,7 +175,9 @@ def create_prompt_nl2code(
     return prompt
 
 
-def create_prompt_example(template: str, example: Dict, num_tests: int = 0, function_name: str = "id") -> str:
+def create_prompt_example(
+    template: str, example: Dict, num_tests: int = 0, function_name: str = "id"
+) -> str:
     prompt = create_prompt_nl2code(template, example, num_tests, function_name)
     return f'{prompt}{example["canonical_solution"]}{example["suffix"]}\n"""'
 
@@ -173,14 +189,29 @@ def create_baseline_prompt(
     num_tests: int = 0,
     function_name: str = "id",
 ) -> str:
-    assert sample["intent"] is not None, f"NL intent is None for sample {sample['task_id']}"
-    prompt = create_prompt_nl2code(template=GPT_NL2CODE_TASK, sample=sample, num_tests=num_tests, function_name=function_name)
+    assert (
+        sample["intent"] is not None
+    ), f"NL intent is None for sample {sample['task_id']}"
+    prompt = create_prompt_nl2code(
+        template=GPT_NL2CODE_TASK,
+        sample=sample,
+        num_tests=num_tests,
+        function_name=function_name,
+    )
 
     if len(examples) == 0:
         return GPT_NL2CODE.format(prompt=prompt)
     else:
         examples = "\n\n".join(
-            [create_prompt_example(template=GPT_NL2CODE_TASK, example=ex, num_tests=0, function_name=function_name) for ex in examples]
+            [
+                create_prompt_example(
+                    template=GPT_NL2CODE_TASK,
+                    example=ex,
+                    num_tests=0,
+                    function_name=function_name,
+                )
+                for ex in examples
+            ]
         )
         return GPT_NL2CODE_FEWSHOT.format(examples=examples, prompt=prompt)
 
@@ -192,8 +223,15 @@ def create_apidisc_prompt(
     num_tests: int = 0,
     function_name: str = "id",
 ) -> str:
-    assert sample["intent"] is not None, f"NL intent is None for sample {sample['task_id']}"
-    prompt = create_prompt_nl2code(template=GPT_NL2CODE_TASK, sample=sample, num_tests=num_tests, function_name=function_name)
+    assert (
+        sample["intent"] is not None
+    ), f"NL intent is None for sample {sample['task_id']}"
+    prompt = create_prompt_nl2code(
+        template=GPT_NL2CODE_TASK,
+        sample=sample,
+        num_tests=num_tests,
+        function_name=function_name,
+    )
 
     return GPT_NL2CODE_API.format(api=sample["api"], prompt=prompt)
 
@@ -205,8 +243,15 @@ def create_apischolar_prompt(
     num_tests: int = 0,
     function_name: str = "id",
 ) -> str:
-    assert sample["intent"] is not None, f"NL intent is None for sample {sample['task_id']}"
-    prompt = create_prompt_nl2code(template=GPT_NL2CODE_TASK, sample=sample, num_tests=num_tests, function_name=function_name)
+    assert (
+        sample["intent"] is not None
+    ), f"NL intent is None for sample {sample['task_id']}"
+    prompt = create_prompt_nl2code(
+        template=GPT_NL2CODE_TASK,
+        sample=sample,
+        num_tests=num_tests,
+        function_name=function_name,
+    )
     api = sample["api"]
 
     with open("./dataset/api2idioms.json", "r") as f:
@@ -215,4 +260,6 @@ def create_apischolar_prompt(
     idioms = api2idioms.get(api, [])
     idioms = random.sample(idioms, min(len(idioms), 5))
     idioms = [f'"""\n{idiom}\n"""' for idiom in idioms]
-    return GPT_NL2CODE_APISCHOLAR.format(api=api, idioms="\n\n".join(idioms), prompt=prompt)
+    return GPT_NL2CODE_APISCHOLAR.format(
+        api=api, idioms="\n\n".join(idioms), prompt=prompt
+    )

@@ -1,45 +1,40 @@
 import os
+import redis
 import os.path as osp
 import argparse
 import numpy as np
 from tqdm import tqdm
 from math import log
 from collections import defaultdict
-from itertools import chain
-from cachetools import cached, LRUCache
-from cachetools.keys import hashkey
 
 import torch
 import networkx as nx
-from deepsnap.batch import Batch
 import scipy.stats as stats
-import torch.multiprocessing as mp
-from transformers import RobertaTokenizer, RobertaModel
+from multiprocessing import Pool
 
 from codescholar.sast.visualizer import render_sast
 from codescholar.sast.sast_utils import sast_to_prog
-from codescholar.representation import models, config
+from codescholar.representation import config
 from codescholar.search import search_config
+from codescholar.search.grow import grow
 from codescholar.search.elastic_search import grep_programs
 from codescholar.search.init_search import init_search_q, init_search_m, init_search_mq
 from codescholar.utils.search_utils import (
-    sample_programs,
     ping_elasticsearch,
     ping_elasticindex,
     wl_hash,
     save_idiom,
     _print_mine_logs,
     _write_mine_logs,
-    _frontier,
     read_graph,
-    read_prog,
-    read_embedding,
-    read_embeddings_batched,
 )
-from codescholar.utils.train_utils import build_model, get_device, featurize_graph
-from codescholar.utils.graph_utils import nx_to_program_graph, program_graph_to_nx
+from codescholar.utils.search_utils import load_embeddings_batched_redis
+from codescholar.utils.graph_utils import nx_to_program_graph
+from codescholar.utils.cluster_utils import cluster_programs
 from codescholar.utils.perf import perftimer
+from codescholar.constants import DATA_DIR
 
+redis_client = redis.StrictRedis(host="localhost", port=6379, db=0)
 
 ######### IDIOM STORE ############
 
@@ -82,7 +77,9 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
             prog = sast_to_prog(sast).replace("#", "_")
 
             if args.mode == "mq":
-                prog = "\n".join([line for line in prog.split("\n") if line.strip() != "_"])
+                prog = "\n".join(
+                    [line for line in prog.split("\n") if line.strip() != "_"]
+                )
 
             save_idiom(path, prog)
 
@@ -105,164 +102,10 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
         return True
 
 
-######### BEAM SEARCH ############
-
-
-def start_workers_grow(prog_indices, in_queue, out_queue, args, gpu):
-    torch.cuda.set_device(gpu)
-    workers = []
-    for _ in tqdm(range(args.n_workers), desc="[workers]"):
-        worker = mp.Process(target=grow, args=(args, prog_indices, in_queue, out_queue, gpu))
-        worker.start()
-        workers.append(worker)
-
-    return workers
-
-
-def score_candidate_freq(args, model, embs, cand_emb, device_id=None):
-    """score candidate program embedding against target program embeddings
-    in a batched manner.
-
-    Algorithm:
-    softmax based classifier on top of emb-diff
-        score = #nhoods !containing cand.
-        = count(cand_emb - embs > 0)
-            --> classifier: 0/1
-    """
-    score = 0
-
-    if cand_emb.shape[0] > 1:
-        preds = []
-
-        for comp_emb in cand_emb:
-            comp_preds = np.array([])
-            for emb_batch in embs:
-                with torch.no_grad():
-                    is_subgraph_rel = model.predict((emb_batch.to(get_device(device_id)), comp_emb))
-                    is_subgraph = model.classifier(is_subgraph_rel.unsqueeze(1))
-                    comp_preds = np.concatenate((comp_preds, torch.argmax(is_subgraph, axis=1).cpu().numpy()))
-
-            preds.append(comp_preds)
-
-        assert len(set([len(pred) for pred in preds])) == 1, "component preds have different shapes!"
-
-        preds = np.array(preds)
-        merged_preds = np.all(preds, axis=0)
-        score = np.sum(merged_preds)
-    else:
-        for emb_batch in embs:
-            with torch.no_grad():
-                is_subgraph_rel = model.predict((emb_batch.to(get_device(device_id)), cand_emb))
-                is_subgraph = model.classifier(is_subgraph_rel.unsqueeze(1))
-                score += torch.sum(torch.argmax(is_subgraph, axis=1)).item()
-
-    return score
-
-
-def grow(args, prog_indices, in_queue, out_queue, device_id=None):
-    embs = read_embeddings_batched(args, prog_indices)
-
-    codebert_name = "microsoft/codebert-base"
-    feat_tokenizer = RobertaTokenizer.from_pretrained(codebert_name)
-    feat_model = RobertaModel.from_pretrained(codebert_name).to(get_device(device_id))
-    feat_model.eval()
-
-    # print("Moving model to device:", get_device(device_id))
-    model = build_model(models.SubgraphEmbedder, args, device_id=device_id)
-    model.eval()
-
-    done = False
-    while not done:
-        msg, beam_set = in_queue.get()
-
-        if msg == "done":
-            del embs
-            done = True
-            break
-
-        new_beams = []
-
-        # STEP 1: Explore all candidates in each beam of the beam_set
-        for beam in beam_set:
-            _, holes, neigh, frontier, visited, graph_idx = beam
-            graph = read_graph(args, graph_idx)
-
-            if len(neigh) >= args.max_idiom_size or not frontier:
-                continue
-
-            cand_neighs = []
-
-            # EMBED CANDIDATES
-            for i, cand_node in enumerate(frontier):
-                cand_neigh = graph.subgraph(neigh + [cand_node])
-                connected_comps = list(nx.connected_components(cand_neigh.to_undirected()))
-
-                if len(connected_comps) == 1:
-                    cand_neigh = featurize_graph(cand_neigh, feat_tokenizer, feat_model, anchor=neigh[0], device_id=device_id)
-                    cand_neighs.append(cand_neigh)
-                else:
-                    comp_neighs = []
-                    for comp in connected_comps:
-                        comp_neigh = cand_neigh.subgraph(comp)
-                        comp_root = [n for n in comp_neigh.nodes if comp_neigh.in_degree(n) == 0][0]
-                        comp_neigh = featurize_graph(comp_neigh, feat_tokenizer, feat_model, anchor=comp_root, device_id=device_id)
-                        comp_neighs.append(comp_neigh)
-
-                    cand_neighs.append(comp_neighs)
-
-            flat_cand_neighs = list(chain.from_iterable([x if isinstance(x, list) else [x] for x in cand_neighs]))
-            cand_batch = Batch.from_data_list(flat_cand_neighs).to(get_device(device_id))
-
-            with torch.no_grad():
-                cand_embs = model.encoder(cand_batch)
-
-            # SCORE CANDIDATES (freq)
-            for i, (cand_node, cand_neigh) in enumerate(zip(frontier, cand_neighs)):
-                if isinstance(cand_neigh, list):
-                    cand_emb = cand_embs[i : i + len(cand_neigh)]
-                else:
-                    cand_emb = cand_embs[i : i + 1]
-
-                # first, add new holes introduced
-                # then, remove hole filled in/by cand_node (incoming/outgoing edge resp)
-                new_holes = holes + graph.nodes[cand_node]["span"].count("#") - 1
-
-                # filter out candidates that exceed max_holes
-                if new_holes < 0 or new_holes > args.max_holes:
-                    continue
-
-                new_neigh = neigh + [cand_node]
-
-                # new frontier = {prev frontier} U {outgoing and incoming neighbors of cand_node} - {visited}
-                # note: one can use type='neigh' to add only outgoing neighbors
-                new_frontier = list(((set(frontier) | _frontier(graph, cand_node, type="radial")) - visited) - set([cand_node]))
-
-                new_visited = visited | set([cand_node])
-
-                score = score_candidate_freq(args, model, embs, cand_emb, device_id=device_id)
-                new_beams.append((score, new_holes, new_neigh, new_frontier, new_visited, graph_idx))
-
-        # STEP 2: Sort new beams by freq_score/#holes
-        new_beams = list(sorted(new_beams, key=lambda x: x[0] / x[1] if x[1] > 0 else x[0], reverse=True))
-
-        # print("===== [debugger] new beams =====")
-        # for beam in new_beams:
-        #     print("freq: ", beam[0])
-        #     print("holes: ", beam[1])
-        #     print("nodes: ", [graph.nodes[n]['span'] for n in beam[2]])
-        #     print("frontier: ", [graph.nodes[n]['span'] for n in beam[3]])
-        #     print()
-        # print("================================")
-
-        # STEP 3: filter top-k beams
-        new_beams = new_beams[: args.n_beams]
-        out_queue.put(("complete", new_beams))
-
-
 ######### MAIN ############
 
 
-@perftimer
+# @perftimer
 def search(args, prog_indices, beam_sets):
     mine_summary = defaultdict(lambda: defaultdict(int))
     size = 1
@@ -272,54 +115,47 @@ def search(args, prog_indices, beam_sets):
         return mine_summary
 
     num_gpus = torch.cuda.device_count()
-    workers_list = []
-    in_queues, out_queues = [], []
 
-    for gpu in range(num_gpus):
-        in_queue, out_queue = mp.Queue(), mp.Queue()
-        workers = start_workers_grow(prog_indices, in_queue, out_queue, args, gpu)
-        workers_list.append(workers)
-        in_queues.append(in_queue)
-        out_queues.append(out_queue)
+    # create a pool of workers for each GPU
+    pools = [Pool(args.n_workers) for _ in range(num_gpus)]
 
     continue_search = True
     while continue_search and len(beam_sets) != 0:
+        results = []
         for i, beam_set in enumerate(beam_sets):
             gpu = i % num_gpus
-            in_queues[gpu].put(("beam_set", beam_set))
+            # use apply_async to submit the grow task to the pool
+            result = pools[gpu].apply_async(grow, (args, prog_indices, beam_set, gpu))
+            results.append(result)
 
         # idioms for generation i
         idiommine_gen = defaultdict(list)
         new_beam_sets = []
 
         # beam search over this generation
-        results_count = 0
         pbar = tqdm(total=len(beam_sets), desc=f"[search {size}]")
-        while results_count < len(beam_sets):
-            for gpu in range(num_gpus):
-                while not out_queues[gpu].empty():
-                    msg, new_beams = out_queues[gpu].get()
-                    results_count += 1
+        for result in results:
+            new_beams = result.get()  # Wait for the result and get it
+            pbar.update(1)
 
-                    # candidates from only top-scoring beams in the beam set
-                    for new_beam in new_beams[:1]:
-                        score, holes, neigh, _, _, graph_idx = new_beam
-                        graph = read_graph(args, graph_idx)
+            # candidates from only top-scoring beams in the beam set
+            for new_beam in new_beams[:1]:
+                score, holes, neigh, _, _, graph_idx = new_beam
+                graph = read_graph(args, graph_idx)
 
-                        neigh_g = graph.subgraph(neigh).copy()
-                        neigh_g.remove_edges_from(nx.selfloop_edges(neigh_g))
+                neigh_g = graph.subgraph(neigh).copy()
+                neigh_g.remove_edges_from(nx.selfloop_edges(neigh_g))
 
-                        for v in neigh_g.nodes:
-                            neigh_g.nodes[v]["anchor"] = 1 if v == neigh[0] else 0
+                for v in neigh_g.nodes:
+                    neigh_g.nodes[v]["anchor"] = 1 if v == neigh[0] else 0
 
-                        neigh_g_hash = wl_hash(neigh_g)
-                        idiommine_gen[neigh_g_hash].append((neigh_g, score, holes))
-                        mine_summary[len(neigh_g)][neigh_g_hash] += 1
+                neigh_g_hash = wl_hash(neigh_g)
+                idiommine_gen[neigh_g_hash].append((neigh_g, score, holes))
+                mine_summary[len(neigh_g)][neigh_g_hash] += 1
 
-                    if len(new_beams) > 0:
-                        new_beam_sets.append(new_beams)
+            if len(new_beams) > 0:
+                new_beam_sets.append(new_beams)
 
-                    pbar.update(1)
         pbar.close()
 
         # save generation
@@ -330,13 +166,10 @@ def search(args, prog_indices, beam_sets):
         if size >= args.min_idiom_size and size <= args.max_idiom_size:
             continue_search = _save_idiom_generation(args, idiommine_gen)
 
-    for in_queue in in_queues:
-        for _ in range(num_gpus):
-            in_queue.put(("done", None))
-
-    for workers in workers_list:
-        for worker in workers:
-            worker.join()
+    # Terminate all pools
+    for pool in pools:
+        pool.terminate()
+        pool.join()
 
     return mine_summary
 
@@ -346,10 +179,14 @@ def main(args):
         parser.error("query modes require --seed to begin search.")
 
     if not ping_elasticsearch():
-        raise ConnectionError("Elasticsearch not running on localhost:9200! Please start Elasticsearch and try again.")
+        raise ConnectionError(
+            "Elasticsearch not running on localhost:9200! Please start Elasticsearch and try again."
+        )
 
     if not ping_elasticindex():
-        raise ValueError("Elasticsearch index `python_files` not found! Please run `elastic_search.py` to create the index.")
+        raise ValueError(
+            "Elasticsearch index `python_files` not found! Please run `elastic_search.py` to create the index."
+        )
 
     # sample and constrain the search space
     if args.mode == "mq":
@@ -365,11 +202,19 @@ def main(args):
     else:
         prog_indices = grep_programs(args, args.seed)[: args.prog_samples]
 
+    # load all embeddings of prog_indices to redis
+    # TODO: do this offline for *all* progs?
+    load_embeddings_batched_redis(args, prog_indices)
+
+    # identify seed programs by clustering
+    if args.mode in ["q", "mq"]:
+        seed_indices = cluster_programs(args, prog_indices, n_clusters=10)
+
     # STEP 1: initialize search space
     if args.mode == "q":
-        beam_sets = init_search_q(args, prog_indices, seed=args.seed)
+        beam_sets = init_search_q(args, seed_indices, seed=args.seed)
     elif args.mode == "mq":
-        beam_sets = init_search_mq(args, prog_indices, seeds=args.seed.split(";"))
+        beam_sets = init_search_mq(args, seed_indices, seeds=args.seed.split(";"))
     elif args.mode == "m":
         prog_indices = grep_programs(args, args.seed)[: args.prog_samples]
         beam_sets = init_search_m(args, prog_indices)
@@ -389,10 +234,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # data config
-    args.prog_dir = f"../data/{args.dataset}/source/"
-    args.source_dir = f"../data/{args.dataset}/graphs/"
-    args.emb_dir = f"../data/{args.dataset}/emb/"
-    args.result_dir = f"./results/{args.seed}/" if (args.mode == "q" or args.mode == "mq") else "./results/"
+    args.prog_dir = f"{DATA_DIR}/{args.dataset}/source/"
+    args.source_dir = f"{DATA_DIR}/{args.dataset}/graphs/"
+    args.emb_dir = f"{DATA_DIR}/{args.dataset}/emb/"
+    args.result_dir = (
+        f"./results/{args.seed}/"
+        if (args.mode == "q" or args.mode == "mq")
+        else "./results/"
+    )
     args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
     args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
 

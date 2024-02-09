@@ -11,11 +11,15 @@ import argparse
 import glob
 import torch.multiprocessing as mp
 
+from codescholar.constants import DATA_DIR
+
 
 def start_workers_rename(in_queue, out_queue, methods_to_fileid, args):
     workers = []
     for _ in tqdm(range(args.n_workers), desc="Workers"):
-        worker = mp.Process(target=mp_rename, args=(args, methods_to_fileid, in_queue, out_queue))
+        worker = mp.Process(
+            target=mp_rename, args=(args, methods_to_fileid, in_queue, out_queue)
+        )
         worker.start()
         workers.append(worker)
 
@@ -59,7 +63,7 @@ def standardize_dataset_files(method_paths, methods_to_fileid):
     for worker in workers:
         worker.join()
 
-    with open(f"../data/{args.dataset}/mappings/example_to_fileid.json", "w") as f:
+    with open(f"{DATA_DIR}/{args.dataset}/mappings/example_to_fileid.json", "w") as f:
         json.dump(methods_to_fileid, f)
 
 
@@ -67,23 +71,27 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, help="Dataset to use")
     parser.add_argument("--n_workers", type=int, default=4, help="Number of workers")
-    parser.add_argument("--apply_filters", action="store_true", help="Whether to run on filtered methods")
+    parser.add_argument(
+        "--apply_filters",
+        action="store_true",
+        help="Whether to run on filtered methods",
+    )
     args = parser.parse_args()
 
     if args.apply_filters:
-        SRC_FILE = f"../data/{args.dataset}/methods_selected.txt"
+        SRC_FILE = f"{DATA_DIR}/{args.dataset}/methods_selected.txt"
         with open(SRC_FILE, "r") as f:
             method_paths = [line.strip() for line in f.readlines()]
     else:
-        SRC_DIR = f"../data/{args.dataset}/methods"
+        SRC_DIR = f"{DATA_DIR}/{args.dataset}/methods"
         method_paths = sorted(glob.glob(osp.join(SRC_DIR, "*.py")))
 
-    args.dest_dir = f"../data/{args.dataset}/source"
+    args.dest_dir = f"{DATA_DIR}/{args.dataset}/source"
     if not osp.exists(args.dest_dir):
         os.makedirs(args.dest_dir)
 
     # read in methods_to_fileid
-    with open(f"../data/{args.dataset}/mappings/meth_to_fileid.json", "r") as f:
+    with open(f"{DATA_DIR}/{args.dataset}/mappings/meth_to_fileid.json", "r") as f:
         methods_to_fileid = json.load(f)
 
     standardize_dataset_files(method_paths, methods_to_fileid)

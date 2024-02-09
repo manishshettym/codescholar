@@ -77,7 +77,9 @@ def repo_cloner(repo_path: str):
 
                 # create a simplified path for file
                 rel_path = root[len(repo_loc) + 1 :].replace("/", "__")
-                out_path = os.path.join(code_loc, rel_path + ("__" if rel_path else "") + file)
+                out_path = os.path.join(
+                    code_loc, rel_path + ("__" if rel_path else "") + file
+                )
 
                 if not os.path.exists(out_path):
                     try:
@@ -96,7 +98,11 @@ def repo_cloner(repo_path: str):
 
 def clone_repositories(paths: List[str]):
     lib_clients_iter = multiprocess.run_tasks_in_parallel_iter(
-        repo_cloner, tasks=paths, use_progress_bar=False, use_spawn=True, num_workers=MAX_WORKERS
+        repo_cloner,
+        tasks=paths,
+        use_progress_bar=False,
+        use_spawn=True,
+        num_workers=MAX_WORKERS,
     )
 
     count = 0

@@ -25,7 +25,9 @@ Write only code and don't print the outputs. Mark the start of each and every ex
 
 def fill_template(template, libs, apis):
     """Fill the template with the given libraroes and APIs"""
-    liblines = "".join([PROMPT_CHAT_LIBLINE.format(lib=lib, api=api) for lib, api in zip(libs, apis)])
+    liblines = "".join(
+        [PROMPT_CHAT_LIBLINE.format(lib=lib, api=api) for lib, api in zip(libs, apis)]
+    )
     importlines = "".join([PROMPT_CHAT_IMPORTLINE.format(lib=lib) for lib in set(libs)])
 
     return template.format(liblines=liblines, importlines=importlines)
@@ -38,7 +40,10 @@ def encode_question_chat(template, libs, apis):
     prompt = fill_template(template, libs, apis)
 
     prompts = [
-        {"role": "system", "content": "You are a helpful API assistant who can write idiomatic API usage examples given the API name."},
+        {
+            "role": "system",
+            "content": "You are a helpful API assistant who can write idiomatic API usage examples given the API name.",
+        },
         {"role": "user", "content": prompt},
     ]
     return prompts
@@ -103,7 +108,9 @@ if __name__ == "__main__":
             idioms = parse_response(response)
 
             if idioms == []:
-                print(f"Warning: No idioms parsed for [{libs}] [{apis}]; but the response is:\n{response}")
+                print(
+                    f"Warning: No idioms parsed for [{libs}] [{apis}]; but the response is:\n{response}"
+                )
 
             for i, idiom in enumerate(idioms):
                 with open(f"{result_dir}/idiom_{i}.py", "w") as f:

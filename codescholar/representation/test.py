@@ -18,7 +18,9 @@ def write_metrics(metrics, path):
         f.write(
             "Epoch: {}. Count: {}. Acc: {:.4f}. "
             "P: {:.4f}. R: {:.4f}. AUROC: {:.4f}. AP: {:.4f}.\n     "
-            "TN: {}. FP: {}. FN: {}. TP: {}".format(epoch, predlen, acc, prec, rec, auroc, avg_prec, tn, fp, fn, tp)
+            "TN: {}. FP: {}. FN: {}. TP: {}".format(
+                epoch, predlen, acc, prec, rec, auroc, avg_prec, tn, fp, fn, tp
+            )
         )
         f.write("\n")
 
@@ -54,7 +56,9 @@ def test(args, model, dataloader, logger):
         neg_a = neg_a.to(get_device())
         neg_b = neg_b.to(get_device())
 
-        labels = torch.tensor([1] * (pos_a.num_graphs if pos_a else 0) + [0] * neg_a.num_graphs).to(get_device())
+        labels = torch.tensor(
+            [1] * (pos_a.num_graphs if pos_a else 0) + [0] * neg_a.num_graphs
+        ).to(get_device())
 
         with torch.no_grad():
             # forward pass through GNN layers
@@ -98,7 +102,9 @@ def test(args, model, dataloader, logger):
     print(
         "Test. Count: {}. Acc: {:.4f}. "
         "P: {:.4f}. R: {:.4f}. AUROC: {:.4f}. AP: {:.4f}.\n     "
-        "TN: {}. FP: {}. FN: {}. TP: {}".format(len(pred), acc, prec, rec, auroc, avg_prec, tn, fp, fn, tp)
+        "TN: {}. FP: {}. FN: {}. TP: {}".format(
+            len(pred), acc, prec, rec, auroc, avg_prec, tn, fp, fn, tp
+        )
     )
 
 
@@ -113,7 +119,9 @@ def validation(args, model, test_pts, logger, batch_n, epoch):
         neg_a = neg_a.to(get_device())
         neg_b = neg_b.to(get_device())
 
-        labels = torch.tensor([1] * (pos_a.num_graphs if pos_a else 0) + [0] * neg_a.num_graphs).to(get_device())
+        labels = torch.tensor(
+            [1] * (pos_a.num_graphs if pos_a else 0) + [0] * neg_a.num_graphs
+        ).to(get_device())
 
         with torch.no_grad():
             # forward pass through GNN layers
@@ -157,10 +165,15 @@ def validation(args, model, test_pts, logger, batch_n, epoch):
     print(
         "Validation. Epoch {}. Count: {}. Acc: {:.4f}. "
         "P: {:.4f}. R: {:.4f}. AUROC: {:.4f}. AP: {:.4f}.\n     "
-        "TN: {}. FP: {}. FN: {}. TP: {}".format(epoch, len(pred), acc, prec, rec, auroc, avg_prec, tn, fp, fn, tp)
+        "TN: {}. FP: {}. FN: {}. TP: {}".format(
+            epoch, len(pred), acc, prec, rec, auroc, avg_prec, tn, fp, fn, tp
+        )
     )
 
-    write_metrics(metrics=[epoch, len(pred), acc, prec, rec, auroc, avg_prec, tn, fp, fn, tp], path="train-logs.log")
+    write_metrics(
+        metrics=[epoch, len(pred), acc, prec, rec, auroc, avg_prec, tn, fp, fn, tp],
+        path="train-logs.log",
+    )
 
     if not args.test:
         logger.add_scalar("Accuracy/test", acc, batch_n)

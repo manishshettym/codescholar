@@ -18,8 +18,18 @@ torch.multiprocessing.set_sharing_strategy("file_system")
 
 
 def init_logger(args):
-    log_keys = ["conv_type", "n_layers", "hidden_dim", "margin", "dataset", "max_graph_size", "skip"]
-    log_str = ".".join(["{}={}".format(k, v) for k, v in sorted(vars(args).items()) if k in log_keys])
+    log_keys = [
+        "conv_type",
+        "n_layers",
+        "hidden_dim",
+        "margin",
+        "dataset",
+        "max_graph_size",
+        "skip",
+    ]
+    log_str = ".".join(
+        ["{}={}".format(k, v) for k, v in sorted(vars(args).items()) if k in log_keys]
+    )
     return SummaryWriter(comment=log_str)
 
 
@@ -83,7 +93,9 @@ def train(args, model, corpus, in_queue, out_queue):
             emb_as = torch.cat((emb_pos_a, emb_neg_a), dim=0)
             emb_bs = torch.cat((emb_pos_b, emb_neg_b), dim=0)
 
-            labels = torch.tensor([1] * pos_a.num_graphs + [0] * neg_a.num_graphs).to(get_device())
+            labels = torch.tensor([1] * pos_a.num_graphs + [0] * neg_a.num_graphs).to(
+                get_device()
+            )
 
             # make predictions
             pred = model(emb_as, emb_bs)
@@ -119,7 +131,9 @@ def train(args, model, corpus, in_queue, out_queue):
 def start_workers(model, corpus, in_queue, out_queue, args):
     workers = []
     for _ in tqdm(range(args.n_workers), desc="Workers"):
-        worker = mp.Process(target=train, args=(args, model, corpus, in_queue, out_queue))
+        worker = mp.Process(
+            target=train, args=(args, model, corpus, in_queue, out_queue)
+        )
         worker.start()
         workers.append(worker)
 
@@ -147,7 +161,9 @@ def train_loop(args):
     model = model.to(get_device())
 
     # create a corpus for train and test
-    corpus = dataset.Corpus(args.dataset, args.n_train, args.n_test, train=(not args.test))
+    corpus = dataset.Corpus(
+        args.dataset, args.n_train, args.n_test, train=(not args.test)
+    )
 
     # create validation points
     loader = corpus.gen_data_loader(args.batch_size, train=False)

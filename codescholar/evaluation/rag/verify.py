@@ -40,9 +40,14 @@ def wrap_check(
 ):
     if exclude_suffix:
         # wrapped_solution_list = [f"{sample['prompt']}{solution}".replace("\t", " " * 4) for solution in solution_list]
-        wrapped_solution_list = [f"{solution}".replace("\t", " " * 4) for solution in solution_list]
+        wrapped_solution_list = [
+            f"{solution}".replace("\t", " " * 4) for solution in solution_list
+        ]
     else:
-        wrapped_solution_list = [f"{solution}{sample['suffix']}".replace("\t", " " * 4) for solution in solution_list]
+        wrapped_solution_list = [
+            f"{solution}{sample['suffix']}".replace("\t", " " * 4)
+            for solution in solution_list
+        ]
 
     max_num_tests = min(len(sample["test"]), max_num_tests)
     test_case = random.sample(sample["test"], max_num_tests)
@@ -81,7 +86,10 @@ def wrap_check_test(
     add_indent_test: bool = True,
     verbose: bool = False,
 ):
-    wrapped_solution_list = [f"{prompt}{solution}{suffix}".replace("\t", " " * 4) for solution in solution_list]
+    wrapped_solution_list = [
+        f"{prompt}{solution}{suffix}".replace("\t", " " * 4)
+        for solution in solution_list
+    ]
 
     if add_indent_test == True:
         test_case = add_indent(test_case)

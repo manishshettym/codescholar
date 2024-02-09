@@ -48,7 +48,11 @@ def to_graphviz(graph: ProgramGraph, spans=False, relpos=False, edgelabel=False)
         edge_attrs = {}
         if edgelabel:
             edge_attrs["label"] = edge.type
-        edge_colors = {pb.EdgeType.LAST_READ: "red", pb.EdgeType.LAST_WRITE: "blue", pb.EdgeType.COMPUTED_FROM: "green"}
+        edge_colors = {
+            pb.EdgeType.LAST_READ: "red",
+            pb.EdgeType.LAST_WRITE: "blue",
+            pb.EdgeType.COMPUTED_FROM: "green",
+        }
         if edge.type in edge_colors:
             edge_attrs["color"] = edge_colors[edge.type]
             edge_attrs["colorscheme"] = "svg"
@@ -57,6 +61,12 @@ def to_graphviz(graph: ProgramGraph, spans=False, relpos=False, edgelabel=False)
     return g
 
 
-def render_sast(graph: ProgramGraph, path="/tmp/graph.png", spans=False, relpos=False, edgelabel=False):
+def render_sast(
+    graph: ProgramGraph,
+    path="/tmp/graph.png",
+    spans=False,
+    relpos=False,
+    edgelabel=False,
+):
     g = to_graphviz(graph, spans, relpos, edgelabel)
     g.draw(path, prog="dot")

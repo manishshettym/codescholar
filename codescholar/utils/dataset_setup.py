@@ -92,7 +92,9 @@ def flatten_dataset(args, files):
         idx += 1
 
     src_to_repo_df = pd.DataFrame(src_to_repo, columns=["fileid", "filename", "repo"])
-    src_to_repo_df.to_csv(os.path.join(DEST_DIR, "file_to_repo.csv"), sep=";", index=False)
+    src_to_repo_df.to_csv(
+        os.path.join(DEST_DIR, "file_to_repo.csv"), sep=";", index=False
+    )
 
 
 if __name__ == "__main__":
@@ -104,11 +106,19 @@ if __name__ == "__main__":
     SRC_DIR = "../data/pnosmt/"
     DEST_DIR = "../data/pnosmt_flat/"
 
-    files = [file for file in glob.glob(SRC_DIR + "/**", recursive=True) if os.path.isfile(file) and file.endswith(".py")]
+    files = [
+        file
+        for file in glob.glob(SRC_DIR + "/**", recursive=True)
+        if os.path.isfile(file) and file.endswith(".py")
+    ]
     print("Total number of files originally: {}".format(len(files)))
     create_dataset(args, files)
 
-    files = [file for file in glob.glob(SRC_DIR + "/**", recursive=True) if os.path.isfile(file) and file.endswith(".py")]
+    files = [
+        file
+        for file in glob.glob(SRC_DIR + "/**", recursive=True)
+        if os.path.isfile(file) and file.endswith(".py")
+    ]
     print("Total number of files [after library filtering]: {}".format(len(files)))
     flatten_dataset(args, files)
 

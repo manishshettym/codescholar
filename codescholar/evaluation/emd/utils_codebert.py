@@ -15,7 +15,9 @@ def start_workers_genemb(in_queue, out_queue, args, gpu):
     torch.cuda.set_device(gpu)
     workers = []
     for _ in tqdm(range(args.n_workers), desc="[workers]"):
-        worker = mp.Process(target=generate_embeddings, args=(args, in_queue, out_queue, gpu))
+        worker = mp.Process(
+            target=generate_embeddings, args=(args, in_queue, out_queue, gpu)
+        )
         worker.start()
         workers.append(worker)
 

@@ -9,10 +9,17 @@ import flask
 import torch
 
 from codescholar.search.search import main as search_main
-from codescholar.apps.utils import find_api, clean_idiom, write_idiom, get_result_from_dir, get_plot_metrics
+from codescholar.apps.utils import (
+    find_api,
+    clean_idiom,
+    write_idiom,
+    get_result_from_dir,
+    get_plot_metrics,
+)
 from codescholar.apps.async_utils import get_celery_app_instance
 from codescholar.representation import config
 from codescholar.search import search_config
+from codescholar.constants import DATA_DIR
 
 api_cache_dir = "./cache/"
 
@@ -62,9 +69,9 @@ def search():
 
         # data config
         args.dataset = "pnosmt"
-        args.prog_dir = f"../data/{args.dataset}/source/"
-        args.source_dir = f"../data/{args.dataset}/graphs/"
-        args.emb_dir = f"../data/{args.dataset}/emb/"
+        args.prog_dir = f"{DATA_DIR}/{args.dataset}/source/"
+        args.source_dir = f"{DATA_DIR}/{args.dataset}/graphs/"
+        args.emb_dir = f"{DATA_DIR}/{args.dataset}/emb/"
 
         # model config
         args.test = True
@@ -91,7 +98,11 @@ def search():
         search_task.delay(args_dict)
         # search_main(args)
 
-        return flask.jsonify({"status": "CodeScholar is now growing idioms for this API. Please try again in ~2 mins."})
+        return flask.jsonify(
+            {
+                "status": "CodeScholar is now growing idioms for this API. Please try again in ~2 mins."
+            }
+        )
 
 
 @scholarapp.route("/clean", methods=["POST"])
