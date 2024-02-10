@@ -154,8 +154,13 @@ def nx_to_program_graph(graph: nx.DiGraph):
 
         pgraph.add_node(new_node)
 
-        if graph.nodes[node]["anchor"] == 1:
+        if "anchor" in graph.nodes[node] and graph.nodes[node]["anchor"] == 1:
             pgraph.root_id = new_node.id
+
+        if "is_idiom" in graph.nodes[node]:
+            new_node.is_idiom = graph.nodes[node]["is_idiom"]
+        else:
+            new_node.is_idiom = 0
 
         nxnode_to_pgnode[node] = new_node.id
 
@@ -231,6 +236,14 @@ def program_graph_to_graphviz(graph):
         g.add_edge(edge.id1, edge.id2, **edge_attrs)
 
     return g
+
+
+def nx_to_sast(graph):
+    """Convert a networkx graph to a SAST (a ProgramGraph)."""
+    sast = nx_to_program_graph(graph)
+    root = [n for n in sast.all_nodes() if sast.incoming_neighbors(n) == []][0]
+    sast.root_id = root.id
+    return sast
 
 
 def save_as_json(data, path):
