@@ -9,12 +9,12 @@ import requests
 import streamlit as st
 
 # deployment
-root = "/app/codescholar/"
-endpoint = st.secrets["ENDPOINT"]
+# root = "/app/codescholar/"
+# endpoint = st.secrets["ENDPOINT"]
 
 # local
-# root = "../../"
-# endpoint = "localhost:3003"
+root = "../../"
+endpoint = "localhost:3003"
 
 st.image(f"{root}/codescholar.png")
 

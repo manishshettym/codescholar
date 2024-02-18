@@ -1,6 +1,14 @@
 import os
 import os.path as osp
 import openai
+import json
+from networkx.readwrite import json_graph
+
+from codescholar.utils.graph_utils import nx_to_sast
+from codescholar.sast.sast_utils import sast_to_prog
+from codescholar.utils.search_utils import read_prog
+
+from codescholar.constants import DATA_DIR
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
@@ -38,7 +46,7 @@ Write a 2-4 line snippet of code using exactly the above given example. Return o
 
 def find_api(query):
     response = openai.Completion.create(
-        model="text-davinci-003",
+        model="gpt-3.5-turbo-instruct",
         prompt=gpt_prompt_find.format(query=query),
         temperature=0,
         max_tokens=250,
@@ -52,7 +60,7 @@ def find_api(query):
 
 def write_idiom(api, idiom):
     response = openai.Completion.create(
-        model="text-davinci-003",
+        model="gpt-3.5-turbo-instruct",
         prompt=gpt_prompt_write.format(api=api, idiom=idiom),
         temperature=0,
         max_tokens=250,
@@ -66,7 +74,7 @@ def write_idiom(api, idiom):
 
 def clean_idiom(api, idiom):
     response = openai.Completion.create(
-        model="text-davinci-003",
+        model="gpt-3.5-turbo-instruct",
         prompt=gpt_prompt_clean.format(api=api, idiom=idiom),
         temperature=0,
         max_tokens=250,
@@ -84,12 +92,23 @@ def get_result_from_dir(api, api_cache, select_size):
         _, size, cluster, nhood_count, hole = file.split("_")
         hole = hole.split(".")[0]
 
-        if int(hole) == 0 and int(size) == select_size and int(nhood_count) > 0:
+        if int(size) == select_size and int(nhood_count) > 0:
             with open(osp.join(api_cache, file), "r") as f:
+
+                data = json.load(f)
+                idx = data["index"]
+                prog_path = f"{DATA_DIR}/pnosmt/source/example_{idx}.py"
+                with open(prog_path, "r") as f:
+                    prog = f.read()
+
+                graph = json_graph.node_link_graph(data["graph"])
+                sast = nx_to_sast(graph)
+                idiom = sast_to_prog(sast).replace("#", "_")
+
                 results.update(
                     {
                         count: {
-                            "idiom": f.read(),
+                            "idiom": idiom,
                             "size": size,
                             "cluster": cluster,
                             "freq": nhood_count,

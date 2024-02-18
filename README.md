@@ -124,7 +124,7 @@ curl -X POST -H "Content-Type: application/json" -d '{"api": "pd.merge", "size":
 
 ```bash
 # start the streamlit app on port localhost:8501
-streamlit run app_streamlit.py
+streamlit run streamlit_app.py
 ```
 
 Reproducability of CodeScholar Evaluation:
