@@ -1,12 +1,70 @@
-from collections import namedtuple
-import altair as alt
+import re
 import math
 import json
 import pandas as pd
 import numpy as np
+from collections import namedtuple
+import altair as alt
 
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
+
+
+def highlight_code_with_html(idiom_code):
+    # Replace <mark> tags with placeholders
+    placeholder_start = "##START_HIGHLIGHT##"
+    placeholder_end = "##END_HIGHLIGHT##"
+    highlighted_code = idiom_code.replace("<mark>", placeholder_start).replace(
+        "</mark>", placeholder_end
+    )
+
+    code_html = f"""
+    <html>
+    <head>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+        <script>
+        document.addEventListener('DOMContentLoaded', (event) => {{
+            document.querySelectorAll('pre code').forEach((block) => {{
+                hljs.highlightElement(block);
+                // Replace placeholders with <span> elements for highlighting after syntax highlighting
+                const regexStart = new RegExp('{placeholder_start}', 'g');
+                const regexEnd = new RegExp('{placeholder_end}', 'g');
+                block.innerHTML = block.innerHTML.replace(regexStart, "<span class='custom-highlight'>");
+                block.innerHTML = block.innerHTML.replace(regexEnd, "</span>");
+            }});
+        }});
+        </script>
+    </head>
+    <body>
+        <style>
+        .code-container {{
+            background-color: #f6f8fa; /* Code block background color */
+            border-radius: 5px;
+            padding: 10px;
+            font-family: monospace;
+            overflow: auto; /* Allow scrolling */
+        }}
+        pre {{
+            margin: 0;
+        }}
+        code {{
+            white-space: pre;
+        }}
+        .custom-highlight {{
+            background-color: rgba(255, 255, 0, 0.5); /* Custom highlight color */
+            color: black!important;
+        }}
+        </style>
+        <div class="code-container">
+            <pre><code class="python">{highlighted_code}</code></pre>
+        </div>
+    </body>
+    </html>
+    """
+    return code_html
+
 
 # deployment
 # root = "/app/codescholar/"
@@ -125,7 +183,9 @@ with st.spinner("Growing your idioms 🌱..."):
         for idiom, tab in zip(idioms, tabs):
             with tab:
                 st.write("🎓: Found this idiom in {} programs!".format(idiom["freq"]))
-                st.code(idiom["idiom"], language="python")
+                highlighted_idiom_html = highlight_code_with_html(idiom["idiom"])
+                maxh = max(100, min(20 * idiom["idiom"].count("\n"), 500))
+                components.html(highlighted_idiom_html, height=maxh, scrolling=True)
 
                 colbut1, colbut2 = st.columns([0.25, 0.8])
                 with colbut1:
