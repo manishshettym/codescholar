@@ -2,11 +2,13 @@ import os
 import os.path as osp
 import openai
 import json
+import networkx as nx
+import torch
 from networkx.readwrite import json_graph
 
 from codescholar.utils.graph_utils import nx_to_sast
 from codescholar.sast.sast_utils import sast_to_prog
-from codescholar.utils.search_utils import read_prog
+from codescholar.utils.search_utils import read_prog, read_graph
 
 from codescholar.constants import DATA_DIR
 
@@ -98,17 +100,26 @@ def get_result_from_dir(api, api_cache, select_size):
                 data = json.load(f)
                 idx = data["index"]
                 prog_path = f"{DATA_DIR}/pnosmt/source/example_{idx}.py"
+                graph_path = f"{DATA_DIR}/pnosmt/graphs/data_{idx}.pt"
+
                 with open(prog_path, "r") as f:
                     prog = f.read()
+                    p_graph = torch.load(graph_path, map_location=torch.device("cpu"))
 
-                graph = json_graph.node_link_graph(data["graph"])
-                sast = nx_to_sast(graph)
-                idiom = sast_to_prog(sast).replace("#", "_")
+                # highlight idiom in prog
+                i_graph = json_graph.node_link_graph(data["graph"])
+                i_subg = p_graph.subgraph(i_graph).copy()
+                i_subg.remove_edges_from(nx.selfloop_edges(i_subg))
+                for v in p_graph.nodes:
+                    p_graph.nodes[v]["is_idiom"] = 1 if v in i_subg.nodes else 0
+
+                # convert to sast and extract highlighted code
+                idiom_prog = sast_to_prog(nx_to_sast(p_graph), mark_idiom=True)
 
                 results.update(
                     {
                         count: {
-                            "idiom": idiom,
+                            "idiom": idiom_prog,
                             "size": size,
                             "cluster": cluster,
                             "freq": nhood_count,
