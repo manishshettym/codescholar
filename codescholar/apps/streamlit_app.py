@@ -243,6 +243,7 @@ with st.spinner("Growing your idioms 🌱..."):
             chart_data = pd.DataFrame(
                 {"Size (Expressivity)": sorted(x), "Diversity": y1, "Reusability": y2}
             )
+            chart_data = chart_data[chart_data["Reusability"] > 0]
 
             col1, col2 = st.columns([2, 1])
             col1.line_chart(
