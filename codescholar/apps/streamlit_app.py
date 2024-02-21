@@ -184,7 +184,7 @@ with st.spinner("Growing your idioms 🌱..."):
             with tab:
                 st.write("🎓: Found this idiom in {} programs!".format(idiom["freq"]))
                 highlighted_idiom_html = highlight_code_with_html(idiom["idiom"])
-                maxh = max(100, min(20 * idiom["idiom"].count("\n"), 500))
+                maxh = max(100, min(30 * idiom["idiom"].count("\n"), 500))
                 components.html(highlighted_idiom_html, height=maxh, scrolling=True)
 
                 colbut1, colbut2 = st.columns([0.25, 0.8])
