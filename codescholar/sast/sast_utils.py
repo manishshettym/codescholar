@@ -277,7 +277,10 @@ def sast_to_prog(sast: ProgramGraph, mark_idiom=False):
                 if part.strip():
                     marked_parts.append(f"<mark>{part}</mark>")
                 if i < len(parts) - 1:
-                    marked_parts.append("#")
+                    if not part.strip():
+                        marked_parts.append(f"{part}#")
+                    else:
+                        marked_parts.append("#")
             node.span = "".join(marked_parts)
 
     for node in sast.all_nodes():

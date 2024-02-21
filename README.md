@@ -114,7 +114,7 @@ celery -A app_decl.celery worker --pool=solo --loglevel=info
 ```bash
 # start a flask server to handle http API requests
 # note: runs flask on port 3003
-python app_main.py
+python flask_app.py
 ```
 
 You can now make API requests to the flask server. For example, to run search for size `10` idioms for `pd.merge`, you can:
