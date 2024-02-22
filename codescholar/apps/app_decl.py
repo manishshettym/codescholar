@@ -80,15 +80,12 @@ def search():
         # search config
         args.mode = "q"
         args.seed = api
-        args.min_idiom_size = 2
+        args.min_idiom_size = 3
         args.max_idiom_size = 20
-        args.max_init_beams = 150
+        args.max_init_beams = 200
         args.result_dir = f"{api_cache_dir}/{args.seed}/"
         args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
         args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
-
-        if not osp.exists(args.idiom_g_dir):
-            os.makedirs(args.idiom_g_dir)
 
         if not osp.exists(args.idiom_p_dir):
             os.makedirs(args.idiom_p_dir)
