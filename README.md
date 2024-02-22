@@ -113,36 +113,46 @@ How to use CodeScholar:
 How to run CodeScholar Streamlit App:
 ---------------------------
 
-```bash
-# cd into the apps directory
-cd codescholar/apps
-```
+1. Setup services
+    ```bash
+    # start codescholar services (elasticsearch and redis)
+    ./services.sh start
+    
+    # index search space programs into elasticsearch
+    ./services.sh index <dataset_name>
+    ```
 
-```bash
-# start a redis server to act as the message broker
-docker run --rm -p 6379:6379 redis
-```
+2. Start server and application
+    ```bash
+    cd codescholar/apps
+    # start a flask server, celery backend, and streamlit app
+    ./app.sh start
+    ```
+    <details>
+        <summary>what does this do?</summary>
 
-```bash
-# start a celery backend to handle tasks asynchronously
-celery -A app_decl.celery worker --pool=solo --loglevel=info
-```
+    ```bash
+    # start a celery backend to handle tasks asynchronously
+    celery -A app_decl.celery worker --pool=solo --loglevel=info
 
-```bash
-# start a flask server to handle http API requests
-# note: runs flask on port 3003
-python flask_app.py
-```
+    # start a flask server to handle http API requests
+    # note: runs flask on port 3003
+    python flask_app.py
+    ```
 
-You can now make API requests to the flask server. For example, to run search for size `10` idioms for `pd.merge`, you can:
-```bash
-curl -X POST -H "Content-Type: application/json" -d '{"api": "pd.merge", "size": 10}' http://localhost:3003/search
-```
+    > You can now make API requests to the flask server. For example, to run search for size `10` idioms for `pd.merge`, you can:
+    ```bash
+    curl -X POST -H "Content-Type: application/json" -d '{"api": "pd.merge", "size": 10}' http://localhost:3003/search
+    ```
 
-```bash
-# start the streamlit app on port localhost:8501
-streamlit run streamlit_app.py
-```
+    Finally,
+    ```bash
+    # start the streamlit app on port localhost:8501
+    streamlit run streamlit_app.py
+    ```
+    </details>
+
+    View details about the app using: `./app.sh show`
 
 Reproducability of CodeScholar Evaluation:
 ---------------------------
