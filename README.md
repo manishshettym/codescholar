@@ -63,7 +63,6 @@ How to use CodeScholar:
 
 1. Starting services
     ```bash
-    # start codescholar services (elasticsearch and redis)
     ./services.sh start
     ```
     <details>
@@ -80,7 +79,6 @@ How to use CodeScholar:
 
 2. Indexing
     ```bash
-    # index search space programs into elasticsearch
     ./services.sh index <dataset_name>
     ```
     <details>
@@ -115,17 +113,14 @@ How to run CodeScholar Streamlit App:
 
 1. Setup services
     ```bash
-    # start codescholar services (elasticsearch and redis)
     ./services.sh start
-    
-    # index search space programs into elasticsearch
     ./services.sh index <dataset_name>
     ```
 
 2. Start server and application
     ```bash
     cd codescholar/apps
-    # start a flask server, celery backend, and streamlit app
+
     ./app.sh start
     ```
     <details>
