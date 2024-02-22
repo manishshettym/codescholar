@@ -58,40 +58,56 @@ How to train CodeScholar:
 Refer to the [training README](./codescholar/representation/README.md) for a detailed description of how to train CodeScholar.
 
 
-How to run pre-trained CodeScholar:
+How to use CodeScholar:
 -----------------------
-    
-```bash
-# start an elasticsearch server (hosts programs)
-docker run --rm -p 9200:9200 -p 9300:9300 -e "xpack.security.enabled=false" -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:8.7.0
-```
 
-```bash
-# start a redis server (hosts embeddings)
-docker run --rm -p 6379:6379 redis
-```
+1. Starting services
+    ```bash
+    # start codescholar services (elasticsearch and redis)
+    ./services.sh start
+    ```
+    <details>
+        <summary>what does this do?</summary>
 
-```bash
-# index the dataset using /search/elastic_search.py
-cd codescholar/search
-python elastic_search.py --dataset <dataset_name>
-```
+        ```bash
+        # start an elasticsearch server (hosts programs) in a tmux session
+        docker run --rm -p 9200:9200 -p 9300:9300 -e "xpack.security.enabled=false" -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:8.7.0
+        # start a redis server (hosts embeddings)
+        docker run --rm -p 6379:6379 redis
+        ```
+    </details>
 
-> TODO: index all embeddings into redis; currently index happens before each search
+2. Indexing
+    ```bash
+    # index search space programs into elasticsearch
+    ./services.sh index <dataset_name>
+    ```
+    <details>
+        <summary>what does this do?</summary>
 
-```bash
-# run the codescholar query (say np.mean) using /search/search.py
-python search.py --dataset <dataset_name> --seed np.mean
-```
+        ```bash
+        # index the dataset using /search/elastic_search.py
+        cd codescholar/search
+        python elastic_search.py --dataset <dataset_name>
+        ```
 
-You can also use some arguments with the search query:
-```bash
---min_idiom_size <int> # minimum size of idioms to be saved
---max_idiom_size <int> # maximum size of idioms to be saved
---max_init_beams <int> # maximum beams to initialize search
---stop_at_equilibrium  # stop search when diversity = reusability of idioms
-```
-*note: see more configurations in [/search/search_config.py](./codescholar/search/search_config.py)*
+        > TODO: index all embeddings into redis; currently index happens before each search
+    </details>
+
+3. Searching
+    ```bash
+    # run the codescholar query (say np.mean) using /search/search.py
+    python search.py --dataset <dataset_name> --seed np.mean
+    ```
+
+    You can also use some arguments with the search query:
+    ```bash
+    --min_idiom_size <int> # minimum size of idioms to be saved
+    --max_idiom_size <int> # maximum size of idioms to be saved
+    --max_init_beams <int> # maximum beams to initialize search
+    --stop_at_equilibrium  # stop search when diversity = reusability of idioms
+    ```
+    *note: see more configurations in [/search/search_config.py](./codescholar/search/search_config.py)*
 
 How to run CodeScholar Streamlit App:
 ---------------------------
