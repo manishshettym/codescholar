@@ -79,7 +79,7 @@ case "$1" in
         show_indexing_status
         ;;
     *)
-        echo "Usage: $0 {start|stop|killall|index <dataset_name>}"
+        echo "Usage: $0 {start|stop|killall|index|status <dataset_name>}"
         exit 1
         ;;
 esac
