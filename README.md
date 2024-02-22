@@ -69,12 +69,13 @@ How to use CodeScholar:
     <details>
         <summary>what does this do?</summary>
 
-        ```bash
-        # start an elasticsearch server (hosts programs) in a tmux session
-        docker run --rm -p 9200:9200 -p 9300:9300 -e "xpack.security.enabled=false" -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:8.7.0
-        # start a redis server (hosts embeddings)
-        docker run --rm -p 6379:6379 redis
-        ```
+    ```bash
+    # start an elasticsearch server (hosts programs) in a tmux session
+    docker run --rm -p 9200:9200 -p 9300:9300 -e "xpack.security.enabled=false" -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:8.7.0
+    
+    # start a redis server (hosts embeddings)
+    docker run --rm -p 6379:6379 redis
+    ```
     </details>
 
 2. Indexing
@@ -85,13 +86,13 @@ How to use CodeScholar:
     <details>
         <summary>what does this do?</summary>
 
-        ```bash
-        # index the dataset using /search/elastic_search.py
-        cd codescholar/search
-        python elastic_search.py --dataset <dataset_name>
-        ```
+    ```bash
+    # index the dataset using /search/elastic_search.py
+    cd codescholar/search
+    python elastic_search.py --dataset <dataset_name>
+    ```
 
-        > TODO: index all embeddings into redis; currently index happens before each search
+    > TODO: index all embeddings into redis; currently index happens before each search
     </details>
 
 3. Searching
