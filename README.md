@@ -26,9 +26,9 @@ python search.py --dataset <dataset_name> --seed json.load
 
 ## Table of Contents
 - [How to install CodeScholar](#how-to-install-codescholar)
+- [How to use CodeScholar](#how-to-use-codescholar)
+- [How to run CodeScholar App](#how-to-run-codescholar-streamlit-app)
 - [How to train CodeScholar](#how-to-train-codescholar)
-- [How to run pre-trained CodeScholar](#how-to-use-codescholar)
-- [How to run CodeScholar Streamlit App](#how-to-run-codescholar-streamlit-app)
 - [Reproducability of CodeScholar Evaluation](#reproducability-of-codescholar-evaluation)
 
 
@@ -51,12 +51,6 @@ pip install -r requirements-{pyg,torch}.txt
 # install codescholar
 pip install -e .
 ```
-
-
-How to train CodeScholar:
------------------------
-Refer to the [training README](./codescholar/representation/README.md) for a detailed description of how to train CodeScholar.
-
 
 How to use CodeScholar:
 -----------------------
@@ -108,7 +102,7 @@ How to use CodeScholar:
     ```
     *note: see more configurations in [/search/search_config.py](./codescholar/search/search_config.py)*
 
-How to run CodeScholar Streamlit App:
+How to run CodeScholar App:
 ---------------------------
 
 1. Setup services
@@ -148,6 +142,12 @@ How to run CodeScholar Streamlit App:
     </details>
 
     View details about the app using: `./app.sh show`
+
+
+How to train CodeScholar:
+-----------------------
+Refer to the [training README](./codescholar/representation/README.md) for a detailed description of how to train CodeScholar.
+
 
 Reproducability of CodeScholar Evaluation:
 ---------------------------
