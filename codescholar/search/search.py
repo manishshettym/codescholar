@@ -203,7 +203,7 @@ def main(args):
     else:
         prog_indices = grep_programs(args, args.seed)[: args.prog_samples]
 
-    if len(prog_indices) > 0:
+    if len(prog_indices) == 0:
         return
 
     # load all embeddings of prog_indices to redis
