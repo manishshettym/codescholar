@@ -1,4 +1,5 @@
 import os
+import json
 import redis
 import os.path as osp
 import argparse
@@ -11,6 +12,7 @@ import torch
 import networkx as nx
 import scipy.stats as stats
 from multiprocessing import Pool
+from networkx.readwrite import json_graph
 
 from codescholar.sast.visualizer import render_sast
 from codescholar.sast.sast_utils import sast_to_prog
@@ -19,17 +21,11 @@ from codescholar.search import search_config
 from codescholar.search.grow import grow
 from codescholar.search.elastic_search import grep_programs
 from codescholar.search.init_search import init_search_q, init_search_m, init_search_mq
-from codescholar.utils.search_utils import (
-    ping_elasticsearch,
-    ping_elasticindex,
-    wl_hash,
-    save_idiom,
-    _print_mine_logs,
-    _write_mine_logs,
-    read_graph,
-)
+from codescholar.utils.search_utils import ping_elasticsearch, ping_elasticindex
+from codescholar.utils.search_utils import wl_hash, read_graph, save_idiom
+from codescholar.utils.search_utils import _print_mine_logs, _write_mine_logs
 from codescholar.utils.search_utils import load_embeddings_batched_redis
-from codescholar.utils.graph_utils import nx_to_program_graph
+from codescholar.utils.graph_utils import nx_to_sast
 from codescholar.utils.cluster_utils import cluster_programs
 from codescholar.utils.perf import perftimer
 from codescholar.constants import DATA_DIR
@@ -48,40 +44,45 @@ def _save_idiom_generation(args, idiommine_gen) -> bool:
     cluster_id, total_nhoods, total_idioms = 1, 0, 0
 
     for _, idioms in idiom_clusters:
-        idioms = list(sorted(idioms, key=lambda x: x[1], reverse=True))
+        idioms = list(sorted(idioms, key=lambda x: x[2], reverse=True))
 
-        for idiom, nhoods, holes in idioms:
-            size_id, nhood_count = len(idiom), int(nhoods)
+        for idx, idiom_graph, nhoods, holes in idioms:
+            size_id, nhood_count = len(idiom_graph), int(nhoods)
 
             if args.mode == "mq":
-                if nx.number_connected_components(nx.to_undirected(idiom)) != 1:
+                if nx.number_connected_components(nx.to_undirected(idiom_graph)) != 1:
                     continue
-
                 if nhood_count < args.min_nhoods:
                     continue
 
             file = "idiom_{}_{}_{}_{}".format(size_id, cluster_id, nhood_count, holes)
 
-            path = f"{args.idiom_g_dir}{file}.png"
-            sast = nx_to_program_graph(idiom)
+            metadata = {
+                "index": idx,
+                "query": args.seed,
+                "query_mode": args.mode,
+                "graph": json_graph.node_link_data(idiom_graph),
+                "size": size_id,
+                "cluster": cluster_id,
+                "nhoods": nhood_count,
+                "holes": holes,
+            }
 
-            # NOTE @manishs: when growing graphs in all directions
-            # the root can get misplaced. Find root = node with no incoming edges!
-            root = [n for n in sast.all_nodes() if sast.incoming_neighbors(n) == []][0]
-            sast.root_id = root.id
-
+            # render idiom graph highlighted in the original graph
             if args.render:
-                render_sast(sast, path, spans=True, relpos=True)
+                graph = read_graph(args, idx)
+                idiom_subg = graph.subgraph(idiom_graph).copy()
+                idiom_subg.remove_edges_from(nx.selfloop_edges(idiom_subg))
+                for v in graph.nodes:
+                    graph.nodes[v]["is_idiom"] = 1 if v in idiom_subg.nodes else 0
 
-            path = f"{args.idiom_p_dir}{file}.py"
-            prog = sast_to_prog(sast).replace("#", "_")
+                path = f"{args.idiom_g_dir}{file}.png"
+                render_sast(nx_to_sast(graph), path, spans=True, relpos=True)
 
-            if args.mode == "mq":
-                prog = "\n".join(
-                    [line for line in prog.split("\n") if line.strip() != "_"]
-                )
-
-            save_idiom(path, prog)
+            # save the metadata to json file
+            path = f"{args.idiom_p_dir}{file}.json"
+            with open(path, "w") as f:
+                f.write(json.dumps(metadata, indent=4))
 
             # update counts
             total_nhoods += nhood_count
@@ -150,7 +151,7 @@ def search(args, prog_indices, beam_sets):
                     neigh_g.nodes[v]["anchor"] = 1 if v == neigh[0] else 0
 
                 neigh_g_hash = wl_hash(neigh_g)
-                idiommine_gen[neigh_g_hash].append((neigh_g, score, holes))
+                idiommine_gen[neigh_g_hash].append((graph_idx, neigh_g, score, holes))
                 mine_summary[len(neigh_g)][neigh_g_hash] += 1
 
             if len(new_beams) > 0:
@@ -201,6 +202,9 @@ def main(args):
         prog_indices = list(prog_indices)[: args.prog_samples]
     else:
         prog_indices = grep_programs(args, args.seed)[: args.prog_samples]
+
+    if len(prog_indices) == 0:
+        return
 
     # load all embeddings of prog_indices to redis
     # TODO: do this offline for *all* progs?

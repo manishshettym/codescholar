@@ -33,7 +33,7 @@ def init_encoder_configs(parser, arg_str=None):
 
     enc_args.set_defaults(
         agg_type="GINE",
-        dataset="pandas",
+        dataset="pnosmt",
         n_layers=7,
         batch_size=64,
         hidden_dim=64,

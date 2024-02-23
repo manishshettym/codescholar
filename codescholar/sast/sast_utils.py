@@ -249,7 +249,7 @@ def replace_nonterminals(node, child_spans):
     return node
 
 
-def sast_to_prog(sast: ProgramGraph):
+def sast_to_prog(sast: ProgramGraph, mark_idiom=False):
     """perform an dfs traversal and regenerate prog"""
 
     def dfs_util(sast: ProgramGraph, node, visited):
@@ -269,6 +269,19 @@ def sast_to_prog(sast: ProgramGraph):
     visited = defaultdict()
     for node in sast.all_nodes():
         visited[node.id] = False
+
+        if mark_idiom and node.is_idiom:
+            parts = node.span.split("#")
+            marked_parts = []
+            for i, part in enumerate(parts):
+                if part.strip():
+                    marked_parts.append(f"<mark>{part}</mark>")
+                if i < len(parts) - 1:
+                    if not part.strip():
+                        marked_parts.append(f"{part}#")
+                    else:
+                        marked_parts.append("#")
+            node.span = "".join(marked_parts)
 
     for node in sast.all_nodes():
         if not visited[node.id]:

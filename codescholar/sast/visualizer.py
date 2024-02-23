@@ -1,11 +1,18 @@
 """Graphviz visualizations of Program Graphs."""
+
 import re
 import pygraphviz
 from python_graphs.program_graph import ProgramGraph
 from python_graphs import program_graph_dataclasses as pb
 
 
-def to_graphviz(graph: ProgramGraph, spans=False, relpos=False, edgelabel=False):
+def to_graphviz(
+    graph: ProgramGraph,
+    spans=False,
+    relpos=False,
+    edgelabel=False,
+    highlight_idioms=False,
+):
     """Creates a grapvhviz representation of a ProgramGraph.
 
     Args:
@@ -42,6 +49,11 @@ def to_graphviz(graph: ProgramGraph, spans=False, relpos=False, edgelabel=False)
             node_attrs["color"] = node_type_colors[node.node_type]
             node_attrs["colorscheme"] = "svg"
 
+        if highlight_idioms and node.is_idiom:
+            node_attrs["style"] = "filled"
+            node_attrs["fillcolor"] = "lightblue"
+            node_attrs["colorscheme"] = "svg"
+
         g.add_node(node.id, **node_attrs)
 
     for edge in graph.edges:
@@ -67,6 +79,7 @@ def render_sast(
     spans=False,
     relpos=False,
     edgelabel=False,
+    highlight_idioms=False,
 ):
-    g = to_graphviz(graph, spans, relpos, edgelabel)
+    g = to_graphviz(graph, spans, relpos, edgelabel, highlight_idioms)
     g.draw(path, prog="dot")

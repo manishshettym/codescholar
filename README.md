@@ -58,74 +58,96 @@ How to train CodeScholar:
 Refer to the [training README](./codescholar/representation/README.md) for a detailed description of how to train CodeScholar.
 
 
-How to run pre-trained CodeScholar:
+How to use CodeScholar:
 -----------------------
+
+1. Starting services
+    ```bash
+    ./services.sh start
+    ```
+    <details>
+        <summary>what does this do?</summary>
+
+    ```bash
+    # start an elasticsearch server (hosts programs) in a tmux session
+    docker run --rm -p 9200:9200 -p 9300:9300 -e "xpack.security.enabled=false" -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:8.7.0
     
-```bash
-# start an elasticsearch server (hosts programs)
-docker run --rm -p 9200:9200 -p 9300:9300 -e "xpack.security.enabled=false" -e "discovery.type=single-node" docker.elastic.co/elasticsearch/elasticsearch:8.7.0
-```
+    # start a redis server (hosts embeddings)
+    docker run --rm -p 6379:6379 redis
+    ```
+    </details>
 
-```bash
-# start a redis server (hosts embeddings)
-docker run --rm -p 6379:6379 redis
-```
+2. Indexing
+    ```bash
+    ./services.sh index <dataset_name>
+    ```
+    <details>
+        <summary>what does this do?</summary>
 
-```bash
-# index the dataset using /search/elastic_search.py
-cd codescholar/search
-python elastic_search.py --dataset <dataset_name>
-```
+    ```bash
+    # index the dataset using /search/elastic_search.py
+    cd codescholar/search
+    python elastic_search.py --dataset <dataset_name>
+    ```
 
-> TODO: index all embeddings into redis; currently index happens before each search
+    > TODO: index all embeddings into redis; currently index happens before each search
+    </details>
 
-```bash
-# run the codescholar query (say np.mean) using /search/search.py
-python search.py --dataset <dataset_name> --seed np.mean
-```
+3. Searching
+    ```bash
+    # run the codescholar query (say np.mean) using /search/search.py
+    python search.py --dataset <dataset_name> --seed np.mean
+    ```
 
-You can also use some arguments with the search query:
-```bash
---min_idiom_size <int> # minimum size of idioms to be saved
---max_idiom_size <int> # maximum size of idioms to be saved
---max_init_beams <int> # maximum beams to initialize search
---stop_at_equilibrium  # stop search when diversity = reusability of idioms
-```
-*note: see more configurations in [/search/search_config.py](./codescholar/search/search_config.py)*
+    You can also use some arguments with the search query:
+    ```bash
+    --min_idiom_size <int> # minimum size of idioms to be saved
+    --max_idiom_size <int> # maximum size of idioms to be saved
+    --max_init_beams <int> # maximum beams to initialize search
+    --stop_at_equilibrium  # stop search when diversity = reusability of idioms
+    ```
+    *note: see more configurations in [/search/search_config.py](./codescholar/search/search_config.py)*
 
 How to run CodeScholar Streamlit App:
 ---------------------------
 
-```bash
-# cd into the apps directory
-cd codescholar/apps
-```
+1. Setup services
+    ```bash
+    ./services.sh start
+    ./services.sh index <dataset_name>
+    ```
 
-```bash
-# start a redis server to act as the message broker
-docker run --rm -p 6379:6379 redis
-```
+2. Start server and application
+    ```bash
+    cd codescholar/apps
 
-```bash
-# start a celery backend to handle tasks asynchronously
-celery -A app_decl.celery worker --pool=solo --loglevel=info
-```
+    ./app.sh start
+    ```
+    <details>
+        <summary>what does this do?</summary>
 
-```bash
-# start a flask server to handle http API requests
-# note: runs flask on port 3003
-python app_main.py
-```
+    ```bash
+    # start a celery backend to handle tasks asynchronously
+    celery -A app_decl.celery worker --pool=solo --loglevel=info
 
-You can now make API requests to the flask server. For example, to run search for size `10` idioms for `pd.merge`, you can:
-```bash
-curl -X POST -H "Content-Type: application/json" -d '{"api": "pd.merge", "size": 10}' http://localhost:3003/search
-```
+    # start a flask server to handle http API requests
+    # note: runs flask on port 3003
+    python flask_app.py
+    ```
 
-```bash
-# start the streamlit app on port localhost:8501
-streamlit run app_streamlit.py
-```
+    > You can now make API requests to the flask server. For example, to run search for size `10` idioms for `pd.merge`, you can:
+    ```bash
+    curl -X POST -H "Content-Type: application/json" -d '{"api": "pd.merge", "size": 10}' http://localhost:3003/search
+    ```
+
+    Finally,
+    ```bash
+    # start the streamlit app on port localhost:8501
+    streamlit run streamlit_app.py
+    ```
+    </details>
+
+    View details about the app using: `./app.sh show`
 
 Reproducability of CodeScholar Evaluation:
 ---------------------------

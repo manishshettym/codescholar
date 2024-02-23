@@ -80,15 +80,12 @@ def search():
         # search config
         args.mode = "q"
         args.seed = api
-        args.min_idiom_size = 2
+        args.min_idiom_size = 3
         args.max_idiom_size = 20
-        args.max_init_beams = 150
+        args.max_init_beams = 200
         args.result_dir = f"{api_cache_dir}/{args.seed}/"
         args.idiom_g_dir = f"{args.result_dir}/idioms/graphs/"
         args.idiom_p_dir = f"{args.result_dir}/idioms/progs/"
-
-        if not osp.exists(args.idiom_g_dir):
-            os.makedirs(args.idiom_g_dir)
 
         if not osp.exists(args.idiom_p_dir):
             os.makedirs(args.idiom_p_dir)
@@ -99,9 +96,22 @@ def search():
         # search_main(args)
 
         return flask.jsonify(
-            {
-                "status": "CodeScholar is now growing idioms for this API. Please try again in ~2 mins."
-            }
+            {"status": "CodeScholar is now growing idioms for this API."}
+        )
+
+
+@scholarapp.route("/search_status", methods=["GET"])
+def search_status():
+    api = flask.request.args.get("api")
+    # Check if the idioms for the API are ready
+    # This could involve checking a file, database, or cache status
+    idioms_dir = osp.join(api_cache_dir, api, "idioms", "progs")
+    idioms_ready = osp.exists(idioms_dir) and len(os.listdir(idioms_dir)) > 0
+    if idioms_ready:
+        return flask.jsonify({"status": "ready"})
+    else:
+        return flask.jsonify(
+            {"status": "CodeScholar is now growing idioms for this API."}
         )
 
 
