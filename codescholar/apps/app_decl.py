@@ -96,9 +96,22 @@ def search():
         # search_main(args)
 
         return flask.jsonify(
-            {
-                "status": "CodeScholar is now growing idioms for this API. Please try again in ~2 mins."
-            }
+            {"status": "CodeScholar is now growing idioms for this API."}
+        )
+
+
+@scholarapp.route("/search_status", methods=["GET"])
+def search_status():
+    api = flask.request.args.get("api")
+    # Check if the idioms for the API are ready
+    # This could involve checking a file, database, or cache status
+    idioms_dir = osp.join(api_cache_dir, api, "idioms", "progs")
+    idioms_ready = osp.exists(idioms_dir) and len(os.listdir(idioms_dir)) > 0
+    if idioms_ready:
+        return flask.jsonify({"status": "ready"})
+    else:
+        return flask.jsonify(
+            {"status": "CodeScholar is now growing idioms for this API."}
         )
 
 
