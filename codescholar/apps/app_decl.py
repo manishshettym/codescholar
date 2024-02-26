@@ -11,8 +11,7 @@ import torch
 from codescholar.search.search import main as search_main
 from codescholar.apps.utils import (
     find_api,
-    clean_idiom,
-    write_idiom,
+    explain_idiom,
     get_result_from_dir,
     get_plot_metrics,
 )
@@ -115,19 +114,11 @@ def search_status():
         )
 
 
-@scholarapp.route("/clean", methods=["POST"])
-def clean():
+@scholarapp.route("/explain", methods=["POST"])
+def explain():
     api = flask.request.json["api"]
     idiom = flask.request.json["idiom"]
-    resp = {"idiom": clean_idiom(api, idiom)}
-    return flask.jsonify(resp)
-
-
-@scholarapp.route("/write", methods=["POST"])
-def write():
-    api = flask.request.json["api"]
-    idiom = flask.request.json["idiom"]
-    resp = {"idiom": write_idiom(api, idiom)}
+    resp = {"idiom": explain_idiom(api, idiom)}
     return flask.jsonify(resp)
 
 

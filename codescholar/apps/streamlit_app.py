@@ -171,7 +171,12 @@ elif (
 ):
     API = st.session_state.search_api
 
-size = st.slider("Choose the size of your idiom:", 4, 20, 4)
+size, sortby = None, None
+col1, col2 = st.columns([3, 1])
+with col1:
+    size = st.slider("Choose the size of your idiom:", 4, 20, 4)
+with col2:
+    sortby = st.selectbox("Sort idioms by:", ("Program Length", "Frequency"))
 
 status_placeholder = st.empty()
 
@@ -192,12 +197,15 @@ with st.spinner("Growing your idioms 🌱..."):
 if len(idioms) == 0:
     st.error("No idioms found for API: {} 🫙".format(API))
 else:
-    idioms = [
-        v
-        for k, v in sorted(
-            idioms.items(), key=lambda item: int(item[1]["freq"]), reverse=True
-        )
-    ]
+
+    idiom_freq = lambda item: int(item[1]["freq"])
+    prog_len = lambda item: len(item[1]["idiom"])
+
+    if sortby == "Frequency":
+        idioms = [v for k, v in sorted(idioms.items(), key=idiom_freq, reverse=True)]
+    else:
+        idioms = [v for k, v in sorted(idioms.items(), key=prog_len, reverse=False)]
+
     tabs = st.tabs(["Idiom {}".format(i + 1) for i in range(len(idioms))])
 
     for idiom, tab in zip(idioms, tabs):
@@ -207,36 +215,19 @@ else:
             maxh = max(100, min(30 * idiom["idiom"].count("\n"), 500))
             components.html(highlighted_idiom_html, height=maxh, scrolling=True)
 
-            colbut1, colbut2 = st.columns([0.25, 0.8])
-            with colbut1:
-                but1 = st.button("Clean this idiom?", key=f"clean_{tabs.index(tab)}")
-            with colbut2:
-                but2 = st.button(
-                    "Code with this idiom?", key=f"write_{tabs.index(tab)}"
-                )
+            but1 = st.button("Explain this idiom?", key=f"explain_{tabs.index(tab)}")
 
             if but1:
-                with st.spinner("Cleaning your idioms 🧹..."):
+                with st.spinner("Summarizing your idiom 👩🏻‍💻..."):
                     response = requests.post(
-                        f"http://{endpoint}/clean",
+                        f"http://{endpoint}/explain",
                         json={"api": API, "idiom": idiom["idiom"]},
                     )
                     # st.error("This feature is not available yet! 🫙")
-                st.code(response.json()["idiom"], language="python")
-            if but2:
-                with st.spinner("Writing some code 👩🏻‍💻..."):
-                    response = requests.post(
-                        f"http://{endpoint}/write",
-                        json={"api": API, "idiom": idiom["idiom"]},
-                    )
-                    # st.error("This feature is not available yet! 🫙")
-                st.code(response.json()["idiom"], language="python")
+                st.markdown(response.json()["idiom"])
 
     st.divider()
 
-    """
-    ##### CodeScholar Suggestions
-    """
     with st.spinner("Analyzing your idioms 📊..."):
         response = requests.post(f"http://{endpoint}/plot", json={"api": API})
 
