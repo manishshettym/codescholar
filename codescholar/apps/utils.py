@@ -27,21 +27,16 @@ Query: {query}
 \"\"\"
 """
 
-gpt_prompt_clean = """
-The following is an example of a idiomatic usage example for {api}
+gpt_prompt_explain = """
+The following is an example of a idiomatic usage example for {api}.
+The idiomatic usage is annotated in the code example.
 \"\"\"
 {idiom}
 \"\"\"
-Rename the variables and constants to make it more generic. Return only the code with no explanations.
-\"\"\"
-"""
-
-gpt_prompt_write = """
-The following is an example of a idiomatic usage example for {api}
-\"\"\"
-{idiom}
-\"\"\"
-Write a 2-4 line snippet of code using exactly the above given example. Return only the code with no explanations.
+Write a 4-6 line explanation of how the API is used in the code example.
+Write an explanation that is specific to this code example.
+Explain the setting not just the usage. Use markdown syntax to format the explanation
+and highlight the important parts. Return only the explanation with no code.
 \"\"\"
 """
 
@@ -60,24 +55,10 @@ def find_api(query):
     return response.choices[0].text
 
 
-def write_idiom(api, idiom):
+def explain_idiom(api, idiom):
     response = openai.Completion.create(
         model="gpt-3.5-turbo-instruct",
-        prompt=gpt_prompt_write.format(api=api, idiom=idiom),
-        temperature=0,
-        max_tokens=250,
-        top_p=1.0,
-        frequency_penalty=0.0,
-        presence_penalty=0.0,
-        stop=['"""', "```"],
-    )
-    return response.choices[0].text
-
-
-def clean_idiom(api, idiom):
-    response = openai.Completion.create(
-        model="gpt-3.5-turbo-instruct",
-        prompt=gpt_prompt_clean.format(api=api, idiom=idiom),
+        prompt=gpt_prompt_explain.format(api=api, idiom=idiom),
         temperature=0,
         max_tokens=250,
         top_p=1.0,
